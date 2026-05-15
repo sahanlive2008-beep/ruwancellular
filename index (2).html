@@ -1,0 +1,1688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RUWAN CELL & THARU SALON</title>
+    <link rel="manifest" href="manifest.json">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @media print {
+            body * { visibility: hidden; height: 0; margin: 0; padding: 0; }
+            #print-area, #print-area * { visibility: visible; height: auto; }
+            #print-area { 
+                position: absolute; 
+                left: 0; 
+                top: 0; 
+                width: 100% !important;
+                padding: 10px; 
+                margin: 0; 
+                border: none; 
+            }
+
+            .print-shop-name { font-size: 22px !important; font-weight: bold; }
+            .print-shop-info { font-size: 15px !important; margin: 0; padding: 0; line-height: 1.2; }
+            .print-bill-details { font-size: 15px !important; }
+            .print-table-head { font-size: 16px !important; font-weight: bold; }
+            .print-item-name { font-size: 19px !important; font-weight: bold; }
+            .print-item-details { font-size: 15px !important; }
+            
+            .print-total-section { 
+                font-size: 22px !important; 
+                font-weight: bold; 
+                border-top: 2px solid black; 
+                padding-top: 5px; 
+                margin-top: 10px; 
+                clear: both !important; 
+                width: 100% !important; 
+                display: flex !important;
+                justify-content: space-between !important;
+                align-items: center !important;
+                white-space: nowrap !important;
+            }
+            
+            .print-footer-info { font-size: 15px !important; display: flex; justify-content: space-between; white-space: nowrap; }
+            .print-thanks-msg { font-size: 18px !important; font-weight: bold; }
+
+            @page { size: auto; margin: 0; }
+        }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .receipt-border { border: 2px solid black; border-radius: 10px; padding: 5px; margin-bottom: 5px; line-height: 1.2; }
+        #live-preview-container { border: 2px dashed #3b82f6; background: white; margin-top: 20px; padding: 10px; }
+        #sidebar { transition: transform 0.3s ease-in-out; transform: translateX(-100%); }
+        #sidebar.open { transform: translateX(0); }
+        .search-results { max-height: 200px; overflow-y: auto; border: 1px solid #ddd; display: none; }
+        .search-results div { padding: 8px; cursor: pointer; border-bottom: 1px solid #eee; }
+        .search-results div:hover { background-color: #f3f4f6; }
+        #receipt-logo { max-width: 100%; height: auto; display: none; margin: 0 auto 5px auto; }
+        #reader { width: 100% !important; min-height: 250px; background: #000; }
+        #reader video { object-fit: cover !important; }
+
+        #print-area { 
+            line-height: 1.4 !important; 
+            padding: 10px !important; 
+            background: white !important;
+            overflow: visible !important;
+        }
+
+        #items-square-container {
+            border-top: 1.5px solid black;
+            border-bottom: 1.5px solid black;
+            padding: 8px 0;
+            margin: 10px 0;
+            min-height: 20px;
+            clear: both;
+        }
+
+        #temp-print-wrap { display: none; }
+    </style>
+</head>
+<body class="bg-gray-100 pb-24">
+
+    <div id="temp-print-wrap"></div>
+
+    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black opacity-50 z-[70] hidden"></div>
+    <nav id="sidebar" class="fixed top-0 left-0 h-full w-64 bg-slate-900 text-white z-[80] shadow-xl p-4">
+        <div class="flex justify-between items-center mb-8">
+            <h2 class="font-bold text-xl">Menu</h2>
+            <button onclick="toggleSidebar()" class="text-2xl">&times;</button>
+        </div>
+        <div class="flex flex-col gap-4 font-semibold">
+            <button onclick="showTab('billing'); toggleSidebar()" class="text-left py-2 border-b border-slate-700">🛒 BILLING</button>
+            <button onclick="showTab('serial'); toggleSidebar()" class="text-left py-2 border-b border-slate-700">🆔 SERIAL RECORD</button>
+            <button onclick="showTab('inventory'); toggleSidebar()" class="text-left py-2 border-b border-slate-700">📦 STOCK</button>
+            <button onclick="showTab('add-items'); toggleSidebar()" class="text-left py-2 border-b border-slate-700">➕ ADD ITEM</button>
+            <button onclick="showTab('customers'); toggleSidebar()" class="text-left py-2 border-b border-slate-700">👥 CUSTOMERS</button>
+            <button onclick="showTab('history'); toggleSidebar()" class="text-left py-2 border-b border-slate-700">📜 HISTORY</button>
+            <button onclick="showTab('reports'); toggleSidebar()" class="text-left py-2 border-b border-slate-700">📊 REPORTS</button>
+            <button onclick="showTab('printer'); toggleSidebar()" class="text-left py-2 border-b border-slate-700">🖨️ PRINTER SETUP</button>
+        </div>
+    </nav>
+
+    <header class="bg-slate-800 text-white p-4 sticky top-0 z-50 shadow-md flex justify-between items-center">
+        <div class="flex items-center gap-3">
+            <button onclick="toggleSidebar()" class="text-2xl">☰</button>
+            <h1 class="font-bold text-lg">RUWAN CELLULAR & SALON THARU</h1>
+        </div>
+        <div id="scanner-container" class="hidden fixed inset-0 bg-black z-[100] flex flex-col">
+            <div id="reader" style="flex: 1;"></div>
+            <button onclick="stopScanner()" class="bg-red-600 text-white w-full py-6 font-bold text-lg">Close Scanner</button>
+        </div>
+        <button onclick="startScanner()" class="bg-blue-500 px-3 py-1 rounded text-sm">📷 Scan</button>
+    </header>
+
+    <main class="p-2">
+        <div id="tab-serial" class="tab-content">
+            <div class="bg-white p-4 rounded shadow">
+                <h2 class="font-bold mb-4 text-blue-800 text-xl">📱 Repair / Serial Record</h2>
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-xs font-bold text-gray-500 uppercase">Owner Name</label>
+                        <input type="text" id="serial-owner" placeholder="Enter Client Name" class="w-full p-2 border rounded">
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-gray-500 uppercase">Item / Model Name</label>
+                        <input type="text" id="serial-item" placeholder="e.g. iPhone 13 Pro" class="w-full p-2 border rounded">
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-gray-500 uppercase">Current Date & Time</label>
+                        <input type="text" id="serial-time" readonly class="w-full p-2 border bg-gray-50 text-gray-600">
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-gray-500 uppercase">Upload Item Photo</label>
+                        <input type="file" id="serial-photo" accept="image/*" class="w-full p-2 border text-sm">
+                    </div>
+                    <div class="pt-4">
+                        <button onclick="printSerialRecord()" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold shadow-lg">🖨️ PRINT REPAIR SLIP</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-billing" class="tab-content active">
+            <div class="bg-white p-3 rounded shadow mb-3">
+                
+                <div class="flex gap-2 mb-3">
+                    <button onclick="setBillingShop('ruwancell')" id="bill-shop-ruwan" class="flex-1 rounded bg-blue-700 text-white text-xs font-bold py-2 uppercase">Ruwan Cellular</button>
+                    <button onclick="setBillingShop('tharusalon')" id="bill-shop-tharu" class="flex-1 rounded bg-gray-200 text-gray-600 text-xs font-bold py-2 uppercase">Salon Tharu</button>
+                </div>
+
+                <div class="relative mb-3">
+                    <input type="text" id="bill-search" onclick="searchItems(this.value)" oninput="searchItems(this.value)" placeholder="Search Item Name or Code..." class="w-full p-3 border-2 border-blue-400 rounded-lg">
+                    <div id="search-results" class="search-results absolute w-full bg-white z-10 shadow-lg"></div>
+                </div>
+                
+                <input type="hidden" id="bill-code">
+                <div class="grid grid-cols-2 gap-2 mb-2 hidden"> 
+                    <input type="text" id="bill-name" readonly placeholder="Selected Item" class="p-2 border rounded bg-gray-100 font-bold">
+                    <input type="number" id="bill-qty" value="1" step="0.001" inputmode="decimal" class="p-2 border rounded w-full" placeholder="Qty">
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
+                    <div class="md:col-span-5">
+                        <label class="text-[10px] font-bold text-gray-500 uppercase">Customer</label>
+                        <select id="bill-customer" class="w-full p-2 border rounded border-blue-500 text-sm" onchange="updateLivePreview()">
+                            <option value="General Customer">General Customer</option>
+                        </select>
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="text-[10px] font-bold text-gray-500 uppercase">Bill Discount</label>
+                        <input type="number" id="bill-extra-discount" value="0" oninput="updateLivePreview()" class="w-full p-2 border rounded border-red-400 text-sm font-bold text-red-600" placeholder="LKR">
+                    </div>
+
+                    <div class="md:col-span-3 flex gap-1 h-[38px]">
+                        <button onclick="setPaymentMode('cash')" id="btn-cash" class="flex-1 rounded bg-green-700 text-white text-xs font-bold">CASH</button>
+                        <button onclick="setPaymentMode('credit')" id="btn-credit" class="flex-1 rounded bg-gray-200 text-xs font-bold">CREDIT</button>
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <button onclick="addUnlistedItem()" class="w-full h-[38px] text-blue-600 text-[10px] border border-blue-600 rounded font-bold uppercase leading-tight">+ Unlisted Item</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded shadow p-3">
+                <div id="cart-items" class="text-sm"></div>
+                <div class="mt-4 border-t pt-2">
+                    <div class="flex justify-between text-lg font-bold">
+                        <span>Total (LKR):</span>
+                        <span id="cart-total">0.00</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 mt-3">
+                        <button onclick="directPrint()" class="bg-blue-600 text-white py-3 px-1 rounded font-bold text-xs md:text-sm">FINISH & PRINT</button>
+                        <button onclick="closeBillWithoutPrint()" class="bg-slate-700 text-white py-3 px-1 rounded font-bold text-xs md:text-sm">SAVE ONLY</button>
+                        <button onclick="cancelBill()" class="bg-red-600 text-white py-3 px-1 rounded font-bold text-xs md:text-sm">CANCEL BILL</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="live-preview-container">
+                <p class="text-xs font-bold text-blue-900 mb-2">LIVE PRINT PREVIEW (80mm):</p>
+                <div id="print-area" class="text-black bg-white p-2 mx-auto" style="font-size: 15px; font-family: 'Courier New', Courier, monospace; width: 80mm; border: 1px solid #ccc;">
+                    <div class="receipt-border text-center">
+                        <img id="receipt-logo" src="" alt="Logo">
+                        <p class="print-shop-name">RUWAN CELLULAR & SALON THARU</p>
+                        <strong>
+                            <p class="print-shop-info">MADAGALLA ROAD, DAGAMA</p>
+                            <p class="print-shop-info">077 230 1099 / 075 548 5454</p>
+                        </strong>
+                    </div>
+
+                    <div id="items-square-container">
+                        <div class="flex justify-between mb-1 print-table-head" style="border-bottom: 1px solid black;">
+                            <span style="width:10%">Qty</span>
+                            <span style="width:15%">Price</span>
+                            <span style="width:15%">Net</span>
+                            <span style="width:15%; text-align:right">Total</span>
+                        </div>
+                        <div id="print-items"></div>
+                    </div>
+
+                    <div id="print-totals" class="text-right mt-1"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-printer" class="tab-content">
+            <div class="bg-white p-4 rounded shadow">
+                <h2 class="font-bold mb-4">Printer & Branding Setup</h2>
+                <div class="mb-6 p-3 border rounded bg-blue-50">
+                    <label class="block font-bold text-sm mb-2">Upload Bill Logo Image:</label>
+                    <input type="file" id="logo-upload" accept="image/*" onchange="handleLogoUpload(this)" class="text-sm">
+                    <button onclick="removeLogo()" class="mt-2 text-red-500 text-xs block underline">Remove Logo</button>
+                </div>
+                <div id="printer-status" class="mb-4 p-3 bg-gray-100 rounded text-sm text-gray-600">Status: Not Connected</div>
+                <button onclick="connectAndSaveBluetooth()" class="w-full bg-blue-600 text-white py-3 rounded font-bold mb-2">🔍 Search & Connect Printer</button>
+                <button onclick="forgetPrinter()" class="w-full mt-4 text-xs text-red-400 underline">Forget Saved Printer</button>
+            </div>
+        </div>
+
+        <div id="tab-inventory" class="tab-content">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="font-bold text-xl text-slate-800">📦 Inventory Management</h2>
+                <div class="flex gap-2">
+                    <button id="download-cloud-btn" class="bg-emerald-600 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 shadow hover:bg-emerald-700">
+                        ⬇️ FETCH CLOUD
+                    </button>
+                    <button id="upload-cloud-btn" class="bg-blue-600 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 shadow hover:bg-blue-700">
+                        ☁️ SYNC TO CLOUD
+                    </button>
+                </div>
+            </div>
+            
+            <div class="flex gap-2 mb-4">
+                <button onclick="setInventoryShop('ruwancell')" id="inv-shop-ruwan" class="flex-1 rounded bg-blue-700 text-white text-xs font-bold py-2 uppercase">Ruwan Cellular</button>
+                <button onclick="setInventoryShop('tharusalon')" id="inv-shop-tharu" class="flex-1 rounded bg-gray-200 text-gray-600 text-xs font-bold py-2 uppercase">Salon Tharu</button>
+            </div>
+
+            <div class="mb-4">
+                <input type="text" id="inventory-search-input" oninput="renderInventory()" placeholder="Search Inventory by Name or Code..." class="w-full p-3 border border-slate-300 rounded-xl shadow-inner outline-none focus:ring-2 focus:ring-blue-400 bg-white">
+            </div>
+
+            <div id="inventory-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        </div>
+
+        <div id="tab-add-items" class="tab-content">
+            <div class="bg-white p-4 rounded shadow">
+                <h2 class="font-bold mb-4">Setup New Item</h2>
+                
+                <select id="add-shop" class="w-full p-2 border mb-2 font-bold text-sm bg-blue-50 text-blue-900 rounded">
+                    <option value="ruwancell">📱 Ruwan Cellular</option>
+                    <option value="tharusalon">💇‍♀️ Salon Tharu</option>
+                </select>
+
+                <input type="text" id="add-code" placeholder="Item Code" class="w-full p-2 border mb-2">
+                <input type="text" id="add-name" placeholder="Item Name" class="w-full p-2 border mb-2">
+                <input type="number" id="add-price" inputmode="decimal" placeholder="Selling Price (LKR)" class="w-full p-2 border mb-2">
+                <input type="number" id="add-discount" inputmode="decimal" placeholder="Discount Per Unit (LKR)" class="w-full p-2 border mb-2">
+                <input type="number" id="add-wholesale" inputmode="decimal" placeholder="Wholesale Price" class="w-full p-2 border mb-2">
+                <input type="number" id="add-stock" inputmode="decimal" placeholder="Initial Stock" class="w-full p-2 border mb-2">
+                <button onclick="saveNewItem()" class="w-full bg-blue-600 text-white py-2 rounded">Save Product</button>
+            </div>
+        </div>
+
+        <div id="tab-customers" class="tab-content">
+            <div class="flex justify-between items-center mb-4 bg-white p-4 shadow rounded border-t-4 border-blue-600">
+                <h2 class="font-bold text-xl text-slate-800">👥 Customer List & Sync</h2>
+                <div class="flex gap-2">
+                    <button id="download-customers-btn" class="bg-emerald-600 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 shadow hover:bg-emerald-700">
+                        ⬇️ FETCH CLOUD
+                    </button>
+                    <button id="upload-customers-btn" class="bg-blue-600 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 shadow hover:bg-blue-700">
+                        ☁️ SYNC TO CLOUD
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-green-50 p-4 rounded-lg border border-green-200 mb-4 shadow-sm">
+                <h3 class="text-green-800 font-bold text-xs uppercase mb-2 tracking-wider">WhatsApp Debt Reminders</h3>
+                <button onclick="sendWhatsAppReminders()" class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-bold shadow transition-all flex items-center justify-center gap-2">
+                    📢 SEND WHATSAPP TO ALL CREDIT USERS
+                </button>
+            </div>
+
+            <div class="bg-white p-4 rounded shadow mb-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
+                    <input type="text" id="cust-name" placeholder="Customer Name" class="p-2 border rounded">
+                    <input type="text" id="cust-phone" placeholder="Phone Number" class="p-2 border rounded">
+                </div>
+                <button onclick="saveCustomer()" class="w-full bg-blue-600 text-white py-2 rounded font-bold">Add New Customer</button>
+            </div>
+
+            <div class="mb-4">
+                <input type="text" id="customer-search-input" oninput="renderCustomers()" placeholder="🔍 Search Customers by Name or Phone..." class="w-full p-3 border-2 border-slate-200 rounded-lg outline-none focus:border-blue-400">
+            </div>
+
+            <div id="customer-list" class="space-y-2"></div>
+        </div>
+
+        <div id="tab-history" class="tab-content">
+            <div class="bg-white p-4 rounded shadow">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="font-bold text-xl text-blue-900">📜 All Transactions History</h2>
+                    <button onclick="renderFullHistory()" class="bg-blue-100 text-blue-700 px-3 py-1 rounded font-bold text-xs hover:bg-blue-200 transition-colors">🔄 REFRESH</button>
+                </div>
+                
+                <div class="mb-4">
+                    <input type="text" id="history-search-input" oninput="renderFullHistory()" placeholder="🔍 Search Invoice No or Customer Name..." class="w-full p-3 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-400 bg-gray-50">
+                </div>
+
+                <div id="full-history-list" class="space-y-3 max-h-[70vh] overflow-y-auto pr-2">
+                    </div>
+            </div>
+        </div>
+
+        <div id="tab-reports" class="tab-content">
+            <div class="bg-white p-4 rounded shadow mb-4">
+                <h2 class="font-bold mb-3 underline text-blue-800">Business Reports</h2>
+                <div class="flex gap-2 mb-4">
+                    <button onclick="setReportFilter('day')" id="filter-day" class="flex-1 bg-blue-600 text-white py-2 rounded text-xs font-bold uppercase">Daily</button>
+                    <button onclick="setReportFilter('week')" id="filter-week" class="flex-1 bg-blue-100 text-blue-800 py-2 rounded text-xs font-bold uppercase">Weekly</button>
+                    <button onclick="setReportFilter('month')" id="filter-month" class="flex-1 bg-blue-100 text-blue-800 py-2 rounded text-xs font-bold uppercase">Monthly</button>
+                </div>
+                <div class="grid grid-cols-2 gap-3 mb-6">
+                    <div class="bg-green-100 p-3 rounded border border-green-200">
+                        <p class="text-[10px] uppercase font-bold text-green-700">Total Profit</p>
+                        <h1 id="rep-profit" class="text-xl font-bold">LKR 0.00</h1>
+                    </div>
+                    <div class="bg-blue-100 p-3 rounded border border-blue-200">
+                        <p class="text-[10px] uppercase font-bold text-blue-700">Total Sales</p>
+                        <h1 id="rep-sales" class="text-xl font-bold">LKR 0.00</h1>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div class="p-3 border rounded-lg bg-gray-50 shadow-inner">
+                        <p class="text-center font-bold text-xs uppercase mb-2 text-gray-500">Credit vs Settled (Bar)</p>
+                        <canvas id="reportBarChart" height="200"></canvas>
+                    </div>
+                    <div class="p-3 border rounded-lg bg-gray-50 shadow-inner">
+                        <p class="text-center font-bold text-xs uppercase mb-2 text-gray-500">Balance Breakdown (Pie)</p>
+                        <div class="flex justify-center">
+                            <canvas id="reportPieChart" style="max-height: 200px; max-width: 200px;"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="bill-history-list" class="space-y-2 max-h-80 overflow-y-auto"></div>
+            </div>
+        </div>
+    </main>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
+        import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCvbgoJj_-VWHw7y23_OFtt6lQDuknqJ0k",
+            authDomain: "ruwan-cell.firebaseapp.com",
+            projectId: "ruwan-cell",
+            storageBucket: "ruwan-cell.firebasestorage.app",
+            messagingSenderId: "1000422430490",
+            appId: "1:1000422430490:web:5385cc02b6a46e5609fea3",
+            measurementId: "G-4QEFYTPNXB",
+            databaseURL: "https://ruwan-cell-default-rtdb.firebaseio.com"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const fb_db = getDatabase(app);
+
+        // --- INVENTORY CLOUD SYNC ---
+        window.uploadInventoryToCloud = async function() {
+            const btn = document.getElementById('upload-cloud-btn');
+            try {
+                btn.innerText = "⏳ SYNCING...";
+                btn.disabled = true;
+
+                const items = await window.db.inventory.toArray();
+                
+                if (items.length === 0) {
+                    alert("Inventory is empty locally.");
+                    btn.innerText = "☁️ SYNC TO CLOUD";
+                    btn.disabled = false;
+                    return;
+                }
+
+                const inventoryObject = {};
+                items.forEach(item => {
+                    const itemShop = item.shop || "ruwancell";
+                    const codeStr = String(item.code || "unknown");
+                    const rawCode = item.rawCode || codeStr.replace(itemShop + "_", "");
+                    
+                    const safeKey = codeStr.replace(/[.#$\[\]/]/g, '_');
+                    
+                    inventoryObject[safeKey] = {
+                        code: codeStr,
+                        rawCode: rawCode,
+                        name: String(item.name || "UNNAMED"),
+                        price: Number(item.price) || 0,
+                        stock: Number(item.stock) || 0,
+                        wholesale: Number(item.wholesale) || 0,
+                        discount: Number(item.discount) || 0,
+                        shop: itemShop 
+                    };
+                });
+
+                const uploadPromise = set(ref(fb_db, 'inventory'), inventoryObject);
+                const timeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error("NETWORK_TIMEOUT")), 6000);
+                });
+
+                await Promise.race([uploadPromise, timeoutPromise]);
+                alert("Inventory successfully uploaded to Cloud!");
+
+            } catch (error) {
+                console.error(error);
+                if (error.message === "NETWORK_TIMEOUT") {
+                    alert("Network is slow. The upload is running in the background and will complete when connection is stable.");
+                } else if(error.message && error.message.includes("Permission denied")) {
+                   alert("ACCESS DENIED: Please go to Firebase Console -> Realtime Database -> Rules and set '.read' and '.write' to true.");
+                } else {
+                   alert("Upload failed: " + (error.message || error));
+                }
+            } finally {
+                btn.innerText = "☁️ SYNC TO CLOUD";
+                btn.disabled = false;
+            }
+        };
+
+        window.downloadInventoryFromCloud = async function() {
+            const btn = document.getElementById('download-cloud-btn');
+            try {
+                btn.innerText = "⏳ FETCHING...";
+                btn.disabled = true;
+
+                const dbRef = ref(fb_db);
+                const downloadPromise = get(child(dbRef, 'inventory'));
+                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("NETWORK_TIMEOUT")), 8000));
+
+                const snapshot = await Promise.race([downloadPromise, timeoutPromise]);
+                
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    const itemsArray = Object.values(data).filter(item => item && item.code);
+                    
+                    if(itemsArray.length > 0) {
+                        await window.db.inventory.clear();
+                        await window.db.inventory.bulkPut(itemsArray);
+                        alert("Inventory successfully downloaded and updated from Cloud!");
+                        if(typeof renderInventory === 'function') {
+                            renderInventory();
+                        } else if (window.renderInventory) {
+                            window.renderInventory();
+                        }
+                    } else {
+                        alert("Cloud inventory is empty.");
+                    }
+                } else {
+                    alert("No inventory data found on Cloud.");
+                }
+            } catch (error) {
+                console.error(error);
+                if (error.message === "NETWORK_TIMEOUT") {
+                    alert("Download taking too long. Please check your internet connection or try again later.");
+                } else if(error.message && error.message.includes("Permission denied")) {
+                   alert("ACCESS DENIED: Please go to Firebase Console -> Realtime Database -> Rules and set '.read' to true.");
+                } else {
+                   alert("Download failed: " + (error.message || error));
+                }
+            } finally {
+                btn.innerText = "⬇️ FETCH CLOUD";
+                btn.disabled = false;
+            }
+        };
+
+        // --- CUSTOMER CLOUD SYNC ---
+        window.uploadCustomersToCloud = async function() {
+            const btn = document.getElementById('upload-customers-btn');
+            try {
+                btn.innerText = "⏳ SYNCING...";
+                btn.disabled = true;
+
+                const items = await window.db.customers.toArray();
+                if (items.length === 0) {
+                    alert("Customer list is empty locally.");
+                    return;
+                }
+
+                const customersObject = {};
+                items.forEach(item => {
+                    const safeKey = String(item.name).replace(/[.#$\[\]/]/g, '_');
+                    customersObject[safeKey] = {
+                        name: String(item.name),
+                        phone: String(item.phone || ''),
+                        status: String(item.status || 'cash'),
+                        creditAmount: Number(item.creditAmount) || 0
+                    };
+                });
+
+                const uploadPromise = set(ref(fb_db, 'customers'), customersObject);
+                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("NETWORK_TIMEOUT")), 6000));
+
+                await Promise.race([uploadPromise, timeoutPromise]);
+                alert("Customers successfully uploaded to Cloud!");
+
+            } catch (error) {
+                console.error(error);
+                if(error.message && error.message.includes("Permission denied")) {
+                   alert("ACCESS DENIED: Check Firebase permissions.");
+                } else {
+                   alert("Upload failed: " + (error.message || error));
+                }
+            } finally {
+                btn.innerText = "☁️ SYNC TO CLOUD";
+                btn.disabled = false;
+            }
+        };
+
+        window.downloadCustomersFromCloud = async function() {
+            const btn = document.getElementById('download-customers-btn');
+            try {
+                btn.innerText = "⏳ FETCHING...";
+                btn.disabled = true;
+
+                const dbRef = ref(fb_db);
+                const downloadPromise = get(child(dbRef, 'customers'));
+                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("NETWORK_TIMEOUT")), 8000));
+
+                const snapshot = await Promise.race([downloadPromise, timeoutPromise]);
+                
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    const itemsArray = Object.values(data).filter(item => item && item.name);
+                    
+                    if(itemsArray.length > 0) {
+                        await window.db.customers.clear();
+                        await window.db.customers.bulkPut(itemsArray);
+                        alert("Customers successfully downloaded and updated from Cloud!");
+                        if(typeof renderCustomers === 'function') renderCustomers();
+                        if(typeof updateCustomerDropdown === 'function') updateCustomerDropdown();
+                    } else {
+                        alert("Cloud customer list is empty.");
+                    }
+                } else {
+                    alert("No customer data found on Cloud.");
+                }
+            } catch (error) {
+                console.error(error);
+                alert("Download failed: " + (error.message || error));
+            } finally {
+                btn.innerText = "⬇️ FETCH CLOUD";
+                btn.disabled = false;
+            }
+        };
+
+        document.getElementById('upload-cloud-btn').addEventListener('click', window.uploadInventoryToCloud);
+        document.getElementById('download-cloud-btn').addEventListener('click', window.downloadInventoryFromCloud);
+        document.getElementById('upload-customers-btn')?.addEventListener('click', window.uploadCustomersToCloud);
+        document.getElementById('download-customers-btn')?.addEventListener('click', window.downloadCustomersFromCloud);
+    </script>
+
+    <script>
+        const db = new Dexie("PiyaratnePOS");
+        window.db = db; 
+
+        // Version 7 to ensure all indexes are thoroughly recreated
+        db.version(7).stores({ 
+            inventory: "code, name, price, wholesale, stock, discount, shop", 
+            customers: "name, phone, status, creditAmount",
+            sales: "++id, date, total, profit, customer, type, items, invoiceNo, status",
+            draftCart: "++id, name, code, qty, price, wholesale, total, discount"
+        });
+
+        let cart = [];
+        let paymentMode = 'cash';
+        let bleDevice = null;
+        let bleCharacteristic = null;
+        let currentFilter = 'day';
+        const ACCESS_PASSWORD = "0054";
+
+        let currentBillShop = 'ruwancell';
+        let currentInvShop = 'ruwancell';
+
+        async function sendIndividualWhatsApp(name, phone, amount) {
+            const phoneNumber = phone.trim().replace(/^0/, '94');
+            const message = `Dear ${name}, you have a pending balance of LKR ${amount.toFixed(2)} at RUWAN CELLULAR & SALON THARU. Please settle it soon. Thank you!`;
+            const encodedMsg = encodeURIComponent(message);
+            window.open(`https://wa.me/${phoneNumber}?text=${encodedMsg}`, '_blank');
+        }
+
+        async function sendWhatsAppReminders() {
+            const allCustomers = await db.customers.toArray();
+            const creditUsers = allCustomers.filter(c => c.creditAmount > 0);
+            if (creditUsers.length === 0) return alert("No customers with a credit balance found.");
+            if (!confirm(`This will open WhatsApp for each of the ${creditUsers.length} credit users. Continue?`)) return;
+            for (let user of creditUsers) {
+                sendIndividualWhatsApp(user.name, user.phone, user.creditAmount);
+            }
+            alert("WhatsApp threads opened.");
+        }
+
+        function setBillingShop(shop) {
+            currentBillShop = shop;
+            document.getElementById('bill-shop-ruwan').className = shop === 'ruwancell' ? 'flex-1 rounded bg-blue-700 text-white text-xs font-bold py-2 uppercase' : 'flex-1 rounded bg-gray-200 text-gray-600 text-xs font-bold py-2 uppercase';
+            document.getElementById('bill-shop-tharu').className = shop === 'tharusalon' ? 'flex-1 rounded bg-pink-600 text-white text-xs font-bold py-2 uppercase' : 'flex-1 rounded bg-gray-200 text-gray-600 text-xs font-bold py-2 uppercase';
+            document.getElementById('bill-search').value = '';
+            document.getElementById('search-results').style.display = 'none';
+        }
+
+        function setInventoryShop(shop) {
+            currentInvShop = shop;
+            document.getElementById('inv-shop-ruwan').className = shop === 'ruwancell' ? 'flex-1 rounded bg-blue-700 text-white text-xs font-bold py-2 uppercase' : 'flex-1 rounded bg-gray-200 text-gray-600 text-xs font-bold py-2 uppercase';
+            document.getElementById('inv-shop-tharu').className = shop === 'tharusalon' ? 'flex-1 rounded bg-pink-600 text-white text-xs font-bold py-2 uppercase' : 'flex-1 rounded bg-gray-200 text-gray-600 text-xs font-bold py-2 uppercase';
+            renderInventory();
+        }
+
+        async function connectAndSaveBluetooth() {
+            const status = document.getElementById('printer-status');
+            try {
+                status.innerText = "Searching...";
+                bleDevice = await navigator.bluetooth.requestDevice({
+                    filters: [{ services: ['000018f0-0000-1000-8000-00805f9b34fb'] }, { namePrefix: 'RP' }, { namePrefix: 'MTP' }],
+                    optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
+                });
+                localStorage.setItem('persistent_printer_name', bleDevice.name);
+                const server = await bleDevice.gatt.connect();
+                const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+                bleCharacteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
+                status.innerText = "Status: Connected to " + bleDevice.name;
+            } catch (err) { status.innerText = "Error: " + err.message; }
+        }
+
+        function forgetPrinter() {
+            localStorage.removeItem('persistent_printer_name');
+            document.getElementById('printer-status').innerText = "Status: Not Connected";
+            alert("Saved printer forgotten.");
+        }
+
+        async function directPrint() {
+            const custName = document.getElementById('bill-customer').value || "General Customer";
+            if(cart.length === 0) return alert("Cart is empty");
+            const extraDiscount = parseFloat(document.getElementById('bill-extra-discount').value) || 0;
+            const subtotal = cart.reduce((sum, i) => sum + (paymentMode === 'credit' ? (i.price * i.qty) : i.total), 0) - extraDiscount;
+            const discountProfit = (paymentMode === 'credit' ? 0 : cart.reduce((sum, i) => sum + (i.discount || 0), 0)) + extraDiscount;
+            const gavePriceInput = prompt("Amount Paid (Gave Price):", subtotal);
+            if(gavePriceInput === null) return;
+            const gavePrice = parseFloat(gavePriceInput) || 0;
+            const balance = gavePrice - subtotal;
+            
+            const salesData = await db.sales.toArray();
+            const lastSale = salesData.length > 0 ? salesData[salesData.length - 1] : null;
+            const nextId = lastSale ? (lastSale.id + 1) : 1;
+            
+            const savedInvoice = localStorage.getItem('editingInvoiceNo');
+            const invoiceNo = savedInvoice || nextId.toString().padStart(3, '0');
+            const savedDate = localStorage.getItem('editingDate');
+            const saleDate = savedDate ? parseInt(savedDate) : new Date().getTime();
+
+            for(let i of cart) {
+                if(i.code && i.code !== 'unlisted') {
+                    const invItem = await db.inventory.get(i.code);
+                    if(invItem) await db.inventory.update(i.code, {stock: invItem.stock - i.qty});
+                }
+            }
+            let creditAmount = 0;
+            if(paymentMode === 'credit') {
+                const customer = await db.customers.get(custName);
+                if(customer) {
+                    creditAmount = (customer.creditAmount || 0) + subtotal;
+                    await db.customers.update(custName, { creditAmount, status: 'credit' });
+                }
+            }
+            
+            const saleData = {
+                invoiceNo: String(invoiceNo),
+                customer: String(custName),
+                total: Number(subtotal),
+                profit: Number(discountProfit),
+                gavePrice: Number(gavePrice),
+                balance: Number(balance),
+                date: Number(saleDate),
+                items: JSON.parse(JSON.stringify(cart)),
+                type: String(paymentMode),
+                remainingCredit: Number(creditAmount),
+                extraDiscount: Number(extraDiscount),
+                status: 'Completed'
+            };
+            
+            try {
+                await db.sales.add(saleData);
+            } catch (err) {
+                console.error("Failed to save sale to history:", err);
+                alert("ERROR: Bill could not be saved to History. Please check console.");
+                return;
+            }
+            
+            localStorage.removeItem('editingInvoiceNo');
+            localStorage.removeItem('editingDate');
+
+            const printWindow = window.open('', '_blank', 'width=600,height=800');
+            if(printWindow) {
+                generateBillPopup(saleData, printWindow);
+            } else {
+                alert("⚠️ Print Preview blocked by your browser! Please allow popups.");
+            }
+            
+            clearCart();
+        }
+
+        async function closeBillWithoutPrint() {
+            const custName = document.getElementById('bill-customer').value || "General Customer";
+            if(cart.length === 0) return alert("Cart is empty");
+            const extraDiscount = parseFloat(document.getElementById('bill-extra-discount').value) || 0;
+            const subtotal = cart.reduce((sum, i) => sum + (paymentMode === 'credit' ? (i.price * i.qty) : i.total), 0) - extraDiscount;
+            const discountProfit = (paymentMode === 'credit' ? 0 : cart.reduce((sum, i) => sum + (i.discount || 0), 0)) + extraDiscount;
+            
+            const salesData = await db.sales.toArray();
+            const lastSale = salesData.length > 0 ? salesData[salesData.length - 1] : null;
+            const nextId = lastSale ? (lastSale.id + 1) : 1;
+            
+            const savedInvoice = localStorage.getItem('editingInvoiceNo');
+            const invoiceNo = savedInvoice || nextId.toString().padStart(3, '0');
+            const savedDate = localStorage.getItem('editingDate');
+            const saleDate = savedDate ? parseInt(savedDate) : new Date().getTime();
+
+            for(let i of cart) {
+                if(i.code && i.code !== 'unlisted') {
+                    const invItem = await db.inventory.get(i.code);
+                    if(invItem) await db.inventory.update(i.code, {stock: invItem.stock - i.qty});
+                }
+            }
+            
+            let creditAmount = 0;
+            if(paymentMode === 'credit') {
+                const customer = await db.customers.get(custName);
+                if(customer) {
+                    creditAmount = (customer.creditAmount || 0) + subtotal;
+                    await db.customers.update(custName, { creditAmount: creditAmount, status: 'credit' });
+                }
+            }
+            
+            const saleData = {
+                invoiceNo: String(invoiceNo),
+                customer: String(custName),
+                total: Number(subtotal),
+                profit: Number(discountProfit),
+                gavePrice: Number(subtotal),
+                balance: 0,
+                date: Number(saleDate),
+                items: JSON.parse(JSON.stringify(cart)),
+                type: String(paymentMode),
+                remainingCredit: Number(creditAmount),
+                extraDiscount: Number(extraDiscount),
+                status: 'Closed'
+            };
+
+            try {
+                await db.sales.add(saleData);
+            } catch (err) {
+                console.error("Failed to save to history:", err);
+                alert("ERROR: Bill could not be saved to History.");
+                return;
+            }
+            
+            localStorage.removeItem('editingInvoiceNo');
+            localStorage.removeItem('editingDate');
+
+            clearCart();
+            alert("Bill Closed and Saved to History.");
+        }
+
+        async function cancelBill() {
+            if(cart.length === 0) return alert("Cart is empty");
+            if(!confirm("Are you sure you want to CANCEL this bill? It will be saved to history as Canceled.")) return;
+            
+            const custName = document.getElementById('bill-customer').value || "General Customer";
+            const extraDiscount = parseFloat(document.getElementById('bill-extra-discount').value) || 0;
+            const subtotal = cart.reduce((sum, i) => sum + (paymentMode === 'credit' ? (i.price * i.qty) : i.total), 0) - extraDiscount;
+            
+            const salesData = await db.sales.toArray();
+            const lastSale = salesData.length > 0 ? salesData[salesData.length - 1] : null;
+            const nextId = lastSale ? (lastSale.id + 1) : 1;
+            
+            const savedInvoice = localStorage.getItem('editingInvoiceNo');
+            const invoiceNo = savedInvoice || nextId.toString().padStart(3, '0');
+            const savedDate = localStorage.getItem('editingDate');
+            const saleDate = savedDate ? parseInt(savedDate) : new Date().getTime();
+            
+            const saleData = {
+                invoiceNo: String(invoiceNo),
+                customer: String(custName),
+                total: Number(subtotal),
+                profit: 0,
+                gavePrice: 0,
+                balance: 0,
+                date: Number(saleDate),
+                items: JSON.parse(JSON.stringify(cart)),
+                type: String(paymentMode),
+                remainingCredit: 0,
+                extraDiscount: Number(extraDiscount),
+                status: 'Canceled'
+            };
+
+            try {
+                await db.sales.add(saleData);
+            } catch (err) {
+                console.error("Failed to save cancellation to history:", err);
+                alert("ERROR: Cancel record could not be saved to History.");
+                return;
+            }
+            
+            localStorage.removeItem('editingInvoiceNo');
+            localStorage.removeItem('editingDate');
+
+            clearCart();
+            alert("Bill Canceled and saved to history.");
+        }
+
+        function generateBillPopup(sale, passedWindow = null) {
+            const itemsHtml = (sale.items || []).map(i => {
+                const qty = i.qty || 1;
+                const price = i.price || (i.total / qty) || 0;
+                const total = i.total || 0;
+                const unitPriceAfterDiscount = total / qty;
+                const rowTotal = sale.type === 'credit' ? (price * qty) : total;
+                return `
+                <div style="margin-bottom: 8px; padding-bottom: 4px; clear: both;">
+                    <div class="print-item-name" style="text-transform: uppercase;">${i.name || 'Item'}</div>
+                    <div class="flex justify-between print-item-details">
+                        <span style="width:15%">${qty}</span>
+                        <span style="width:25%">${price.toFixed(0)}</span>
+                        <span style="width:13%; font-weight: bold;">${sale.type === 'credit' ? price.toFixed(0) : unitPriceAfterDiscount.toFixed(0)}</span>
+                        <span style="width:35%; text-align:right; font-weight: bold;">${rowTotal.toFixed(2)}</span>
+                    </div>
+                </div>`;
+            }).join('');
+            
+            const safeTotal = sale.total || 0;
+            const safeExtraDisc = sale.extraDiscount || 0;
+            const baseTotal = safeTotal + safeExtraDisc;
+            
+            let footerHtml = "";
+            if (safeExtraDisc > 0) {
+                footerHtml += `
+                    <div class="print-footer-info" style="margin-top:5px; clear: both; font-weight:bold;">
+                        <span>Subtotal:</span> <span style="text-decoration: line-through; opacity: 0.7;">Rs. ${baseTotal.toFixed(2)}</span>
+                    </div>
+                    <div class="print-total-section" style="border-top: 1px solid black; margin-top: 2px;">
+                        <span>Net Total:</span> <span>Rs. ${safeTotal.toFixed(2)}</span>
+                    </div>
+                `;
+            } else {
+                footerHtml += `
+                    <div class="print-total-section">
+                        <span>Total Amount:</span> <span>Rs. ${safeTotal.toFixed(2)}</span>
+                    </div>
+                `;
+            }
+            
+            if(sale.type === 'cash' || sale.type === 'settlement') {
+              const gavePrice = sale.gavePrice || sale.total || 0;
+              const balance = sale.balance || 0;
+              footerHtml += `
+                <div class="print-footer-info" style="margin-top:5px; clear: both;">
+                    <span>Paid Amount:</span> <span>Rs. ${gavePrice.toFixed(2)}</span>
+                </div>
+                <div class="print-footer-info" style="margin-bottom:5px;">
+                    <span>Balance:</span> <span>Rs. ${balance.toFixed(2)}</span>
+                </div>
+              `;
+            }
+            if((sale.profit || 0) > 0 && sale.type !== 'credit') {
+              footerHtml += `
+                <div style="text-align: center; margin: 15px 0; clear: both;">
+                    <div style="display: inline-block; border: 1.5px solid black; padding: 10px 20px; font-weight: bold; font-size: 17px !important;">
+                        You Saved: Rs. ${(sale.profit || 0).toFixed(2)}
+                    </div>
+                </div>`;
+            }
+            if(sale.type === 'credit' && (sale.remainingCredit || 0) > 0) {
+              footerHtml += `
+                <div style="text-align: center; margin: 15px 0; clear: both;">
+                    <div style="display: inline-block; border: 1.5px solid black; padding: 10px 20px; font-weight: bold; font-size: 18px !important;">
+                        Credit Balance: Rs. ${(sale.remainingCredit || 0).toFixed(2)}
+                    </div>
+                </div>`;
+            }
+            footerHtml += `
+                <div style="text-align: center; margin-top: 10px; border-top: 0.5px dashed #000; padding-top: 8px; clear: both;">
+                    <p class="print-footer-info" style="margin: 0; display:block;">Payment: ${(sale.type || 'cash').toUpperCase()}</p>
+                    <p class="print-footer-info" style="color: #333; margin: 2px 0; display:block;">${new Date(sale.date).toLocaleString()}</p>
+                    <div class="print-thanks-msg" style="margin-top:10px; width:100%; text-align:center;">Thank You Come Again!</div>
+                </div>
+            `;
+            const logoBase64 = localStorage.getItem('bill_logo');
+            const logoHtml = logoBase64 ? `<img src="${logoBase64}" style="max-width: 100%; height: auto; display: block; margin: 0 auto 5px auto;">` : '';
+            const printContent = `
+                <div class="receipt-border text-center">
+                    ${logoHtml}
+                    <p class="print-shop-name">RUWAN CELLULAR & SALON THARU</p>
+                    <strong>
+                        <p class="print-shop-info">MADAGALLA ROAD, DAGAMA</p>
+                        <p class="print-shop-info">077 230 1099 / 075 548 5454</p>
+                    </strong>
+                </div>
+                <div class="print-bill-details" style="margin-bottom: 5px;">
+                    <div class="flex justify-between"><span>Inv: ${sale.invoiceNo}</span><span>Customer: ${sale.customer}</span></div>
+                </div>
+                <div id="items-square-container">
+                    <div class="flex justify-between mb-1 print-table-head" style="border-bottom: 1px solid black;">
+                        <span style="width:10%">Qty</span>
+                        <span style="width:15%">Price</span>
+                        <span style="width:15%">Net</span>
+                        <span style="width:15%; text-align:right">Total</span>
+                    </div>
+                    ${itemsHtml}
+                </div>
+                <div class="text-right mt-1">${footerHtml}</div>
+            `;
+            
+            const printWindow = passedWindow || window.open('', '_blank', 'width=600,height=800');
+            if (printWindow) {
+                printWindow.document.open();
+                printWindow.document.write(`<html><head><title>Bill Preview</title><style>body { width: 80mm; font-family: 'Courier New', Courier, monospace; margin: 0; padding: 5px; text-align: center; background: #eee; } #bill-wrap { width: 80mm; text-align: left; background: white; padding: 4mm; margin: 0 auto; box-shadow: 0 0 5px rgba(0,0,0,0.1); } .print-btn { width: 100%; background: #2563eb; color: white; border: none; padding: 15px; font-weight: bold; border-radius: 5px; margin-bottom: 20px; cursor: pointer; font-size: 16px; } .receipt-border { border:1.5px solid black; border-radius: 8px; padding: 5px; margin-bottom: 5px; text-align: center; line-height:1.1; } #items-square-container { border-top: 1.5px solid black; border-bottom: 1.5px solid black; padding: 5px 0; margin: 5px 0; min-height: 20px; clear: both; } .flex { display: flex; } .justify-between { justify-content: space-between; } .text-right { text-align: right; } .print-shop-name { font-size: 22px !important; font-weight: bold; margin: 0; } .print-shop-info { font-size: 15px !important; margin: 0; padding: 0; line-height: 1.2; } .print-bill-details { font-size: 15px !important; } .print-table-head { font-size: 16px !important; font-weight: bold; } .print-item-name { font-size: 19px !important; font-weight: bold; margin: 0; } .print-item-details { font-size: 15px !important; } .print-total-section { font-size: 22px !important; font-weight: bold; border-top: 2px solid black; padding-top: 5px; margin-top: 5px; clear: both !important; width: 100%; display: flex; justify-content: space-between; white-space: nowrap; } .print-footer-info { font-size: 15px !important; display: flex; justify-content: space-between; white-space: nowrap; } .print-thanks-msg { font-size: 18px !important; font-weight: bold; } @media print { .print-btn { display: none !important; } @page { margin: 0; size: 80mm auto; } body { background: white; padding: 0; } #bill-wrap { box-shadow: none; width: 100%; } }</style></head><body><button class=\"print-btn\" onclick=\"window.print();\">PRINT BILL NOW</button><div id=\"bill-wrap\">${printContent}</div></body></html>`);
+                printWindow.document.close();
+                printWindow.focus();
+            } else {
+                alert("⚠️ Print Preview blocked! Please allow popups for this site.");
+            }
+        }
+
+        async function clearCart() {
+            cart = []; 
+            await db.draftCart.clear(); 
+            document.getElementById('bill-extra-discount').value = 0;
+            renderCart(); 
+            updateLivePreview();
+        }
+
+        async function searchItems(query) {
+            const resultsDiv = document.getElementById('search-results');
+            let allItems = await db.inventory.toArray();
+            let shopItems = allItems.filter(i => i.shop === currentBillShop || !i.shop); 
+            let items;
+            if (query.length < 1) { 
+                items = shopItems.slice(0, 20); 
+            } else { 
+                items = shopItems.filter(item => {
+                    const codeStr = String(item.code);
+                    const rawCode = item.rawCode || codeStr.replace((item.shop || currentBillShop) + '_', '');
+                    return item.name.toLowerCase().includes(query.toLowerCase()) || rawCode.toLowerCase().includes(query.toLowerCase());
+                });
+            }
+            if (items.length > 0) {
+                resultsDiv.innerHTML = items.map(i => {
+                    const codeStr = String(i.code);
+                    const displayCode = i.rawCode || codeStr.replace((i.shop || currentBillShop) + '_', '');
+                    return `
+                    <div onclick="selectSearchResult('${codeStr}', '${i.name}')">
+                        <span class="font-bold">${i.name}</span> <span class="text-xs text-gray-500">(${displayCode})</span>
+                        <p class="text-xs">Price: LKR ${i.price} | Stock: ${i.stock}</p>
+                    </div>
+                `}).join('');
+                resultsDiv.style.display = 'block';
+            } else { resultsDiv.style.display = 'none'; }
+        }
+
+        async function selectSearchResult(code, name) {
+            const qtyInput = prompt(`Enter Quantity for ${name}:`, "1");
+            if (qtyInput === null) { document.getElementById('search-results').style.display = 'none'; return; }
+            const qty = parseFloat(qtyInput);
+            if (isNaN(qty) || qty <= 0) { alert("Invalid quantity"); return; }
+            document.getElementById('bill-code').value = code;
+            document.getElementById('bill-name').value = name;
+            document.getElementById('bill-qty').value = qty;
+            await addToCart();
+            document.getElementById('bill-search').value = '';
+            document.getElementById('search-results').style.display = 'none';
+        }
+
+        async function addToCart() {
+            const code = document.getElementById('bill-code').value;
+            const qty = parseFloat(document.getElementById('bill-qty').value);
+            const item = await db.inventory.get(code);
+            if(item) {
+                if(item.stock - qty < 10) { alert(`⚠️ Low Stock: ${item.name} is under 10!`); }
+                const itemDiscount = item.discount || 0;
+                const totalDiscount = itemDiscount * qty;
+                const cartItem = { 
+                    ...item, 
+                    qty: qty, 
+                    discount: totalDiscount, 
+                    total: (item.price * qty) - totalDiscount 
+                };
+                cart.push(cartItem);
+                await db.draftCart.add(cartItem);
+                renderCart();
+                resetBillingInputs();
+                updateLivePreview();
+            }
+        }
+
+        function resetBillingInputs() {
+            document.getElementById('bill-code').value = '';
+            document.getElementById('bill-name').value = '';
+            document.getElementById('bill-qty').value = '1';
+        }
+
+        async function removeFromCart(index) {
+            const itemToRemove = cart[index];
+            if(itemToRemove.id) { await db.draftCart.delete(itemToRemove.id); }
+            cart.splice(index, 1); 
+            renderCart(); 
+            updateLivePreview();
+        }
+
+        async function addUnlistedItem() {
+            const name = prompt("Item Name:");
+            const price = parseFloat(prompt("Price (LKR):"));
+            if(name && !isNaN(price)) {
+                const cartItem = { name: name.toUpperCase(), price, qty: 1, wholesale: price, total: price, discount: 0 };
+                cart.push(cartItem); 
+                await db.draftCart.add(cartItem);
+                renderCart(); 
+                updateLivePreview();
+            }
+        }
+
+        function renderCart() {
+            const extraDiscount = parseFloat(document.getElementById('bill-extra-discount').value) || 0;
+            let total = cart.reduce((sum, i) => sum + (paymentMode === 'credit' ? (i.price * i.qty) : i.total), 0) - extraDiscount;
+            document.getElementById('cart-items').innerHTML = cart.map((i, index) => {
+                const rowTotal = paymentMode === 'credit' ? (i.price * i.qty) : i.total;
+                return `
+                <div class="flex justify-between border-b py-1">
+                    <span>${i.name} x ${i.qty} ${(i.discount > 0 && paymentMode !== 'credit') ? '<small class="text-blue-600">(-'+i.discount.toFixed(2)+')</small>' : ''}</span>
+                    <div class="flex gap-2">
+                        <span>${rowTotal.toFixed(2)}</span>
+                        <button onclick="removeFromCart(${index})" class="text-red-500 font-bold">✕</button>
+                    </div>
+                </div>
+            `}).join('');
+            document.getElementById('cart-total').innerText = total.toFixed(2);
+        }
+
+        async function updateLivePreview() {
+            const extraDiscount = parseFloat(document.getElementById('bill-extra-discount').value) || 0;
+            const subtotal = cart.reduce((sum, i) => sum + (paymentMode === 'credit' ? (i.price * i.qty) : i.total), 0) - extraDiscount;
+            const baseSubtotal = cart.reduce((sum, i) => sum + (paymentMode === 'credit' ? (i.price * i.qty) : i.total), 0);
+            const discountProfit = (paymentMode === 'credit' ? 0 : cart.reduce((sum, i) => sum + (i.discount || 0), 0)) + extraDiscount;
+            const custName = document.getElementById('bill-customer').value || "General Customer";
+            document.getElementById('print-items').innerHTML = cart.map(i => {
+                const unitPriceAfterDiscount = i.total / i.qty;
+                const rowTotal = paymentMode === 'credit' ? (i.price * i.qty) : i.total;
+                return `
+                <div style="margin-bottom: 8px; padding-bottom: 4px; clear: both;">
+                    <div class="print-item-name" style="text-transform: uppercase;">${i.name}</div>
+                    <div class="flex justify-between print-item-details">
+                        <span style="width:15%">${i.qty}</span>
+                        <span style="width:25%">${i.price.toFixed(0)}</span>
+                        <span style="width:13%; font-weight: bold;">${paymentMode === 'credit' ? i.price.toFixed(0) : unitPriceAfterDiscount.toFixed(0)}</span>
+                        <span style="width:35%; text-align:right; font-weight: bold;">${rowTotal.toFixed(2)}</span>
+                    </div>
+                </div>
+            `}).join('');
+            let totalHtml = "";
+            if (extraDiscount > 0) {
+                totalHtml += `
+                    <div class="print-footer-info" style="margin-top:5px; clear: both; font-weight:bold;">
+                        <span>Subtotal:</span> <span style="text-decoration: line-through; opacity: 0.7;">Rs. ${baseSubtotal.toFixed(2)}</span>
+                    </div>
+                    <div class="print-total-section" style="border-top: 1px solid black; margin-top: 2px;">
+                        <span>Net Total:</span> <span>Rs. ${subtotal.toFixed(2)}</span>
+                    </div>
+                `;
+            } else {
+                totalHtml += `
+                    <div class="print-total-section">
+                        <span>Total Amount:</span> <span>Rs. ${subtotal.toFixed(2)}</span>
+                    </div>
+                `;
+            }
+            if(discountProfit > 0 && paymentMode !== 'credit') {
+              totalHtml += `
+                <div style="text-align: center; margin: 15px 0; clear: both;">
+                    <div style="display: inline-block; border: 1.5px solid black; padding: 10px 20px; font-weight: bold; font-size: 17px;">
+                        You Saved: Rs. ${discountProfit.toFixed(2)}
+                    </div>
+                </div>`;
+            }
+            if(paymentMode === 'credit' && custName !== 'General Customer') {
+                const customer = await db.customers.get(custName);
+                if(customer) {
+                    const currentCredit = (customer.creditAmount || 0) + subtotal;
+                    totalHtml += `
+                    <div style="text-align: center; margin: 15px 0; clear: both;">
+                        <div style="display: inline-block; border: 1.5px solid black; padding: 10px 20px; font-weight: bold; font-size: 18px;">
+                            Credit Balance: Rs. ${currentCredit.toFixed(2)}
+                        </div>
+                    </div>`;
+                }
+            }
+            totalHtml += `
+                <div style="text-align: center; margin-top: 10px; border-top: 0.5px dashed #000; padding-top: 8px; clear: both;">
+                    <p class="print-footer-info" style="margin: 0; display:block;">Payment: ${paymentMode.toUpperCase()}</p>
+                    <p class="print-footer-info" style="color: #333; margin: 2px 0; display:block;">${new Date().toLocaleString()}</p>
+                    <div class="print-thanks-msg" style="margin-top:10px; width:100%; text-align:center;">Thank You Come Again!</div>
+                </div>
+            `;
+            document.getElementById('print-totals').innerHTML = totalHtml;
+            renderCart();
+        }
+
+        function setPaymentMode(mode) {
+            paymentMode = mode;
+            document.getElementById('btn-cash').className = mode === 'cash' ? 'flex-1 rounded bg-green-700 text-white text-xs font-bold' : 'flex-1 rounded bg-gray-200 text-xs font-bold';
+            document.getElementById('btn-credit').className = mode === 'credit' ? 'flex-1 rounded bg-red-700 text-white text-xs font-bold' : 'flex-1 rounded bg-gray-200 text-xs font-bold';
+            updateLivePreview();
+        }
+
+        function handleLogoUpload(input) {
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) { localStorage.setItem('bill_logo', e.target.result); loadLogo(); };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function loadLogo() {
+            const logoBase64 = localStorage.getItem('bill_logo');
+            const imgElement = document.getElementById('receipt-logo');
+            if (logoBase64) { imgElement.src = logoBase64; imgElement.style.display = 'block'; }
+            else { imgElement.style.display = 'none'; }
+        }
+
+        function removeLogo() { localStorage.removeItem('bill_logo'); loadLogo(); }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('sidebar-overlay').classList.toggle('hidden');
+        }
+
+        function showTab(id) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.getElementById('tab-' + id).classList.add('active');
+            if(id === 'inventory') renderInventory();
+            if(id === 'customers') renderCustomers();
+            if(id === 'billing') updateCustomerDropdown();
+            if(id === 'reports') calculateReports();
+            if(id === 'history') renderFullHistory();
+            if(id === 'serial') document.getElementById('serial-time').value = new Date().toLocaleString();
+        }
+
+        async function saveNewItem() {
+            const shop = document.getElementById('add-shop').value;
+            const rawCode = String(document.getElementById('add-code').value).trim();
+            if(!rawCode) return alert("Code is required");
+            
+            // Generate a combined code behind the scenes
+            const code = rawCode.startsWith(shop + '_') ? rawCode : shop + '_' + rawCode;
+
+            const item = {
+                shop: shop, 
+                code: code,
+                rawCode: rawCode.startsWith(shop + '_') ? rawCode.replace(shop + '_', '') : rawCode,
+                name: document.getElementById('add-name').value.toUpperCase(),
+                price: parseFloat(document.getElementById('add-price').value) || 0,
+                discount: parseFloat(document.getElementById('add-discount').value) || 0,
+                wholesale: parseFloat(document.getElementById('add-wholesale').value) || 0,
+                stock: parseFloat(document.getElementById('add-stock').value) || 0
+            };
+            
+            await db.inventory.put(item);
+            alert("Saved!");
+            showTab('inventory');
+            
+            // Clear form inputs
+            document.getElementById('add-code').value = '';
+            document.getElementById('add-name').value = '';
+            document.getElementById('add-price').value = '';
+            document.getElementById('add-discount').value = '';
+            document.getElementById('add-wholesale').value = '';
+            document.getElementById('add-stock').value = '';
+        }
+
+        async function renderInventory() {
+            const searchTerm = document.getElementById('inventory-search-input')?.value.toLowerCase() || "";
+            let items = await db.inventory.toArray();
+            items = items.filter(i => i.shop === currentInvShop || !i.shop);
+            if(searchTerm) {
+                items = items.filter(i => {
+                    const codeStr = String(i.code);
+                    const rawCode = i.rawCode || codeStr.replace((i.shop || currentInvShop) + '_', '');
+                    return i.name.toLowerCase().includes(searchTerm) || rawCode.toLowerCase().includes(searchTerm);
+                });
+            }
+            document.getElementById('inventory-list').innerHTML = items.map(i => {
+                const lowStockClass = i.stock < 10 ? 'border-red-500 bg-red-50' : 'border-slate-200 bg-white';
+                const codeStr = String(i.code);
+                const displayCode = i.rawCode || codeStr.replace((i.shop || currentInvShop) + '_', '');
+                return `
+                <div class="p-4 rounded-xl shadow-sm border-2 ${lowStockClass} transition-all hover:shadow-md">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex-1">
+                            <input type="text" onchange="updateItemName('${codeStr}', this.value)" value="${i.name}" 
+                                class="w-full font-bold text-slate-800 text-lg leading-tight uppercase bg-transparent border-b border-dashed border-slate-300 focus:border-blue-500 outline-none">
+                            <p class="text-xs font-mono text-slate-500 mt-1">Code: ${displayCode}</p>
+                        </div>
+                        <div class="flex flex-col gap-1 items-end">
+                            <div class="px-2 py-1 rounded text-[10px] font-bold uppercase ${i.stock < 10 ? 'bg-red-200 text-red-800' : 'bg-green-100 text-green-800'}">
+                                ${i.stock < 10 ? 'Low Stock' : 'In Stock'}
+                            </div>
+                            <button onclick="deleteItem('${codeStr}')" class="text-[10px] text-red-500 font-bold uppercase hover:underline">🗑️ Delete Product</button>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 mt-4">
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">📦 Current Stock</label>
+                            <input type="number" step="0.001" inputmode="decimal" onchange="updateStock('${codeStr}', this.value)" value="${i.stock}" 
+                                class="w-full p-2 border border-slate-300 rounded-lg text-sm font-bold bg-slate-50 focus:ring-2 focus:ring-blue-400 outline-none">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">💰 Selling Price</label>
+                            <input type="number" inputmode="decimal" onchange="updatePrice('${codeStr}', this.value)" value="${i.price}" 
+                                class="w-full p-2 border border-slate-300 rounded-lg text-sm font-bold text-blue-700 bg-slate-50 focus:ring-2 focus:ring-blue-400 outline-none">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">🏢 Wholesale Cost</label>
+                            <input type="number" inputmode="decimal" onchange="updateWholesale('${codeStr}', this.value)" value="${i.wholesale || 0}" 
+                                class="w-full p-2 border border-slate-300 rounded-lg text-sm font-bold text-emerald-700 bg-slate-50 focus:ring-2 focus:ring-blue-400 outline-none">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">🏷️ Disc / Unit</label>
+                            <input type="number" inputmode="decimal" onchange="updateDiscount('${codeStr}', this.value)" value="${i.discount || 0}" 
+                                class="w-full p-2 border border-slate-300 rounded-lg text-sm font-bold text-red-600 bg-slate-50 focus:ring-2 focus:ring-blue-400 outline-none">
+                        </div>
+                    </div>
+                </div>
+            `}).join('');
+        }
+
+        window.renderInventory = renderInventory; 
+
+        async function updateItemName(code, val) { await db.inventory.update(code, {name: val.toUpperCase()}); }
+        async function updateStock(code, val) { await db.inventory.update(code, {stock: parseFloat(val)}); }
+        async function updatePrice(code, val) { await db.inventory.update(code, {price: parseFloat(val)}); }
+        async function updateWholesale(code, val) { await db.inventory.update(code, {wholesale: parseFloat(val)}); }
+        async function updateDiscount(code, val) { await db.inventory.update(code, {discount: parseFloat(val)}); }
+        
+        async function deleteItem(code) {
+            if(confirm("Are you sure you want to PERMANENTLY DELETE this product?")) {
+                await db.inventory.delete(code);
+                renderInventory();
+            }
+        }
+
+        async function saveCustomer() {
+            const name = document.getElementById('cust-name').value;
+            if(!name) return alert("Name is required");
+            await db.customers.add({ name, phone: document.getElementById('cust-phone').value, status: 'cash', creditAmount: 0 });
+            document.getElementById('cust-name').value = '';
+            document.getElementById('cust-phone').value = '';
+            renderCustomers();
+        }
+
+        async function renderCustomers() {
+            const searchTerm = document.getElementById('customer-search-input')?.value.toLowerCase() || "";
+            let list = await db.customers.toArray();
+            if(searchTerm) {
+                list = list.filter(c => 
+                    c.name.toLowerCase().includes(searchTerm) || 
+                    (c.phone && c.phone.includes(searchTerm))
+                );
+            }
+            document.getElementById('customer-list').innerHTML = list.map(c => `
+                <div class="bg-white p-3 rounded flex justify-between shadow items-center border border-slate-200">
+                    <div>
+                        <p class="font-bold text-slate-800">${c.name} <small class="text-gray-400 font-normal ml-2">${c.phone || ''}</small></p>
+                        <div class="flex items-center gap-1 mt-1">
+                            <span class="text-xs font-bold uppercase ${c.status === 'credit' ? 'text-red-500' : 'text-green-500'}">${c.status}:</span>
+                            <input type="number" step="0.01" inputmode="decimal" onfocus="this.oldValue = this.value" onchange="updateCustomerCredit('${c.name}', this.value, this)" value="${c.creditAmount.toFixed(2)}" 
+                                class="w-24 p-1 border rounded text-xs font-bold focus:ring-1 focus:ring-blue-400">
+                            <span class="text-[10px] text-gray-400 font-bold">LKR</span>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        ${c.creditAmount > 0 ? `
+                            <button onclick="sendIndividualWhatsApp('${c.name}', '${c.phone}', ${c.creditAmount})" class="p-2 bg-green-50 text-green-600 rounded-lg border border-green-200 hover:bg-green-100" title="Send Reminder">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                                  <path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z"/>
+                                </svg>
+                            </button>
+                        ` : ''}
+                        <button onclick="settleCredit('${c.name}')" class="text-xs bg-blue-100 p-2 rounded border border-blue-500 font-bold hover:bg-blue-200">Settle</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function updateCustomerCredit(name, val, inputElem) {
+            const pass = prompt("Enter Password to change credit balance:");
+            if(pass !== ACCESS_PASSWORD) {
+                alert("Incorrect Password!");
+                inputElem.value = inputElem.oldValue;
+                return;
+            }
+            const amount = parseFloat(val) || 0;
+            await db.customers.update(name, { 
+                creditAmount: amount, 
+                status: amount > 0 ? 'credit' : 'cash' 
+            });
+            renderCustomers();
+        }
+
+        async function settleCredit(name) {
+            const pass = prompt("Enter Password to Settle:");
+            if(pass !== ACCESS_PASSWORD) return alert("Incorrect Password!");
+
+            const amount = parseFloat(prompt(`Enter amount paid by ${name}:`));
+            if(isNaN(amount) || amount <= 0) return;
+            const c = await db.customers.get(name);
+            const newAmount = Math.max(0, c.creditAmount - amount);
+            await db.customers.update(name, { creditAmount: newAmount, status: newAmount <= 0 ? 'cash' : 'credit' });
+            
+            const saleData = {
+                date: Number(new Date().getTime()),
+                total: Number(amount),
+                profit: 0,
+                customer: String(name),
+                type: 'settlement',
+                items: [{name: 'Settlement', total: Number(amount), qty: 1, price: Number(amount)}],
+                status: 'Settled',
+                invoiceNo: "SETTLE",
+                gavePrice: Number(amount),
+                balance: 0,
+                remainingCredit: Number(newAmount),
+                extraDiscount: 0
+            };
+            try {
+                await db.sales.add(saleData);
+            } catch (err) {
+                console.error("Error saving settlement:", err);
+            }
+            renderCustomers();
+        }
+
+        // Ensuring we safely preserve selected customer dropdown choice
+        async function updateCustomerDropdown() {
+            const select = document.getElementById('bill-customer');
+            const currentVal = select.value;
+            const list = await db.customers.toArray();
+            select.innerHTML = '<option value="General Customer">General Customer</option>' + list.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+            if (currentVal && select.querySelector(`option[value="${currentVal}"]`)) {
+                select.value = currentVal;
+            }
+        }
+        window.updateCustomerDropdown = updateCustomerDropdown;
+
+        // --- ROBUST HISTORY RENDERER ---
+        async function renderFullHistory() {
+            try {
+                const searchQ = (document.getElementById('history-search-input')?.value || "").toLowerCase();
+                let sales = await db.sales.toArray();
+                
+                // Sort descending by date
+                sales.sort((a, b) => b.date - a.date);
+                
+                if (searchQ) {
+                    sales = sales.filter(s => 
+                        (s.invoiceNo && String(s.invoiceNo).toLowerCase().includes(searchQ)) || 
+                        (s.customer && String(s.customer).toLowerCase().includes(searchQ))
+                    );
+                }
+
+                if (sales.length === 0) {
+                    document.getElementById('full-history-list').innerHTML = `<p class="text-center text-gray-500 py-4 font-bold">No history records found.</p>`;
+                    return;
+                }
+
+                document.getElementById('full-history-list').innerHTML = sales.map(s => {
+                    const statusColor = s.status === 'Completed' ? 'bg-green-100 text-green-700 border-green-200' : 
+                                      (s.status === 'Canceled' ? 'bg-red-100 text-red-700 border-red-200' : 
+                                      'bg-orange-100 text-orange-700 border-orange-200');
+                                      
+                    const typeColor = s.type === 'credit' ? 'text-red-600' : (s.type === 'settlement' ? 'text-blue-600' : 'text-green-600');
+                    
+                    return `
+                    <div class="p-4 border rounded-xl bg-white shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all hover:shadow-md ${s.status === 'Canceled' ? 'opacity-75' : ''}">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="font-bold text-lg text-slate-800">INV: ${s.invoiceNo || 'N/A'}</span>
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded border ${statusColor}">${s.status || 'Done'}</span>
+                            </div>
+                            <p class="font-semibold text-gray-700">👤 ${s.customer}</p>
+                            <p class="text-xs text-gray-500 font-mono mt-1">🕒 ${new Date(s.date).toLocaleString()}</p>
+                        </div>
+                        <div class="flex flex-col items-end gap-2">
+                            <p class="text-lg font-black ${typeColor}">LKR ${Number(s.total).toFixed(2)} <span class="text-xs font-bold uppercase ml-1">(${s.type})</span></p>
+                            <div class="flex flex-wrap gap-2 justify-end">
+                                <button onclick='reprintSale(${s.id})' class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-lg text-xs font-bold uppercase hover:bg-indigo-100 transition-colors">🖨️ View</button>
+                                <button onclick='editSale(${s.id})' class="bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1.5 rounded-lg text-xs font-bold uppercase hover:bg-blue-100 transition-colors">✏️ Edit</button>
+                                <button onclick='deleteSale(${s.id})' class="bg-red-50 text-red-700 border border-red-200 px-3 py-1.5 rounded-lg text-xs font-bold uppercase hover:bg-red-100 transition-colors">🗑️ Del</button>
+                            </div>
+                        </div>
+                    </div>
+                `}).join('');
+            } catch (err) {
+                console.error("Error loading history:", err);
+                document.getElementById('full-history-list').innerHTML = `<p class="text-red-500 text-center py-4">Error loading history. Please check console.</p>`;
+            }
+        }
+        window.renderFullHistory = renderFullHistory;
+
+        window.reprintSale = async function(id) {
+            id = Number(id); // Ensure correct primary key type
+            const printWindow = window.open('', '_blank', 'width=600,height=800');
+            if (!printWindow) {
+                alert("⚠️ Print Preview blocked! Please allow popups for this site to view bills.");
+                return;
+            }
+            printWindow.document.write("<h3 style='font-family:sans-serif; padding: 20px;'>Loading bill preview...</h3>");
+            
+            try {
+                const sale = await db.sales.get(id);
+                if(sale) {
+                    generateBillPopup(sale, printWindow);
+                } else {
+                    printWindow.close();
+                    alert("Bill not found in database.");
+                }
+            } catch(e) {
+                printWindow.close();
+                alert("Error viewing bill: " + e);
+            }
+        }
+
+        window.deleteSale = async function(id) {
+            id = Number(id); // Ensure correct primary key type
+            if(!confirm("Are you sure? This will delete the record PERMANENTLY. Stock will NOT be restored automatically unless you choose 'Edit' instead.")) return;
+            await db.sales.delete(id);
+            renderFullHistory();
+            calculateReports();
+        }
+
+        window.editSale = async function(id) {
+            id = Number(id); // Ensure correct primary key type
+            const sale = await db.sales.get(id);
+            if(!sale) return;
+            
+            if(localStorage.getItem('editingInvoiceNo')) {
+                if(!confirm("You are currently editing INV: " + localStorage.getItem('editingInvoiceNo') + ". If you edit another bill now, the first bill will be PERMANENTLY LOST. Continue?")) return;
+            } else {
+                if(!confirm("Restore items to billing screen? Original record will be temporarily removed. STOCK WILL BE RESTORED back to inventory until you save again.")) return;
+            }
+            
+            // Restore stock and credit
+            if (sale.status !== 'Canceled') {
+                for(let i of sale.items) {
+                    if(i.code && i.code !== 'unlisted') {
+                        const invItem = await db.inventory.get(i.code);
+                        if(invItem) await db.inventory.update(i.code, {stock: Number(invItem.stock) + Number(i.qty)});
+                    }
+                }
+                if(sale.type === 'credit') {
+                    const customer = await db.customers.get(sale.customer);
+                    if(customer) {
+                        const restoredCredit = Math.max(0, (customer.creditAmount || 0) - sale.total);
+                        await db.customers.update(sale.customer, { creditAmount: restoredCredit, status: restoredCredit > 0 ? 'credit' : 'cash' });
+                    }
+                }
+            }
+
+            cart = [];
+            await db.draftCart.clear();
+            const restoredItems = JSON.parse(JSON.stringify(sale.items || []));
+            for(let item of restoredItems) {
+                delete item.id; 
+                item.qty = item.qty || 1;
+                item.price = item.price || (item.total / item.qty) || 0;
+                item.total = item.total || 0;
+                item.discount = item.discount || 0;
+                const draftId = await db.draftCart.add(item);
+                item.id = draftId;
+                cart.push(item);
+            }
+            
+            await updateCustomerDropdown();
+            
+            document.getElementById('bill-customer').value = sale.customer || "General Customer";
+            document.getElementById('bill-extra-discount').value = sale.extraDiscount || 0;
+            setPaymentMode(sale.type || 'cash');
+            
+            localStorage.setItem('editingInvoiceNo', sale.invoiceNo || '');
+            localStorage.setItem('editingDate', sale.date.toString());
+            
+            await db.sales.delete(id);
+            renderCart();
+            updateLivePreview();
+            showTab('billing');
+        }
+
+        let html5QrCode;
+        async function startScanner() {
+            document.getElementById('scanner-container').classList.remove('hidden');
+            html5QrCode = new Html5Qrcode("reader");
+            try {
+                await html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, async (decodedText) => {
+                    let item = await db.inventory.get(currentBillShop + '_' + decodedText);
+                    if(!item) {
+                        item = await db.inventory.get(decodedText); 
+                    }
+                    if(item) { stopScanner(); selectSearchResult(item.code, item.name); }
+                });
+            } catch (err) { stopScanner(); }
+        }
+
+        function stopScanner() { if(html5QrCode) html5QrCode.stop().then(() => document.getElementById('scanner-container').classList.add('hidden')); }
+
+        function setReportFilter(range) { 
+            currentFilter = range; 
+            ['day', 'week', 'month'].forEach(f => {
+                const btn = document.getElementById('filter-' + f);
+                if(f === range) {
+                    btn.classList.replace('bg-blue-100', 'bg-blue-600');
+                    btn.classList.replace('text-blue-800', 'text-white');
+                } else {
+                    btn.classList.replace('bg-blue-600', 'bg-blue-100');
+                    btn.classList.replace('text-white', 'text-blue-800');
+                }
+            });
+            calculateReports(); 
+        }
+
+        let barChartInstance = null;
+        let pieChartInstance = null;
+
+        // Bulletproof Reports avoiding problematic indexed queries
+        async function calculateReports() {
+            const now = new Date();
+            let startTime = currentFilter === 'day' ? new Date().setHours(0,0,0,0) : (currentFilter === 'week' ? new Date(now.setDate(now.getDate() - 7)).getTime() : new Date(now.setMonth(now.getMonth() - 1)).getTime());
+            
+            let allDbSales = await db.sales.toArray();
+            const allSales = allDbSales.filter(s => s.date >= startTime);
+            const validSales = allSales.filter(s => s.status !== 'Canceled');
+
+            document.getElementById('rep-profit').innerText = `LKR ${validSales.reduce((s, a) => s + (a.profit || 0), 0).toFixed(2)}`;
+            document.getElementById('rep-sales').innerText = `LKR ${validSales.reduce((s, a) => s + (a.total || 0), 0).toFixed(2)}`;
+            const creditIssued = validSales.filter(s => s.type === 'credit').reduce((s, a) => s + (Number(a.total) || 0), 0);
+            const creditSettled = validSales.filter(s => s.type === 'settlement').reduce((s, a) => s + (Number(a.total) || 0), 0);
+            const cashSales = validSales.filter(s => s.type === 'cash').reduce((s, a) => s + (Number(a.total) || 0), 0);
+            
+            if (barChartInstance) barChartInstance.destroy();
+            if (pieChartInstance) pieChartInstance.destroy();
+            const chartLabels = ['Credit Issued', 'Credit Settled', 'Direct Cash'];
+            const chartData = [creditIssued, creditSettled, cashSales];
+            const barCtx = document.getElementById('reportBarChart').getContext('2d');
+            barChartInstance = new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels: chartLabels,
+                    datasets: [{
+                        label: 'LKR Amount',
+                        data: chartData,
+                        backgroundColor: ['#ef4444', '#10b981', '#3b82f6'],
+                        borderRadius: 5
+                    }]
+                },
+                options: { 
+                    responsive: true, 
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+            const pieCtx = document.getElementById('reportPieChart').getContext('2d');
+            pieChartInstance = new Chart(pieCtx, {
+                type: 'pie',
+                data: {
+                    labels: chartLabels,
+                    datasets: [{
+                        data: chartData,
+                        backgroundColor: ['#ef4444', '#10b981', '#3b82f6']
+                    }]
+                },
+                options: { responsive: true }
+            });
+            
+            // Sort reports manually to guarantee ordering
+            document.getElementById('bill-history-list').innerHTML = allSales.sort((a,b) => b.date - a.date).map(s => {
+                const statusFlag = s.status === 'Canceled' ? '<span class="text-red-500 font-bold ml-1">(CANCELED)</span>' : '';
+                return `
+                <div class="border p-2 rounded text-sm bg-white shadow-sm mb-1 ${s.status === 'Canceled' ? 'opacity-70 bg-red-50' : ''}">
+                    <div class="flex justify-between font-bold"><span>${s.customer} ${statusFlag}</span><span class="${s.status === 'Canceled' ? 'text-red-700' : 'text-blue-700'}">${Number(s.total).toFixed(2)}</span></div>
+                    <div class="flex justify-between text-[10px] text-gray-500"><span>${new Date(s.date).toLocaleString()}</span><span class="text-green-600">Profit: ${Number(s.profit).toFixed(2)}</span></div>
+                </div>
+            `}).join('');
+        }
+
+        function printSerialRecord() {
+            const owner = document.getElementById('serial-owner').value;
+            const item = document.getElementById('serial-item').value;
+            const time = document.getElementById('serial-time').value;
+            const photoInput = document.getElementById('serial-photo');
+            if(!owner || !item) return alert("Please enter Owner and Item names");
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const photoSrc = e.target.result;
+                const printWindow = window.open('', '_blank', 'width=600,height=800');
+                const logoBase64 = localStorage.getItem('bill_logo');
+                const logoHtml = logoBase64 ? `<img src="${logoBase64}" style="max-width: 150px; margin: 0 auto;">` : '';
+                printWindow.document.write(`
+                    <html><head><title>Repair Record</title>
+                    <style>
+                        body { font-family: 'Courier New', Courier, monospace; width: 80mm; padding: 10px; }
+                        .header { text-align: center; border-bottom: 2px solid black; padding-bottom: 10px; }
+                        .content { margin-top: 15px; }
+                        .field { margin-bottom: 10px; font-size: 14px; }
+                        .label { font-weight: bold; text-transform: uppercase; display: block; font-size: 11px; color: #555; }
+                        .val { font-size: 18px; font-weight: bold; }
+                        img.preview { max-width: 100%; border: 1px solid #ccc; margin-top: 10px; }
+                        .footer { margin-top: 20px; text-align: center; border-top: 1px dashed black; padding-top: 10px; font-size: 12px; }
+                    </style></head>
+                    <body onload="window.print()">
+                        <div class="header">
+                            ${logoHtml}
+                            <h3>REPAIR SERVICE</h3>
+                            <p>RUWAN CELLULAR & SALON THARU</p>
+                        </div>
+                        <div class="content">
+                            <div class="field"><span class="label">Owner Name:</span><span class="val">${owner}</span></div>
+                            <div class="field"><span class="label">Item/Model:</span><span class="val">${item}</span></div>
+                            <div class="field"><span class="label">Date & Time:</span><span class="val">${time}</span></div>
+                            ${photoSrc ? `<img src="${photoSrc}" class="preview">` : ''}
+                        </div>
+                        <div class="footer">
+                            <p>Thank you for choosing us!</p>
+                            <p style="font-weight: bold; font-size: 13px; margin-top: 8px;">Contact: 077 230 1099 / 075 548 5454</p>
+                        </div>
+                    </body></html>
+                `);
+                printWindow.document.close();
+            };
+            if(photoInput.files[0]) {
+                reader.readAsDataURL(photoInput.files[0]);
+            } else {
+                reader.onload({ target: { result: '' } });
+            }
+        }
+
+        async function init() {
+            const savedCart = await db.draftCart.toArray();
+            if(savedCart.length > 0) { cart = savedCart; renderCart(); }
+            loadLogo(); updateCustomerDropdown(); updateLivePreview();
+            const savedName = localStorage.getItem('persistent_printer_name');
+            if(savedName) { document.getElementById('printer-status').innerText = "Status: Saved Printer - " + savedName; }
+        }
+        init();
+    </script>
+</body>
+</html>
