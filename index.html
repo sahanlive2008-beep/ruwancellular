@@ -18,8 +18,8 @@
                 position: absolute; 
                 left: 0; 
                 top: 0; 
-                width: 80mm !important;
-                max-width: 80mm !important;
+                width: 100% !important;
+                max-width: 100% !important;
                 padding: 2mm !important; 
                 margin: 0; 
                 border: none; 
@@ -27,15 +27,15 @@
                 overflow: hidden !important;
             }
 
-            .print-shop-name { font-size: 22px !important; font-weight: bold; text-align: center; }
-            .print-shop-info { font-size: 14px !important; margin: 0; padding: 0; line-height: 1.2; text-align: center; }
-            .print-bill-details { font-size: 14px !important; margin-bottom: 5px; }
-            .print-table-head { font-size: 15px !important; font-weight: bold; border-bottom: 1px solid black; }
-            .print-item-name { font-size: 16px !important; font-weight: bold; white-space: normal; }
-            .print-item-details { font-size: 15px !important; }
+            .print-shop-name { font-size: 24px !important; font-weight: bold; text-align: center; }
+            .print-shop-info { font-size: 16px !important; margin: 0; padding: 0; line-height: 1.2; text-align: center; }
+            .print-bill-details { font-size: 16px !important; margin-bottom: 5px; }
+            .print-table-head { font-size: 17px !important; font-weight: bold; border-bottom: 1px solid black; }
+            .print-item-name { font-size: 18px !important; font-weight: bold; white-space: normal; }
+            .print-item-details { font-size: 17px !important; }
             
             .print-total-section { 
-                font-size: 18px !important; 
+                font-size: 20px !important; 
                 font-weight: bold; 
                 border-top: 1.5px solid black; 
                 padding-top: 5px; 
@@ -47,11 +47,11 @@
                 align-items: center !important;
             }
             
-            .print-footer-info { font-size: 15px !important; display: flex; justify-content: space-between; }
-            .print-thanks-msg { font-size: 18px !important; font-weight: bold; text-align: center; margin-top: 10px; }
+            .print-footer-info { font-size: 16px !important; display: flex; justify-content: space-between; }
+            .print-thanks-msg { font-size: 20px !important; font-weight: bold; text-align: center; margin-top: 10px; }
 
-            @page { size: 80mm auto; margin: 0; }
-            body { width: 80mm; margin: 0; padding: 0; }
+            @page { size: auto; margin: 0; }
+            body { width: 100% !important; margin: 0; padding: 0; }
         }
 
         .tab-content { display: none; }
@@ -210,7 +210,7 @@
 
             <div id="live-preview-container">
                 <p class="text-xs font-bold text-blue-900 mb-2">LIVE PRINT PREVIEW (80mm):</p>
-                <div id="print-area" class="text-black bg-white p-2 mx-auto" style="font-size: 15px; font-family: 'Courier New', Courier, monospace; width: 80mm; border: 1px solid #ccc; box-sizing: border-box;">
+                <div id="print-area" class="text-black bg-white p-2 mx-auto" style="font-size: 15px; font-family: 'Courier New', Courier, monospace; width: 100%; max-width: 320px; border: 1px solid #ccc; box-sizing: border-box;">
                     <div class="receipt-border text-center">
                         <img id="receipt-logo" src="" alt="Logo">
                         <p class="print-shop-name">RUWAN CELLULAR & SALON THARU</p>
@@ -862,7 +862,7 @@
                     <div class="flex justify-between print-item-details">
                         <span style="width:15%">${qty}</span>
                         <span style="width:25%">${price.toFixed(0)}</span>
-                        <span style="width:15%; font-weight: bold;">${sale.type === 'credit' ? price.toFixed(0) : unitPriceAfterDiscount.toFixed(0)}</span>
+                        <span style="width:13%; font-weight: bold;">${sale.type === 'credit' ? price.toFixed(0) : unitPriceAfterDiscount.toFixed(0)}</span>
                         <span style="width:35%; text-align:right; font-weight: bold;">${rowTotal.toFixed(2)}</span>
                     </div>
                 </div>`;
@@ -878,7 +878,7 @@
                     <div class="print-footer-info" style="margin-top:5px; clear: both; font-weight:bold;">
                         <span>Subtotal:</span> <span style="text-decoration: line-through; opacity: 0.7;">Rs. ${baseTotal.toFixed(2)}</span>
                     </div>
-                    <div class="print-total-section">
+                    <div class="print-total-section" style="border-top: 1px solid black; margin-top: 2px;">
                         <span>Net Total:</span> <span>Rs. ${safeTotal.toFixed(2)}</span>
                     </div>
                 `;
@@ -905,7 +905,7 @@
             if((sale.profit || 0) > 0 && sale.type !== 'credit') {
               footerHtml += `
                 <div style="text-align: center; margin: 15px 0; clear: both;">
-                    <div style="display: inline-block; border: 1.5px solid black; padding: 10px 20px; font-weight: bold; font-size: 16px !important;">
+                    <div style="display: inline-block; border: 1.5px solid black; padding: 10px 20px; font-weight: bold; font-size: 17px !important;">
                         You Saved: Rs. ${(sale.profit || 0).toFixed(2)}
                     </div>
                 </div>`;
@@ -913,7 +913,7 @@
             if(sale.type === 'credit' && (sale.remainingCredit || 0) > 0) {
               footerHtml += `
                 <div style="text-align: center; margin: 15px 0; clear: both;">
-                    <div style="display: inline-block; border: 1.5px solid black; padding: 10px 20px; font-weight: bold; font-size: 16px !important;">
+                    <div style="display: inline-block; border: 1.5px solid black; padding: 10px 20px; font-weight: bold; font-size: 18px !important;">
                         Credit Balance: Rs. ${(sale.remainingCredit || 0).toFixed(2)}
                     </div>
                 </div>`;
@@ -922,7 +922,7 @@
                 <div style="text-align: center; margin-top: 10px; border-top: 0.5px dashed #000; padding-top: 8px; clear: both;">
                     <p class="print-footer-info" style="margin: 0; display:block;">Payment: ${(sale.type || 'cash').toUpperCase()}</p>
                     <p class="print-footer-info" style="color: #333; margin: 2px 0; display:block;">${new Date(sale.date).toLocaleString()}</p>
-                    <div class="print-thanks-msg">Thank You Come Again!</div>
+                    <div class="print-thanks-msg" style="margin-top:10px; width:100%; text-align:center;">Thank You Come Again!</div>
                 </div>
             `;
             const logoBase64 = localStorage.getItem('bill_logo');
@@ -936,11 +936,11 @@
                         <p class="print-shop-info">077 230 1099 / 075 548 5454</p>
                     </strong>
                 </div>
-                <div class="print-bill-details">
+                <div class="print-bill-details" style="margin-bottom: 5px;">
                     <div class="flex justify-between"><span>Inv: ${sale.invoiceNo}</span><span>Customer: ${sale.customer}</span></div>
                 </div>
                 <div id="items-square-container">
-                    <div class="flex justify-between mb-1 print-table-head">
+                    <div class="flex justify-between mb-1 print-table-head" style="border-bottom: 1px solid black;">
                         <span style="width:10%">Qty</span>
                         <span style="width:15%">Price</span>
                         <span style="width:15%">Net</span>
@@ -955,26 +955,26 @@
             if (printWindow) {
                 printWindow.document.open();
                 printWindow.document.write(`<html><head><title>Bill Preview</title><style>
-                    body { width: 80mm; font-family: 'Courier New', Courier, monospace; margin: 0; padding: 5px; text-align: center; background: #eee; } 
-                    #bill-wrap { width: 80mm; text-align: left; background: white; padding: 2mm; margin: 0 auto; box-shadow: 0 0 5px rgba(0,0,0,0.1); box-sizing: border-box; overflow: hidden; } 
-                    .print-btn { width: 100%; background: #2563eb; color: white; border: none; padding: 15px; font-weight: bold; border-radius: 5px; margin-bottom: 20px; cursor: pointer; font-size: 16px; } 
+                    body { width: 100%; font-family: 'Courier New', Courier, monospace; margin: 0; padding: 5px; text-align: center; background: #eee; } 
+                    #bill-wrap { width: 100%; max-width: 320px; text-align: left; background: white; padding: 4mm; margin: 0 auto; box-shadow: 0 0 5px rgba(0,0,0,0.1); box-sizing: border-box; overflow: hidden; } 
+                    .print-btn { width: 100%; max-width: 320px; background: #2563eb; color: white; border: none; padding: 15px; font-weight: bold; border-radius: 5px; margin: 0 auto 20px auto; display: block; cursor: pointer; font-size: 16px; } 
                     .receipt-border { border:1.5px solid black; border-radius: 8px; padding: 5px; margin-bottom: 5px; text-align: center; line-height:1.1; } 
                     #items-square-container { border-top: 1.5px solid black; border-bottom: 1.5px solid black; padding: 5px 0; margin: 5px 0; min-height: 20px; clear: both; width: 100%; } 
                     .flex { display: flex; } .justify-between { justify-content: space-between; } .text-right { text-align: right; } 
-                    .print-shop-name { font-size: 20px !important; font-weight: bold; margin: 0; text-align: center; } 
-                    .print-shop-info { font-size: 14px !important; margin: 0; padding: 0; line-height: 1.2; text-align: center; } 
-                    .print-bill-details { font-size: 14px !important; margin-bottom: 5px; } 
-                    .print-table-head { font-size: 14px !important; font-weight: bold; border-bottom: 1px solid black; } 
-                    .print-item-name { font-size: 16px !important; font-weight: bold; margin: 0; white-space: normal; } 
-                    .print-item-details { font-size: 14px !important; } 
-                    .print-total-section { font-size: 18px !important; font-weight: bold; border-top: 1.5px solid black; padding-top: 5px; margin-top: 5px; clear: both !important; width: 100%; display: flex; justify-content: space-between; } 
-                    .print-footer-info { font-size: 14px !important; display: flex; justify-content: space-between; } 
-                    .print-thanks-msg { font-size: 16px !important; font-weight: bold; text-align: center; margin-top: 10px; } 
+                    .print-shop-name { font-size: 24px !important; font-weight: bold; margin: 0; text-align: center; } 
+                    .print-shop-info { font-size: 16px !important; margin: 0; padding: 0; line-height: 1.2; text-align: center; } 
+                    .print-bill-details { font-size: 16px !important; margin-bottom: 5px; } 
+                    .print-table-head { font-size: 16px !important; font-weight: bold; border-bottom: 1px solid black; } 
+                    .print-item-name { font-size: 18px !important; font-weight: bold; margin: 0; white-space: normal; } 
+                    .print-item-details { font-size: 16px !important; } 
+                    .print-total-section { font-size: 20px !important; font-weight: bold; border-top: 1.5px solid black; padding-top: 5px; margin-top: 5px; clear: both !important; width: 100%; display: flex; justify-content: space-between; } 
+                    .print-footer-info { font-size: 16px !important; display: flex; justify-content: space-between; } 
+                    .print-thanks-msg { font-size: 18px !important; font-weight: bold; text-align: center; margin-top: 10px; } 
                     @media print { 
                         .print-btn { display: none !important; } 
-                        @page { margin: 0; size: 80mm auto; } 
-                        body { background: white; padding: 0; width: 80mm !important; max-width: 80mm !important; margin: 0; } 
-                        #bill-wrap { box-shadow: none; width: 100% !important; padding: 0 2mm !important; overflow: hidden; box-sizing: border-box; } 
+                        @page { margin: 0; size: auto; } 
+                        body { background: white; padding: 0; width: 100% !important; max-width: 100% !important; margin: 0; } 
+                        #bill-wrap { box-shadow: none; width: 100% !important; max-width: 100% !important; padding: 0 2mm !important; overflow: hidden; box-sizing: border-box; } 
                     }
                 </style></head><body><button class=\"print-btn\" onclick=\"window.print();\">PRINT BILL NOW</button><div id=\"bill-wrap\">${printContent}</div></body></html>`);
                 printWindow.document.close();
@@ -1113,7 +1113,7 @@
                     <div class="flex justify-between print-item-details">
                         <span style="width:15%">${i.qty}</span>
                         <span style="width:25%">${i.price.toFixed(0)}</span>
-                        <span style="width:15%; font-weight: bold;">${paymentMode === 'credit' ? i.price.toFixed(0) : unitPriceAfterDiscount.toFixed(0)}</span>
+                        <span style="width:13%; font-weight: bold;">${paymentMode === 'credit' ? i.price.toFixed(0) : unitPriceAfterDiscount.toFixed(0)}</span>
                         <span style="width:35%; text-align:right; font-weight: bold;">${rowTotal.toFixed(2)}</span>
                     </div>
                 </div>
@@ -1124,7 +1124,7 @@
                     <div class="print-footer-info" style="margin-top:5px; clear: both; font-weight:bold;">
                         <span>Subtotal:</span> <span style="text-decoration: line-through; opacity: 0.7;">Rs. ${baseSubtotal.toFixed(2)}</span>
                     </div>
-                    <div class="print-total-section">
+                    <div class="print-total-section" style="border-top: 1px solid black; margin-top: 2px;">
                         <span>Net Total:</span> <span>Rs. ${subtotal.toFixed(2)}</span>
                     </div>
                 `;
@@ -1138,7 +1138,7 @@
             if(discountProfit > 0 && paymentMode !== 'credit') {
               totalHtml += `
                 <div style="text-align: center; margin: 15px 0; clear: both;">
-                    <div style="display: inline-block; border: 1.5px solid black; padding: 10px 20px; font-weight: bold; font-size: 16px;">
+                    <div style="display: inline-block; border: 1.5px solid black; padding: 10px 20px; font-weight: bold; font-size: 17px;">
                         You Saved: Rs. ${discountProfit.toFixed(2)}
                     </div>
                 </div>`;
@@ -1149,7 +1149,7 @@
                     const currentCredit = (customer.creditAmount || 0) + subtotal;
                     totalHtml += `
                     <div style="text-align: center; margin: 15px 0; clear: both;">
-                        <div style="display: inline-block; border: 1.5px solid black; padding: 10px 20px; font-weight: bold; font-size: 16px;">
+                        <div style="display: inline-block; border: 1.5px solid black; padding: 10px 20px; font-weight: bold; font-size: 18px;">
                             Credit Balance: Rs. ${currentCredit.toFixed(2)}
                         </div>
                     </div>`;
@@ -1159,7 +1159,7 @@
                 <div style="text-align: center; margin-top: 10px; border-top: 0.5px dashed #000; padding-top: 8px; clear: both;">
                     <p class="print-footer-info" style="margin: 0; display:block;">Payment: ${paymentMode.toUpperCase()}</p>
                     <p class="print-footer-info" style="color: #333; margin: 2px 0; display:block;">${new Date().toLocaleString()}</p>
-                    <div class="print-thanks-msg">Thank You Come Again!</div>
+                    <div class="print-thanks-msg" style="margin-top:10px; width:100%; text-align:center;">Thank You Come Again!</div>
                 </div>
             `;
             document.getElementById('print-totals').innerHTML = totalHtml;
