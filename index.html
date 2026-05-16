@@ -18,9 +18,9 @@
                 position: absolute; 
                 left: 0; 
                 top: 0; 
-                width: 100% !important;
-                max-width: 100% !important;
-                padding: 2mm !important; 
+                width: 78mm !important;
+                max-width: 78mm !important;
+                padding: 0 !important; 
                 margin: 0; 
                 border: none; 
                 box-sizing: border-box !important;
@@ -50,8 +50,8 @@
             .print-footer-info { font-size: 16px !important; display: flex; justify-content: space-between; }
             .print-thanks-msg { font-size: 20px !important; font-weight: bold; text-align: center; margin-top: 10px; }
 
-            @page { size: auto; margin: 0; }
-            body { width: 100% !important; margin: 0; padding: 0; }
+            @page { size: 80mm auto; margin: 0; }
+            body { width: 80mm !important; margin: 0; padding: 0; }
         }
 
         .tab-content { display: none; }
@@ -73,6 +73,7 @@
             background: white !important;
             overflow: hidden !important;
             box-sizing: border-box;
+            width: 78mm;
         }
 
         #items-square-container {
@@ -210,7 +211,7 @@
 
             <div id="live-preview-container">
                 <p class="text-xs font-bold text-blue-900 mb-2">LIVE PRINT PREVIEW (80mm):</p>
-                <div id="print-area" class="text-black bg-white p-2 mx-auto" style="font-size: 15px; font-family: 'Courier New', Courier, monospace; width: 100%; max-width: 320px; border: 1px solid #ccc; box-sizing: border-box;">
+                <div id="print-area" class="text-black bg-white p-2 mx-auto" style="font-size: 15px; font-family: 'Courier New', Courier, monospace; border: 1px solid #ccc; box-sizing: border-box;">
                     <div class="receipt-border text-center">
                         <img id="receipt-logo" src="" alt="Logo">
                         <p class="print-shop-name">RUWAN CELLULAR & SALON THARU</p>
@@ -955,9 +956,9 @@
             if (printWindow) {
                 printWindow.document.open();
                 printWindow.document.write(`<html><head><title>Bill Preview</title><style>
-                    body { width: 100%; font-family: 'Courier New', Courier, monospace; margin: 0; padding: 5px; text-align: center; background: #eee; } 
-                    #bill-wrap { width: 100%; max-width: 320px; text-align: left; background: white; padding: 4mm; margin: 0 auto; box-shadow: 0 0 5px rgba(0,0,0,0.1); box-sizing: border-box; overflow: hidden; } 
-                    .print-btn { width: 100%; max-width: 320px; background: #2563eb; color: white; border: none; padding: 15px; font-weight: bold; border-radius: 5px; margin: 0 auto 20px auto; display: block; cursor: pointer; font-size: 16px; } 
+                    body { width: 78mm; font-family: 'Courier New', Courier, monospace; margin: 0; padding: 0; text-align: left; background: white; color: black; } 
+                    #bill-wrap { width: 78mm; box-sizing: border-box; overflow: hidden; padding: 2mm; margin: 0 auto; } 
+                    .print-btn { width: 100%; background: #2563eb; color: white; border: none; padding: 15px; font-weight: bold; border-radius: 5px; margin: 10px 0; display: block; cursor: pointer; font-size: 16px; } 
                     .receipt-border { border:1.5px solid black; border-radius: 8px; padding: 5px; margin-bottom: 5px; text-align: center; line-height:1.1; } 
                     #items-square-container { border-top: 1.5px solid black; border-bottom: 1.5px solid black; padding: 5px 0; margin: 5px 0; min-height: 20px; clear: both; width: 100%; } 
                     .flex { display: flex; } .justify-between { justify-content: space-between; } .text-right { text-align: right; } 
@@ -972,9 +973,9 @@
                     .print-thanks-msg { font-size: 18px !important; font-weight: bold; text-align: center; margin-top: 10px; } 
                     @media print { 
                         .print-btn { display: none !important; } 
-                        @page { margin: 0; size: auto; } 
-                        body { background: white; padding: 0; width: 100% !important; max-width: 100% !important; margin: 0; } 
-                        #bill-wrap { box-shadow: none; width: 100% !important; max-width: 100% !important; padding: 0 2mm !important; overflow: hidden; box-sizing: border-box; } 
+                        @page { margin: 0; size: 80mm auto; } 
+                        body { width: 78mm !important; margin: 0; padding: 0; } 
+                        #bill-wrap { width: 78mm !important; padding: 0 !important; } 
                     }
                 </style></head><body><button class=\"print-btn\" onclick=\"window.print();\">PRINT BILL NOW</button><div id=\"bill-wrap\">${printContent}</div></body></html>`);
                 printWindow.document.close();
