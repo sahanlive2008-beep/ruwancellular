@@ -1167,7 +1167,7 @@
         }
         
         window.closePasswordModal = function(isSubmit) {
-            document.getElementById('password-modal').classList.add('hidden');
+            document.getElementById('password-modal-input').classList.add('hidden');
             if(passwordPromiseResolve) {
                 passwordPromiseResolve(isSubmit ? document.getElementById('password-modal-input').value : null);
                 passwordPromiseResolve = null;
@@ -1231,17 +1231,20 @@
             }
             
             // Hide/Show sidebar elements
+            const hasFullAccess = Date.now() < parseInt(localStorage.getItem('cashier_full_access_expiry') || '0');
+            const isEffectivelyOwner = role === 'owner' || (role === 'cashier' && hasFullAccess);
+
             const restrictedTabs = ['nav-inventory', 'nav-add-items', 'nav-customers', 'nav-history', 'nav-reports', 'nav-printer', 'nav-cloud', 'nav-warranty'];
             restrictedTabs.forEach(id => {
                 const el = document.getElementById(id);
-                if(el) el.style.display = role === 'owner' ? 'block' : 'none';
+                if(el) el.style.display = isEffectivelyOwner ? 'block' : 'none';
             });
 
             // Restrict views
             if (role === 'cashier') {
                 const activeTab = document.querySelector('.tab-content.active')?.id;
                 const allowed = ['tab-billing', 'tab-serial', 'tab-profile', 'tab-warranty']; 
-                if (!allowed.includes(activeTab)) {
+                if (!isEffectivelyOwner && !allowed.includes(activeTab)) {
                     showTab('billing');
                 }
                 renderCashierReport();
@@ -2022,7 +2025,8 @@
         window.toggleSidebar = toggleSidebar;
 
         function showTab(id) {
-            if (currentRole === 'cashier' && !['billing', 'serial', 'profile', 'warranty'].includes(id)) {
+            const hasFullAccess = Date.now() < parseInt(localStorage.getItem('cashier_full_access_expiry') || '0');
+            if (currentRole === 'cashier' && !hasFullAccess && !['billing', 'serial', 'profile', 'warranty'].includes(id)) {
                 alert("Access Denied for Cashier Profile!");
                 return;
             }
@@ -2081,7 +2085,8 @@
         window.saveNewItem = saveNewItem;
 
         async function renderInventory() {
-            if (currentRole === 'cashier') return; // Double protection
+            const hasFullAccess = Date.now() < parseInt(localStorage.getItem('cashier_full_access_expiry') || '0');
+            if (currentRole === 'cashier' && !hasFullAccess) return; // Double protection
 
             const searchTerm = document.getElementById('inventory-search-input')?.value.toLowerCase() || "";
             let items = await db.inventory.toArray();
@@ -2709,6 +2714,11 @@
         window.calculateReports = calculateReports;
 
         async function init() {
+            // --- 48 HOUR FULL ACCESS LOGIC ---
+            if (!localStorage.getItem('cashier_full_access_expiry')) {
+                localStorage.setItem('cashier_full_access_expiry', Date.now() + (48 * 60 * 60 * 1000));
+            }
+            
             const savedRole = localStorage.getItem('app_role') || 'owner';
             
             // Temporarily bypass strict initialization constraint for Dev switch behavior logic
