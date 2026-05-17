@@ -10,7 +10,14 @@
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
     <style>
+        /* Base Dark Theme Overrides for Scrollbars */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
         @media print {
             body * { visibility: hidden; height: 0; margin: 0; padding: 0; }
             #print-area, #print-area * { visibility: visible; height: auto; }
@@ -25,14 +32,16 @@
                 border: none; 
                 box-sizing: border-box !important;
                 overflow: hidden !important;
+                background: white !important;
+                color: black !important;
             }
 
-            .print-shop-name { font-size: 24px !important; font-weight: bold; text-align: center; }
-            .print-shop-info { font-size: 16px !important; margin: 0; padding: 0; line-height: 1.2; text-align: center; }
-            .print-bill-details { font-size: 16px !important; margin-bottom: 5px; }
-            .print-table-head { font-size: 17px !important; font-weight: bold; border-bottom: 1px solid black; }
-            .print-item-name { font-size: 18px !important; font-weight: bold; white-space: normal; }
-            .print-item-details { font-size: 17px !important; }
+            .print-shop-name { font-size: 24px !important; font-weight: bold; text-align: center; color: black !important; }
+            .print-shop-info { font-size: 16px !important; margin: 0; padding: 0; line-height: 1.2; text-align: center; color: black !important; }
+            .print-bill-details { font-size: 16px !important; margin-bottom: 5px; color: black !important; }
+            .print-table-head { font-size: 17px !important; font-weight: bold; border-bottom: 1px solid black; color: black !important; }
+            .print-item-name { font-size: 18px !important; font-weight: bold; white-space: normal; color: black !important; }
+            .print-item-details { font-size: 17px !important; color: black !important; }
             
             .print-total-section { 
                 font-size: 20px !important; 
@@ -45,24 +54,27 @@
                 display: flex !important;
                 justify-content: space-between !important;
                 align-items: center !important;
+                color: black !important;
             }
             
-            .print-footer-info { font-size: 16px !important; display: flex; justify-content: space-between; }
-            .print-thanks-msg { font-size: 20px !important; font-weight: bold; text-align: center; margin-top: 10px; }
+            .print-footer-info { font-size: 16px !important; display: flex; justify-content: space-between; color: black !important; }
+            .print-thanks-msg { font-size: 20px !important; font-weight: bold; text-align: center; margin-top: 10px; color: black !important; }
 
             @page { size: 80mm auto; margin: 0; }
-            body { width: 80mm !important; margin: 0; padding: 0; }
+            body { width: 80mm !important; margin: 0; padding: 0; background: white !important; }
         }
 
         .tab-content { display: none; }
-        .tab-content.active { display: block; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
         .receipt-border { border: 2px solid black; border-radius: 10px; padding: 5px; margin-bottom: 5px; line-height: 1.2; text-align: center; }
-        #live-preview-container { border: 2px dashed #3b82f6; background: white; margin-top: 20px; padding: 10px; }
+        #live-preview-container { border: 2px dashed #3b82f6; background: #0f172a; margin-top: 20px; padding: 10px; border-radius: 8px; }
         #sidebar { transition: transform 0.3s ease-in-out; transform: translateX(-100%); }
         #sidebar.open { transform: translateX(0); }
-        .search-results { max-height: 200px; overflow-y: auto; border: 1px solid #ddd; display: none; }
-        .search-results div { padding: 8px; cursor: pointer; border-bottom: 1px solid #eee; }
-        .search-results div:hover { background-color: #f3f4f6; }
+        .search-results { max-height: 200px; overflow-y: auto; display: none; }
+        .search-results div { padding: 8px; cursor: pointer; border-bottom: 1px solid #334155; }
+        .search-results div:hover { background-color: #1e293b; }
         #receipt-logo { max-width: 100%; height: auto; display: none; margin: 0 auto 5px auto; }
         #reader { width: 100% !important; min-height: 250px; background: #000; }
         #reader video { object-fit: cover !important; }
@@ -71,6 +83,7 @@
             line-height: 1.4 !important; 
             padding: 10px !important; 
             background: white !important;
+            color: black !important;
             overflow: hidden !important;
             box-sizing: border-box;
             width: 78mm;
@@ -87,81 +100,265 @@
         }
 
         #temp-print-wrap { display: none; }
+
+        /* Smart Glowing Inputs & Buttons */
+        .glass-panel { background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+        .glow-focus:focus { box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); border-color: #3b82f6; outline: none; }
     </style>
 </head>
-<body class="bg-gray-100 pb-24">
+<body class="bg-slate-900 text-gray-200 pb-24 font-sans selection:bg-blue-500 selection:text-white">
 
     <div id="temp-print-wrap"></div>
 
-    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black opacity-50 z-[70] hidden"></div>
-    <nav id="sidebar" class="fixed top-0 left-0 h-full w-64 bg-slate-900 text-white z-[80] shadow-xl p-4">
-        <div class="flex justify-between items-center mb-8">
-            <h2 class="font-bold text-xl">Menu</h2>
-            <button onclick="toggleSidebar()" class="text-2xl">&times;</button>
+    <div id="password-modal" class="hidden fixed inset-0 bg-slate-950 bg-opacity-90 z-[200] flex items-center justify-center backdrop-blur-sm transition-opacity">
+        <div class="bg-slate-800 p-8 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.8)] border border-slate-600 w-80 transform transition-all scale-100">
+            <h3 id="password-modal-msg" class="text-white font-bold mb-6 text-lg text-center tracking-wide">Enter Password</h3>
+            <input type="password" id="password-modal-input" class="w-full p-4 rounded-xl bg-slate-900 text-white border border-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none text-center tracking-[0.5em] font-mono text-2xl mb-8 glow-focus shadow-inner">
+            <div class="flex justify-center gap-4">
+                <button onclick="closePasswordModal(false)" class="flex-1 py-3 bg-slate-700 hover:bg-slate-600 rounded-xl text-slate-200 font-bold transition-colors border border-slate-600">Cancel</button>
+                <button onclick="closePasswordModal(true)" class="flex-1 py-3 bg-blue-600 hover:bg-blue-500 rounded-xl text-white font-bold shadow-[0_0_15px_rgba(37,99,235,0.4)] hover:shadow-[0_0_25px_rgba(37,99,235,0.6)] transition-all border border-blue-500">Unlock</button>
+            </div>
         </div>
-        <div class="flex flex-col gap-4 font-semibold">
-            <button onclick="showTab('billing'); toggleSidebar()" class="text-left py-2 border-b border-slate-700">🛒 BILLING</button>
-            <button onclick="showTab('serial'); toggleSidebar()" class="text-left py-2 border-b border-slate-700">🆔 SERIAL RECORD</button>
-            <button onclick="showTab('inventory'); toggleSidebar()" class="text-left py-2 border-b border-slate-700">📦 STOCK</button>
-            <button onclick="showTab('add-items'); toggleSidebar()" class="text-left py-2 border-b border-slate-700">➕ ADD ITEM</button>
-            <button onclick="showTab('customers'); toggleSidebar()" class="text-left py-2 border-b border-slate-700">👥 CUSTOMERS</button>
-            <button onclick="showTab('history'); toggleSidebar()" class="text-left py-2 border-b border-slate-700">📜 HISTORY</button>
-            <button onclick="showTab('reports'); toggleSidebar()" class="text-left py-2 border-b border-slate-700">📊 REPORTS</button>
-            <button onclick="showTab('printer'); toggleSidebar()" class="text-left py-2 border-b border-slate-700">🖨️ PRINTER SETUP</button>
+    </div>
+
+    <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black opacity-60 z-[70] hidden backdrop-blur-sm"></div>
+    <nav id="sidebar" class="fixed top-0 left-0 h-full w-64 bg-slate-950 text-white z-[80] shadow-2xl p-4 border-r border-slate-800">
+        <div class="flex justify-between items-center mb-8">
+            <h2 class="font-bold text-xl tracking-wider text-blue-400">POS MENU</h2>
+            <button onclick="toggleSidebar()" class="text-3xl text-slate-400 hover:text-white transition-colors">&times;</button>
+        </div>
+        <div class="flex flex-col gap-2 font-semibold">
+            <button onclick="showTab('profile'); toggleSidebar()" id="nav-profile" class="text-left py-3 px-4 rounded-lg hover:bg-slate-800 text-yellow-400 transition-colors">👤 PROFILE MODE</button>
+            <button onclick="showTab('billing'); toggleSidebar()" id="nav-billing" class="text-left py-3 px-4 rounded-lg hover:bg-slate-800 text-slate-200 transition-colors">🛒 BILLING</button>
+            <button onclick="showTab('serial'); toggleSidebar()" id="nav-serial" class="text-left py-3 px-4 rounded-lg hover:bg-slate-800 text-slate-200 transition-colors">🆔 SERIAL RECORD</button>
+            <button onclick="showTab('inventory'); toggleSidebar()" id="nav-inventory" class="text-left py-3 px-4 rounded-lg hover:bg-slate-800 text-slate-200 transition-colors">📦 STOCK</button>
+            <button onclick="showTab('add-items'); toggleSidebar()" id="nav-add-items" class="text-left py-3 px-4 rounded-lg hover:bg-slate-800 text-slate-200 transition-colors">➕ ADD ITEM</button>
+            <button onclick="showTab('customers'); toggleSidebar()" id="nav-customers" class="text-left py-3 px-4 rounded-lg hover:bg-slate-800 text-slate-200 transition-colors">👥 CUSTOMERS</button>
+            <button onclick="showTab('history'); toggleSidebar()" id="nav-history" class="text-left py-3 px-4 rounded-lg hover:bg-slate-800 text-slate-200 transition-colors">📜 HISTORY</button>
+            <button onclick="showTab('reports'); toggleSidebar()" id="nav-reports" class="text-left py-3 px-4 rounded-lg hover:bg-slate-800 text-slate-200 transition-colors">📊 REPORTS</button>
+            <button onclick="showTab('printer'); toggleSidebar()" id="nav-printer" class="text-left py-3 px-4 rounded-lg hover:bg-slate-800 text-slate-200 transition-colors">🖨️ PRINTER SETUP</button>
+            <button onclick="showTab('cloud'); toggleSidebar()" id="nav-cloud" class="text-left py-3 px-4 rounded-lg hover:bg-slate-800 text-emerald-400 transition-colors">☁️ CLOUD SERVICE</button>
+            <button onclick="showTab('warranty'); toggleSidebar()" id="nav-warranty" class="text-left py-3 px-4 rounded-lg hover:bg-slate-800 text-orange-400 transition-colors">🛡️ WARRANTY CHECK</button>
         </div>
     </nav>
 
-    <header class="bg-slate-800 text-white p-4 sticky top-0 z-50 shadow-md flex justify-between items-center">
-        <div class="flex items-center gap-3">
-            <button onclick="toggleSidebar()" class="text-2xl">☰</button>
-            <h1 class="font-bold text-lg">RUWAN CELLULAR & SALON THARU</h1>
+    <header class="bg-slate-950 text-white p-4 sticky top-0 z-50 shadow-[0_4px_20px_rgba(0,0,0,0.5)] border-b border-slate-800 flex justify-between items-center">
+        <div class="flex items-center gap-4">
+            <button onclick="toggleSidebar()" class="text-2xl hover:text-blue-400 transition-colors">☰</button>
+            <h1 class="font-black text-lg tracking-wide bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">RUWAN CELLULAR & SALON THARU</h1>
         </div>
         <div id="scanner-container" class="hidden fixed inset-0 bg-black z-[100] flex flex-col">
             <div id="reader" style="flex: 1;"></div>
-            <button onclick="stopScanner()" class="bg-red-600 text-white w-full py-6 font-bold text-lg">Close Scanner</button>
+            <button onclick="stopScanner()" class="bg-red-600 text-white w-full py-6 font-bold text-lg tracking-widest uppercase">Close Scanner</button>
         </div>
-        <button onclick="startScanner()" class="bg-blue-500 px-3 py-1 rounded text-sm">📷 Scan</button>
+        <button onclick="startScanner()" class="bg-slate-800 hover:bg-slate-700 border border-slate-600 px-4 py-2 rounded-lg text-sm font-bold shadow-lg transition-colors flex items-center gap-2">📷 <span class="hidden sm:inline">Scan</span></button>
     </header>
 
-    <main class="p-2">
+    <main class="p-2 md:p-4 max-w-7xl mx-auto">
+        <div id="tab-profile" class="tab-content">
+            <div class="glass-panel p-6 md:p-8 rounded-2xl shadow-2xl border-t-4 border-blue-500 mb-4 text-center max-w-2xl mx-auto mt-4">
+                <h2 class="font-black text-3xl mb-6 text-white tracking-wide">👤 User Profile Selection</h2>
+                
+                <div id="role-selection-buttons" class="flex flex-col sm:flex-row gap-4 mb-6 transition-all duration-300">
+                    <button id="btn-role-owner" onclick="setRole('owner')" class="flex-1 rounded-xl bg-blue-600 text-white font-black text-lg py-5 shadow-[0_0_15px_rgba(37,99,235,0.4)] hover:bg-blue-500 hover:shadow-[0_0_25px_rgba(37,99,235,0.6)] border border-blue-500 transition-all uppercase tracking-widest">👑 Owner</button>
+                    <button id="btn-role-cashier" onclick="setRole('cashier')" class="flex-1 rounded-xl bg-slate-800 text-slate-300 font-black text-lg py-5 border border-slate-600 hover:bg-slate-700 hover:text-white transition-all uppercase tracking-widest">🧑‍💼 Cashier</button>
+                </div>
+
+                <div id="cashier-mode-header" class="hidden flex justify-between items-center bg-emerald-900/40 border border-emerald-500/50 p-4 rounded-xl mb-6 shadow-inner">
+                    <span class="font-bold text-emerald-400 tracking-wide">🧑‍💼 Cashier Mode Active</span>
+                    <button onclick="setRole('owner')" class="text-xs bg-slate-800 text-emerald-400 font-bold px-4 py-2 rounded-lg shadow border border-slate-600 hover:bg-slate-700 hover:text-white transition-colors">🔄 Switch Owner</button>
+                </div>
+
+                <div id="owner-setup-section" class="hidden mt-6 border-t border-slate-700 pt-8">
+                    <h3 class="font-bold text-2xl mb-6 text-white">Host Server (Admin)</h3>
+                    
+                    <div class="bg-slate-800/80 p-6 rounded-xl border border-slate-600 shadow-lg text-left mb-6 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>
+                        <h4 class="font-bold text-lg text-blue-400 mb-2 relative z-10">📡 Live Connection Link</h4>
+                        <p class="text-sm text-slate-400 mb-4 relative z-10">Create a temporary server to stream live inventory updates to your cashier.</p>
+                        <button onclick="startHostServer()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-lg font-bold shadow-[0_0_10px_rgba(37,99,235,0.3)] transition-colors mb-4 relative z-10">Generate Server Details</button>
+                        <div id="host-credentials" class="hidden grid grid-cols-2 gap-4 relative z-10">
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Server IP</label>
+                                <input type="text" id="host-ip" readonly class="w-full p-3 border border-blue-500/50 rounded-lg font-mono text-blue-300 font-bold bg-slate-900 text-base text-center shadow-inner">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Password</label>
+                                <input type="text" id="host-password" readonly class="w-full p-3 border border-red-500/50 rounded-lg font-mono text-red-400 font-bold bg-slate-900 text-base text-center shadow-inner">
+                            </div>
+                        </div>
+                        <p id="host-status" class="text-sm font-bold text-emerald-400 mt-4 hidden text-center animate-pulse relative z-10">🟢 Server Active & Broadcasting...</p>
+                        
+                        <div id="connected-cashiers-container" class="mt-6 pt-6 border-t border-slate-700 relative z-10">
+                            <h5 class="font-bold text-sm text-slate-300 mb-3 uppercase tracking-wider">🔌 Connected Cashiers</h5>
+                            <div id="connected-cashiers-list" class="space-y-2 max-h-32 overflow-y-auto pr-2">
+                                <p class="text-sm text-slate-500 italic">No cashiers connected yet.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-800/80 p-6 rounded-xl border border-slate-600 shadow-lg text-left relative overflow-hidden">
+                        <h4 class="font-bold text-lg text-yellow-400 mb-4 relative z-10">🔐 Change Admin Password</h4>
+                        <div class="grid grid-cols-1 gap-4 relative z-10">
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Old Password</label>
+                                <input type="password" id="change-pass-old" class="w-full p-3 rounded-lg font-mono text-lg bg-slate-900 border border-slate-600 text-white focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 outline-none glow-focus text-center tracking-widest">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">New Password</label>
+                                <input type="password" id="change-pass-new" class="w-full p-3 rounded-lg font-mono text-lg bg-slate-900 border border-slate-600 text-white focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 outline-none glow-focus text-center tracking-widest">
+                            </div>
+                            <button onclick="changeAdminPassword()" class="w-full bg-yellow-600 hover:bg-yellow-500 text-slate-900 py-3 rounded-lg font-black shadow-[0_0_10px_rgba(202,138,4,0.3)] transition-colors mt-2 uppercase tracking-wide">Update Password</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="cashier-setup-section" class="hidden mt-6 border-t border-slate-700 pt-6">
+                    <h3 class="font-bold text-2xl mb-6 text-white">Smart Cashier Profile</h3>
+                    
+                    <div class="flex flex-col md:flex-row gap-6 items-center mb-6 bg-slate-800/80 p-6 rounded-xl border border-slate-600 shadow-lg">
+                        <div class="w-32 h-32 bg-slate-900 rounded-full overflow-hidden border-4 border-emerald-500 flex-shrink-0 relative shadow-[0_0_15px_rgba(16,185,129,0.4)]">
+                            <img id="cashier-photo-preview" src="" class="w-full h-full object-cover hidden">
+                            <span id="cashier-photo-placeholder" class="text-slate-500 flex items-center justify-center h-full text-sm font-bold absolute inset-0 uppercase tracking-wider">No Photo</span>
+                        </div>
+                        <div class="flex-1 w-full space-y-4 text-left">
+                            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Cashier Name</label>
+                            <input type="text" id="cashier-name" placeholder="Enter Your Name" class="w-full p-3 bg-slate-900 border border-slate-600 text-white rounded-lg font-bold shadow-inner focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 glow-focus outline-none text-lg" onchange="saveCashierInfo()">
+                            
+                            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider block mt-2">Update Photo</label>
+                            <input type="file" id="cashier-photo-upload" accept="image/*" class="w-full text-sm text-slate-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-slate-700 file:text-white hover:file:bg-slate-600 transition-colors" onchange="handleCashierPhoto(this)">
+                        </div>
+                    </div>
+
+                    <div class="bg-indigo-900/20 p-6 rounded-xl border border-indigo-500/30 shadow-lg mb-6 text-left relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-32 h-32 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10"></div>
+                        <h4 class="font-bold text-lg text-indigo-300 mb-4 relative z-10">🔌 Connect to Admin Panel</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 relative z-10">
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Device Name</label>
+                                <input type="text" id="client-device" placeholder="E.g. Front Counter" class="w-full p-3 bg-slate-900 border rounded-lg font-mono text-sm border-slate-600 text-white focus:border-indigo-400 glow-focus outline-none">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Host IP</label>
+                                <input type="text" id="client-ip" placeholder="192.168.x.x" class="w-full p-3 bg-slate-900 border rounded-lg font-mono text-sm border-slate-600 text-white focus:border-indigo-400 glow-focus outline-none text-center">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Password</label>
+                                <input type="password" id="client-password" class="w-full p-3 bg-slate-900 border rounded-lg font-mono text-sm border-slate-600 text-white focus:border-indigo-400 glow-focus outline-none text-center tracking-widest">
+                            </div>
+                        </div>
+                        <button onclick="connectToHost()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-3 rounded-lg font-bold shadow-[0_0_10px_rgba(79,70,229,0.4)] transition-colors uppercase tracking-wider relative z-10">Connect Server</button>
+                        <p id="client-status" class="text-sm font-bold text-emerald-400 mt-4 hidden text-center animate-pulse relative z-10">🟢 Connected to Admin Panel</p>
+                    </div>
+                    
+                    <div class="bg-slate-800 p-6 rounded-xl border border-slate-600 shadow-lg text-left">
+                        <div class="flex justify-between items-center mb-6 border-b border-slate-700 pb-4">
+                            <h4 class="font-bold text-xl text-white">📊 My Daily Sales (Today)</h4>
+                            <button onclick="renderCashierReport()" class="text-xs bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg font-bold shadow border border-slate-500 transition-colors uppercase tracking-wider">🔄 Refresh Stats</button>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="bg-slate-900 p-5 rounded-xl shadow-inner border border-slate-700 flex flex-col items-center justify-center text-center">
+                                <p class="text-xs uppercase font-bold text-blue-400 tracking-wider mb-2">📱 Ruwan Cellular</p>
+                                <p id="cashier-sales-ruwan" class="font-black text-2xl text-white">LKR 0.00</p>
+                            </div>
+                            <div class="bg-slate-900 p-5 rounded-xl shadow-inner border border-slate-700 flex flex-col items-center justify-center text-center">
+                                <p class="text-xs uppercase font-bold text-pink-400 tracking-wider mb-2">💇‍♀️ Salon Tharu</p>
+                                <p id="cashier-sales-tharu" class="font-black text-2xl text-white">LKR 0.00</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-cloud" class="tab-content">
+            <div class="glass-panel p-8 rounded-2xl shadow-2xl border-t-4 border-emerald-500 mb-4 text-center max-w-lg mx-auto mt-4">
+                <h2 class="font-black text-3xl mb-2 text-white tracking-wide">☁️ Master Cloud Sync</h2>
+                <p class="text-sm text-slate-400 mb-8">Backup or Restore all system data (Inventory, Customers, History, Drafts) at once.</p>
+                
+                <div class="space-y-4">
+                    <button id="master-upload-btn" onclick="uploadAllToCloud()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-5 rounded-xl font-black shadow-[0_0_15px_rgba(37,99,235,0.3)] flex justify-center items-center gap-3 text-lg transition-all border border-blue-500 uppercase tracking-widest">
+                        ☁️ Upload All Data
+                    </button>
+                    
+                    <button id="master-download-btn" onclick="downloadAllFromCloud()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-5 rounded-xl font-black shadow-[0_0_15px_rgba(16,185,129,0.3)] flex justify-center items-center gap-3 text-lg transition-all border border-emerald-500 uppercase tracking-widest">
+                        ⬇️ Download All Data
+                    </button>
+                </div>
+                <div class="mt-8 text-xs text-slate-400 text-left bg-slate-900/50 p-4 rounded-xl border border-slate-700 shadow-inner">
+                    <strong class="text-yellow-500">⚠️ Warning:</strong> Uploading overrides the cloud with your current local data. Downloading replaces your local data with what's on the cloud. Ensure your connection is stable.
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-warranty" class="tab-content">
+            <div class="glass-panel p-6 rounded-2xl shadow-2xl border border-slate-700">
+                <h2 class="font-black text-2xl text-orange-400 mb-6 border-b border-slate-700 pb-4 tracking-wide uppercase">🛡️ Warranty Check Details</h2>
+                <div id="warranty-result-container" class="space-y-4">
+                    <p class="text-slate-500 text-sm text-center py-10 bg-slate-900/50 border-2 border-dashed border-slate-600 rounded-xl font-bold tracking-wider">Scan a bill barcode to verify warranty status.</p>
+                </div>
+                <button onclick="startScanner()" class="mt-6 w-full bg-orange-600 hover:bg-orange-500 border border-orange-500 text-white py-4 rounded-xl font-black shadow-[0_0_15px_rgba(234,88,12,0.4)] transition-all uppercase tracking-widest text-lg">📷 Scan Warranty Barcode</button>
+            </div>
+        </div>
+
         <div id="tab-serial" class="tab-content">
-            <div class="bg-white p-4 rounded shadow">
-                <h2 class="font-bold mb-4 text-blue-800 text-xl">📱 Repair / Serial Record</h2>
-                <div class="space-y-3">
+            <div class="glass-panel p-6 rounded-2xl shadow-2xl border border-slate-700">
+                <h2 class="font-black mb-6 text-white text-2xl tracking-wide uppercase border-b border-slate-700 pb-4">📱 Repair / Serial Record</h2>
+                <div class="space-y-4">
                     <div>
-                        <label class="text-xs font-bold text-gray-500 uppercase">Owner Name</label>
-                        <input type="text" id="serial-owner" placeholder="Enter Client Name" class="w-full p-2 border rounded">
+                        <label class="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1">Owner Name</label>
+                        <input type="text" id="serial-owner" placeholder="Enter Client Name" class="w-full p-3 bg-slate-900 border border-slate-600 text-white rounded-lg focus:border-blue-500 glow-focus mt-1 shadow-inner outline-none">
                     </div>
                     <div>
-                        <label class="text-xs font-bold text-gray-500 uppercase">Item / Model Name</label>
-                        <input type="text" id="serial-item" placeholder="e.g. iPhone 13 Pro" class="w-full p-2 border rounded">
+                        <label class="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1">Phone Number</label>
+                        <input type="tel" id="serial-phone" placeholder="Enter Phone Number" class="w-full p-3 bg-slate-900 border border-slate-600 text-white rounded-lg focus:border-blue-500 glow-focus mt-1 shadow-inner outline-none">
                     </div>
                     <div>
-                        <label class="text-xs font-bold text-gray-500 uppercase">Current Date & Time</label>
-                        <input type="text" id="serial-time" readonly class="w-full p-2 border bg-gray-50 text-gray-600">
+                        <label class="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1">Item / Model Name</label>
+                        <input type="text" id="serial-item" placeholder="e.g. iPhone 13 Pro" class="w-full p-3 bg-slate-900 border border-slate-600 text-white rounded-lg focus:border-blue-500 glow-focus mt-1 shadow-inner outline-none">
                     </div>
                     <div>
-                        <label class="text-xs font-bold text-gray-500 uppercase">Upload Item Photo</label>
-                        <input type="file" id="serial-photo" accept="image/*" class="w-full p-2 border text-sm">
+                        <label class="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1">Advance Paid (LKR)</label>
+                        <input type="number" id="serial-advance" inputmode="decimal" placeholder="Enter Advance Amount" class="w-full p-3 bg-slate-900 border border-slate-600 text-white rounded-lg focus:border-blue-500 glow-focus mt-1 shadow-inner outline-none text-emerald-400 font-bold">
                     </div>
-                    <div class="pt-4">
-                        <button onclick="printSerialRecord()" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold shadow-lg">🖨️ PRINT REPAIR SLIP</button>
+                    <div>
+                        <label class="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1">Note / Issues</label>
+                        <textarea id="serial-note" placeholder="Enter device issues, password, or notes..." class="w-full p-3 bg-slate-900 border border-slate-600 text-white rounded-lg focus:border-blue-500 glow-focus mt-1 shadow-inner outline-none resize-y min-h-[80px]"></textarea>
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1">Current Date & Time</label>
+                        <input type="text" id="serial-time" readonly class="w-full p-3 bg-slate-800 border border-slate-700 text-slate-400 rounded-lg mt-1 font-mono text-sm cursor-not-allowed">
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1">Upload Item Photo</label>
+                        <input type="file" id="serial-photo" accept="image/*" class="w-full p-2 bg-slate-900 border border-slate-600 text-slate-300 rounded-lg mt-1 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-slate-700 file:text-white hover:file:bg-slate-600 transition-colors cursor-pointer">
+                    </div>
+                    <div class="pt-6">
+                        <button onclick="printSerialRecord()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-xl font-black shadow-[0_0_15px_rgba(37,99,235,0.4)] transition-all uppercase tracking-widest text-lg border border-blue-500">🖨️ Print Repair Slip</button>
                     </div>
                 </div>
             </div>
         </div>
 
         <div id="tab-billing" class="tab-content active">
-            <div class="bg-white p-3 rounded shadow mb-3">
+            <div class="glass-panel p-4 md:p-5 rounded-2xl shadow-2xl mb-4 border border-slate-700">
                 
-                <div class="flex gap-2 mb-3">
-                    <button onclick="setBillingShop('ruwancell')" id="bill-shop-ruwan" class="flex-1 rounded bg-blue-700 text-white text-xs font-bold py-2 uppercase">Ruwan Cellular</button>
-                    <button onclick="setBillingShop('tharusalon')" id="bill-shop-tharu" class="flex-1 rounded bg-gray-200 text-gray-600 text-xs font-bold py-2 uppercase">Salon Tharu</button>
+                <div class="flex gap-3 mb-4">
+                    <button onclick="setBillingShop('ruwancell')" id="bill-shop-ruwan" class="flex-1 rounded-xl bg-blue-600 text-white text-sm font-black py-3 uppercase shadow-[0_0_15px_rgba(37,99,235,0.4)] border border-blue-500 transition-all tracking-wider">Ruwan Cellular</button>
+                    <button onclick="setBillingShop('tharusalon')" id="bill-shop-tharu" class="flex-1 rounded-xl bg-slate-800 text-slate-400 text-sm font-black py-3 uppercase border border-slate-600 hover:bg-slate-700 hover:text-white transition-all tracking-wider">Salon Tharu</button>
                 </div>
 
-                <div class="relative mb-3">
-                    <input type="text" id="bill-search" onclick="searchItems(this.value)" oninput="searchItems(this.value)" placeholder="Search Item Name or Code..." class="w-full p-3 border-2 border-blue-400 rounded-lg">
-                    <div id="search-results" class="search-results absolute w-full bg-white z-10 shadow-lg"></div>
+                <div class="flex gap-3 mb-5">
+                    <button onclick="setPricingMode('retail')" id="btn-retail" class="flex-1 rounded-lg bg-indigo-600 text-white text-xs font-bold py-2.5 uppercase shadow-[0_0_10px_rgba(79,70,229,0.4)] border border-indigo-500 transition-all tracking-wider">Retail Sale</button>
+                    <button onclick="setPricingMode('wholesale')" id="btn-wholesale" class="flex-1 rounded-lg bg-slate-800 text-slate-400 text-xs font-bold py-2.5 uppercase border border-slate-600 hover:bg-slate-700 hover:text-white transition-all tracking-wider">Wholesale Sale</button>
+                </div>
+
+                <div class="relative mb-5 group">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <span class="text-slate-500">🔍</span>
+                    </div>
+                    <input type="text" id="bill-search" onclick="searchItems(this.value)" oninput="searchItems(this.value)" placeholder="Search Item Name or Code..." class="w-full pl-10 p-4 bg-slate-900 border-2 border-slate-600 text-white rounded-xl font-bold shadow-inner focus:border-blue-500 focus:ring-1 focus:ring-blue-500 glow-focus outline-none text-lg transition-colors placeholder-slate-500">
+                    <div id="search-results" class="search-results absolute w-full bg-slate-800 border border-slate-600 z-[60] shadow-2xl rounded-b-xl mt-1 overflow-hidden divide-y divide-slate-700"></div>
                 </div>
                 
                 <input type="hidden" id="bill-code">
@@ -170,47 +367,59 @@
                     <input type="number" id="bill-qty" value="1" step="0.001" inputmode="decimal" class="p-2 border rounded w-full" placeholder="Qty">
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
-                    <div class="md:col-span-5">
-                        <label class="text-[10px] font-bold text-gray-500 uppercase">Customer</label>
-                        <select id="bill-customer" class="w-full p-2 border rounded border-blue-500 text-sm" onchange="updateLivePreview()">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-end bg-slate-900/50 p-4 rounded-xl border border-slate-700">
+                    <div class="lg:col-span-5">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1 block mb-1">Customer</label>
+                        <select id="bill-customer" class="w-full p-3 bg-slate-800 border border-slate-600 text-white rounded-lg text-sm font-bold shadow-inner focus:border-blue-500 glow-focus outline-none appearance-none cursor-pointer" onchange="updateLivePreview()">
                             <option value="General Customer">General Customer</option>
                         </select>
                     </div>
 
-                    <div class="md:col-span-2">
-                        <label class="text-[10px] font-bold text-gray-500 uppercase">Bill Discount</label>
-                        <input type="number" id="bill-extra-discount" value="0" oninput="updateLivePreview()" class="w-full p-2 border rounded border-red-400 text-sm font-bold text-red-600" placeholder="LKR">
+                    <div class="lg:col-span-2">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1 block mb-1">Bill Discount</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-red-500 font-bold text-xs pointer-events-none">Rs</span>
+                            <input type="number" id="bill-extra-discount" value="0" oninput="updateLivePreview()" class="w-full pl-8 p-3 bg-slate-800 border border-red-500/50 text-red-400 rounded-lg text-sm font-black shadow-inner focus:border-red-400 glow-focus outline-none" placeholder="0.00">
+                        </div>
                     </div>
 
-                    <div class="md:col-span-3 flex gap-1 h-[38px]">
-                        <button onclick="setPaymentMode('cash')" id="btn-cash" class="flex-1 rounded bg-green-700 text-white text-xs font-bold">CASH</button>
-                        <button onclick="setPaymentMode('credit')" id="btn-credit" class="flex-1 rounded bg-gray-200 text-xs font-bold">CREDIT</button>
+                    <div class="lg:col-span-3 flex gap-2 h-[46px]">
+                        <button onclick="setPaymentMode('cash')" id="btn-cash" class="flex-1 rounded-lg bg-emerald-600 text-white text-xs font-black shadow-[0_0_10px_rgba(16,185,129,0.3)] border border-emerald-500 transition-all uppercase tracking-wider">CASH</button>
+                        <button onclick="setPaymentMode('credit')" id="btn-credit" class="flex-1 rounded-lg bg-slate-800 text-slate-400 text-xs font-black border border-slate-600 hover:bg-slate-700 hover:text-white transition-all uppercase tracking-wider">CREDIT</button>
                     </div>
 
-                    <div class="md:col-span-2">
-                        <button onclick="addUnlistedItem()" class="w-full h-[38px] text-blue-600 text-[10px] border border-blue-600 rounded font-bold uppercase leading-tight">+ Unlisted Item</button>
+                    <div class="lg:col-span-2 h-[46px]">
+                        <button onclick="addUnlistedItem()" class="w-full h-full bg-slate-800 hover:bg-blue-900/40 text-blue-400 border border-blue-500/50 rounded-lg text-xs font-black uppercase tracking-wider transition-colors shadow-sm">+ Unlisted</button>
                     </div>
                 </div>
             </div>
 
-            <div class="bg-white rounded shadow p-3">
-                <div id="cart-items" class="text-sm"></div>
-                <div class="mt-4 border-t pt-2">
-                    <div class="flex justify-between text-lg font-bold">
-                        <span>Total (LKR):</span>
-                        <span id="cart-total">0.00</span>
+            <div class="glass-panel rounded-2xl shadow-2xl p-4 md:p-6 border border-slate-700 relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-64 h-64 bg-blue-600 rounded-full mix-blend-multiply filter blur-[80px] opacity-10 pointer-events-none"></div>
+                
+                <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-3 border-b border-slate-700 pb-2">Current Cart</h3>
+                
+                <div id="cart-items" class="text-sm space-y-1 mb-4 min-h-[100px] max-h-[300px] overflow-y-auto pr-2 relative z-10">
                     </div>
-                    <div class="grid grid-cols-3 gap-2 mt-3">
-                        <button onclick="directPrint()" class="bg-blue-600 text-white py-3 px-1 rounded font-bold text-xs md:text-sm">FINISH & PRINT</button>
-                        <button onclick="closeBillWithoutPrint()" class="bg-slate-700 text-white py-3 px-1 rounded font-bold text-xs md:text-sm">SAVE ONLY</button>
-                        <button onclick="cancelBill()" class="bg-red-600 text-white py-3 px-1 rounded font-bold text-xs md:text-sm">CANCEL BILL</button>
+                
+                <div class="border-t-2 border-slate-600 pt-4 mt-2 relative z-10">
+                    <div class="flex justify-between items-end mb-6">
+                        <span class="text-sm font-black text-slate-400 uppercase tracking-widest">Net Total</span>
+                        <div class="text-right">
+                            <span class="text-xs font-bold text-slate-500 mr-1">LKR</span>
+                            <span id="cart-total" class="text-4xl md:text-5xl font-black text-white drop-shadow-md">0.00</span>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <button onclick="directPrint()" class="bg-blue-600 hover:bg-blue-500 text-white py-4 px-2 rounded-xl font-black text-sm uppercase tracking-wider shadow-[0_0_20px_rgba(37,99,235,0.4)] border border-blue-500 transition-all transform hover:-translate-y-1">FINISH & PRINT</button>
+                        <button onclick="closeBillWithoutPrint()" class="bg-slate-700 hover:bg-slate-600 text-white py-4 px-2 rounded-xl font-bold text-sm uppercase tracking-wider border border-slate-500 shadow transition-all">SAVE ONLY</button>
+                        <button onclick="cancelBill()" class="bg-red-900/50 hover:bg-red-600 text-red-300 hover:text-white border border-red-700/50 py-4 px-2 rounded-xl font-bold text-sm uppercase tracking-wider shadow transition-all">CANCEL BILL</button>
                     </div>
                 </div>
             </div>
 
-            <div id="live-preview-container">
-                <p class="text-xs font-bold text-blue-900 mb-2">LIVE PRINT PREVIEW (80mm):</p>
+            <div id="live-preview-container" class="mt-8 border border-slate-700 shadow-xl bg-slate-900/80">
+                <p class="text-xs font-black text-blue-400 mb-4 tracking-widest uppercase text-center opacity-70">Live Print Preview (80mm)</p>
                 <div id="print-area" class="text-black bg-white p-2 mx-auto" style="font-size: 15px; font-family: 'Courier New', Courier, monospace; border: 1px solid #ccc; box-sizing: border-box;">
                     <div class="receipt-border text-center">
                         <img id="receipt-logo" src="" alt="Logo">
@@ -237,147 +446,222 @@
         </div>
 
         <div id="tab-printer" class="tab-content">
-            <div class="bg-white p-4 rounded shadow">
-                <h2 class="font-bold mb-4">Printer & Branding Setup</h2>
-                <div class="mb-6 p-3 border rounded bg-blue-50">
-                    <label class="block font-bold text-sm mb-2">Upload Bill Logo Image:</label>
-                    <input type="file" id="logo-upload" accept="image/*" onchange="handleLogoUpload(this)" class="text-sm">
-                    <button onclick="removeLogo()" class="mt-2 text-red-500 text-xs block underline">Remove Logo</button>
+            <div class="glass-panel p-6 rounded-2xl shadow-2xl border border-slate-700">
+                <h2 class="font-black mb-6 text-white text-2xl tracking-wide uppercase border-b border-slate-700 pb-4">🖨️ Printer & Branding Setup</h2>
+                <div class="mb-6 p-5 border border-blue-500/30 rounded-xl bg-blue-900/10 shadow-inner">
+                    <label class="block font-bold text-sm mb-3 text-blue-300 uppercase tracking-wider">Upload Bill Logo Image</label>
+                    <input type="file" id="logo-upload" accept="image/*" onchange="handleLogoUpload(this)" class="w-full text-sm text-slate-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-blue-600 file:text-white hover:file:bg-blue-500 transition-colors cursor-pointer bg-slate-900 p-2 rounded-lg border border-slate-700">
+                    <button onclick="removeLogo()" class="mt-3 text-red-400 hover:text-red-300 text-xs block font-bold transition-colors">🗑️ Remove Current Logo</button>
                 </div>
-                <div id="printer-status" class="mb-4 p-3 bg-gray-100 rounded text-sm text-gray-600">Status: Not Connected</div>
-                <button onclick="connectAndSaveBluetooth()" class="w-full bg-blue-600 text-white py-3 rounded font-bold mb-2">🔍 Search & Connect Printer</button>
-                <button onclick="forgetPrinter()" class="w-full mt-4 text-xs text-red-400 underline">Forget Saved Printer</button>
+                <div id="printer-status" class="mb-6 p-4 bg-slate-900 border border-slate-700 rounded-xl text-sm font-mono text-slate-400 shadow-inner flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-full bg-slate-600 inline-block"></span> Status: Not Connected
+                </div>
+                <button onclick="connectAndSaveBluetooth()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-xl font-black shadow-[0_0_15px_rgba(37,99,235,0.4)] transition-all uppercase tracking-widest text-lg border border-blue-500">🔍 Search & Connect Printer</button>
+                <div class="text-center mt-6 border-t border-slate-700 pt-4">
+                    <button onclick="forgetPrinter()" class="text-xs text-red-500 hover:text-red-400 font-bold uppercase tracking-wider transition-colors">⚠️ Forget Saved Printer</button>
+                </div>
             </div>
         </div>
 
         <div id="tab-inventory" class="tab-content">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="font-bold text-xl text-slate-800">📦 Inventory Management</h2>
-                <div class="flex gap-2">
-                    <button id="download-cloud-btn" class="bg-emerald-600 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 shadow hover:bg-emerald-700">
-                        ⬇️ FETCH CLOUD
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                <h2 class="font-black text-2xl text-white tracking-wide uppercase">📦 Inventory Management</h2>
+                <div class="flex gap-3 w-full md:w-auto">
+                    <button id="download-cloud-btn" class="flex-1 md:flex-none bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-lg text-xs font-black flex items-center justify-center gap-2 shadow-[0_0_10px_rgba(16,185,129,0.3)] transition-all border border-emerald-500 uppercase tracking-wider">
+                        ⬇️ Fetch Cloud
                     </button>
-                    <button id="upload-cloud-btn" class="bg-blue-600 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 shadow hover:bg-blue-700">
-                        ☁️ SYNC TO CLOUD
+                    <button id="upload-cloud-btn" class="flex-1 md:flex-none bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-lg text-xs font-black flex items-center justify-center gap-2 shadow-[0_0_10px_rgba(37,99,235,0.3)] transition-all border border-blue-500 uppercase tracking-wider">
+                        ☁️ Sync Cloud
                     </button>
                 </div>
             </div>
             
-            <div class="flex gap-2 mb-4">
-                <button onclick="setInventoryShop('ruwancell')" id="inv-shop-ruwan" class="flex-1 rounded bg-blue-700 text-white text-xs font-bold py-2 uppercase">Ruwan Cellular</button>
-                <button onclick="setInventoryShop('tharusalon')" id="inv-shop-tharu" class="flex-1 rounded bg-gray-200 text-gray-600 text-xs font-bold py-2 uppercase">Salon Tharu</button>
+            <div class="flex gap-3 mb-6">
+                <button onclick="setInventoryShop('ruwancell')" id="inv-shop-ruwan" class="flex-1 rounded-xl bg-blue-600 text-white text-sm font-black py-3 uppercase shadow-[0_0_15px_rgba(37,99,235,0.4)] border border-blue-500 transition-all tracking-wider">Ruwan Cellular</button>
+                <button onclick="setInventoryShop('tharusalon')" id="inv-shop-tharu" class="flex-1 rounded-xl bg-slate-800 text-slate-400 text-sm font-black py-3 uppercase border border-slate-600 hover:bg-slate-700 hover:text-white transition-all tracking-wider">Salon Tharu</button>
             </div>
 
-            <div class="mb-4">
-                <input type="text" id="inventory-search-input" oninput="renderInventory()" placeholder="Search Inventory by Name or Code..." class="w-full p-3 border border-slate-300 rounded-xl shadow-inner outline-none focus:ring-2 focus:ring-blue-400 bg-white">
+            <div class="relative mb-6 group">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <span class="text-slate-500">🔍</span>
+                </div>
+                <input type="text" id="inventory-search-input" oninput="renderInventory()" placeholder="Search Inventory by Name or Code..." class="w-full pl-10 p-4 bg-slate-800 border-2 border-slate-600 text-white rounded-xl shadow-inner outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 glow-focus transition-colors placeholder-slate-500 font-bold">
             </div>
 
-            <div id="inventory-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+            <div id="inventory-list" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5"></div>
         </div>
 
         <div id="tab-add-items" class="tab-content">
-            <div class="bg-white p-4 rounded shadow">
-                <h2 class="font-bold mb-4">Setup New Item</h2>
+            <div class="glass-panel p-6 rounded-2xl shadow-2xl border border-slate-700 max-w-2xl mx-auto">
+                <h2 class="font-black mb-6 text-white text-2xl tracking-wide uppercase border-b border-slate-700 pb-4">➕ Setup New Product</h2>
                 
-                <select id="add-shop" class="w-full p-2 border mb-2 font-bold text-sm bg-blue-50 text-blue-900 rounded">
-                    <option value="ruwancell">📱 Ruwan Cellular</option>
-                    <option value="tharusalon">💇‍♀️ Salon Tharu</option>
-                </select>
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1">Assign to Shop</label>
+                        <select id="add-shop" class="w-full p-3 bg-slate-900 border border-slate-600 text-white rounded-lg font-bold shadow-inner focus:border-blue-500 glow-focus outline-none mt-1">
+                            <option value="ruwancell">📱 Ruwan Cellular</option>
+                            <option value="tharusalon">💇‍♀️ Salon Tharu</option>
+                        </select>
+                    </div>
 
-                <input type="text" id="add-code" placeholder="Item Code" class="w-full p-2 border mb-2">
-                <input type="text" id="add-name" placeholder="Item Name" class="w-full p-2 border mb-2">
-                <input type="number" id="add-price" inputmode="decimal" placeholder="Selling Price (LKR)" class="w-full p-2 border mb-2">
-                <input type="number" id="add-discount" inputmode="decimal" placeholder="Discount Per Unit (LKR)" class="w-full p-2 border mb-2">
-                <input type="number" id="add-wholesale" inputmode="decimal" placeholder="Wholesale Price" class="w-full p-2 border mb-2">
-                <input type="number" id="add-stock" inputmode="decimal" placeholder="Initial Stock" class="w-full p-2 border mb-2">
-                <button onclick="saveNewItem()" class="w-full bg-blue-600 text-white py-2 rounded">Save Product</button>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1">Product Code</label>
+                            <input type="text" id="add-code" placeholder="e.g. RC-001" class="w-full p-3 bg-slate-900 border border-slate-600 text-white rounded-lg font-bold shadow-inner focus:border-blue-500 glow-focus outline-none mt-1 font-mono">
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1">Product Name</label>
+                            <input type="text" id="add-name" placeholder="e.g. Glass Protector" class="w-full p-3 bg-slate-900 border border-slate-600 text-white rounded-lg font-bold shadow-inner focus:border-blue-500 glow-focus outline-none mt-1 uppercase">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-slate-700 pt-4 mt-4">
+                        <div>
+                            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1 text-emerald-400">Cost Price</label>
+                            <input type="number" id="add-cost" inputmode="decimal" placeholder="0.00" class="w-full p-3 bg-slate-900 border border-slate-600 text-emerald-400 font-black rounded-lg shadow-inner focus:border-emerald-500 glow-focus outline-none mt-1">
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1 text-blue-400">Retail Price</label>
+                            <input type="number" id="add-price" inputmode="decimal" placeholder="0.00" class="w-full p-3 bg-slate-900 border border-slate-600 text-blue-400 font-black rounded-lg shadow-inner focus:border-blue-500 glow-focus outline-none mt-1">
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1 text-purple-400">Wholesale Price</label>
+                            <input type="number" id="add-wholesale-price" inputmode="decimal" placeholder="0.00" class="w-full p-3 bg-slate-900 border border-slate-600 text-purple-400 font-black rounded-lg shadow-inner focus:border-purple-500 glow-focus outline-none mt-1">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1 text-red-400">Max Discount/Unit</label>
+                            <input type="number" id="add-discount" inputmode="decimal" placeholder="0.00" class="w-full p-3 bg-slate-900 border border-slate-600 text-red-400 font-bold rounded-lg shadow-inner focus:border-red-500 glow-focus outline-none mt-1">
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1">Initial Stock Qty</label>
+                            <input type="number" id="add-stock" inputmode="decimal" placeholder="0" class="w-full p-3 bg-slate-900 border border-slate-600 text-white font-bold rounded-lg shadow-inner focus:border-blue-500 glow-focus outline-none mt-1">
+                        </div>
+                    </div>
+                    
+                    <div id="owner-warranty-sec" class="bg-orange-900/20 p-4 rounded-xl border border-orange-500/30 shadow-inner mt-4">
+                        <label class="text-xs font-bold text-orange-400 uppercase tracking-wider pl-1 block mb-2">🛡️ Supplier Warranty Expiry (Owner Only)</label>
+                        <input type="date" id="add-stock-warranty" class="w-full p-3 bg-slate-900 border border-slate-600 text-orange-300 font-mono rounded-lg shadow-inner focus:border-orange-500 glow-focus outline-none" title="Supplier Warranty Expiry (For Owner)">
+                        <p class="text-[10px] text-slate-500 mt-2 italic">This date reminds you when your purchase warranty from the supplier expires.</p>
+                    </div>
+
+                    <div class="pt-4">
+                        <button onclick="saveNewItem()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-xl font-black shadow-[0_0_15px_rgba(37,99,235,0.4)] transition-all uppercase tracking-widest text-lg border border-blue-500">💾 Save Product</button>
+                    </div>
+                </div>
             </div>
         </div>
 
         <div id="tab-customers" class="tab-content">
-            <div class="flex justify-between items-center mb-4 bg-white p-4 shadow rounded border-t-4 border-blue-600">
-                <h2 class="font-bold text-xl text-slate-800">👥 Customer List & Sync</h2>
-                <div class="flex gap-2">
-                    <button id="download-customers-btn" class="bg-emerald-600 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 shadow hover:bg-emerald-700">
-                        ⬇️ FETCH CLOUD
+            <div class="glass-panel flex flex-col md:flex-row justify-between items-start md:items-center p-5 rounded-2xl shadow-xl border-t-4 border-blue-500 mb-6 gap-4">
+                <h2 class="font-black text-xl md:text-2xl text-white uppercase tracking-wide">👥 Customer Ledger</h2>
+                <div class="flex gap-2 w-full md:w-auto">
+                    <button id="download-customers-btn" class="flex-1 md:flex-none bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-lg text-xs font-black shadow transition-all border border-emerald-500 uppercase tracking-wider flex items-center justify-center gap-1">
+                        ⬇️ Fetch
                     </button>
-                    <button id="upload-customers-btn" class="bg-blue-600 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 shadow hover:bg-blue-700">
-                        ☁️ SYNC TO CLOUD
+                    <button id="upload-customers-btn" class="flex-1 md:flex-none bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-lg text-xs font-black shadow transition-all border border-blue-500 uppercase tracking-wider flex items-center justify-center gap-1">
+                        ☁️ Sync
                     </button>
                 </div>
             </div>
 
-            <div class="bg-green-50 p-4 rounded-lg border border-green-200 mb-4 shadow-sm">
-                <h3 class="text-green-800 font-bold text-xs uppercase mb-2 tracking-wider">WhatsApp Debt Reminders</h3>
-                <button onclick="sendWhatsAppReminders()" class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-bold shadow transition-all flex items-center justify-center gap-2">
-                    📢 SEND WHATSAPP TO ALL CREDIT USERS
+            <div class="bg-gradient-to-r from-emerald-900/40 to-green-900/20 p-5 rounded-2xl border border-emerald-500/30 mb-6 shadow-lg">
+                <h3 class="text-emerald-400 font-black text-sm uppercase mb-3 tracking-widest flex items-center gap-2"><span>📢</span> WhatsApp Debt Recovery</h3>
+                <button onclick="sendWhatsAppReminders()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-4 rounded-xl font-black shadow-[0_0_15px_rgba(16,185,129,0.4)] transition-all flex items-center justify-center gap-2 uppercase tracking-wider border border-emerald-500">
+                    Send Mass Reminders to All Credit Users
                 </button>
             </div>
 
-            <div class="bg-white p-4 rounded shadow mb-4">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mb-2">
-                    <input type="text" id="cust-name" placeholder="Customer Name" class="p-2 border rounded">
-                    <input type="text" id="cust-phone" placeholder="Phone Number" class="p-2 border rounded">
+            <div class="glass-panel p-5 rounded-2xl shadow-lg mb-6 border border-slate-700">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 pl-1">Add New Profile</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                    <input type="text" id="cust-name" placeholder="Full Name" class="p-3 bg-slate-900 border border-slate-600 rounded-lg text-white font-bold focus:border-blue-500 glow-focus outline-none">
+                    <input type="text" id="cust-phone" placeholder="Phone Number (e.g. 077...)" class="p-3 bg-slate-900 border border-slate-600 rounded-lg text-white font-bold focus:border-blue-500 glow-focus outline-none">
                 </div>
-                <button onclick="saveCustomer()" class="w-full bg-blue-600 text-white py-2 rounded font-bold">Add New Customer</button>
+                <button onclick="saveCustomer()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl font-bold uppercase tracking-wider transition-colors shadow-md border border-blue-500">Add Customer</button>
             </div>
 
-            <div class="mb-4">
-                <input type="text" id="customer-search-input" oninput="renderCustomers()" placeholder="🔍 Search Customers by Name or Phone..." class="w-full p-3 border-2 border-slate-200 rounded-lg outline-none focus:border-blue-400">
+            <div class="relative mb-6 group">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <span class="text-slate-500">🔍</span>
+                </div>
+                <input type="text" id="customer-search-input" oninput="renderCustomers()" placeholder="Search Ledger by Name or Phone..." class="w-full pl-10 p-4 bg-slate-800 border-2 border-slate-600 text-white rounded-xl shadow-inner outline-none focus:border-blue-500 glow-focus transition-colors placeholder-slate-500 font-bold text-lg">
             </div>
 
-            <div id="customer-list" class="space-y-2"></div>
+            <div id="customer-list" class="space-y-3"></div>
         </div>
 
         <div id="tab-history" class="tab-content">
-            <div class="bg-white p-4 rounded shadow">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="font-bold text-xl text-blue-900">📜 All Transactions History</h2>
-                    <button onclick="renderFullHistory()" class="bg-blue-100 text-blue-700 px-3 py-1 rounded font-bold text-xs hover:bg-blue-200 transition-colors">🔄 REFRESH</button>
+            <div class="glass-panel p-5 md:p-6 rounded-2xl shadow-2xl border border-slate-700 mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <h2 class="font-black text-2xl text-white uppercase tracking-wide">📜 Transaction History</h2>
+                <div class="flex gap-2 w-full md:w-auto bg-slate-900 p-1.5 rounded-lg border border-slate-700">
+                    <button onclick="downloadHistoryFromCloud()" class="flex-1 md:flex-none bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-md text-xs font-bold shadow transition-colors uppercase">⬇️ Fetch</button>
+                    <button onclick="uploadHistoryToCloud()" class="flex-1 md:flex-none bg-blue-600 hover:bg-blue-500 text-white px-3 py-2 rounded-md text-xs font-bold shadow transition-colors uppercase">☁️ Sync</button>
+                    <button onclick="renderFullHistory()" class="flex-1 md:flex-none bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded-md text-xs font-bold shadow transition-colors uppercase">🔄 Ref</button>
                 </div>
-                
-                <div class="mb-4">
-                    <input type="text" id="history-search-input" oninput="renderFullHistory()" placeholder="🔍 Search Invoice No or Customer Name..." class="w-full p-3 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-400 bg-gray-50">
-                </div>
+            </div>
 
-                <div id="full-history-list" class="space-y-3 max-h-[70vh] overflow-y-auto pr-2">
-                    </div>
+            <div class="flex gap-3 mb-6">
+                <button onclick="setHistoryShop('ruwancell')" id="hist-shop-ruwan" class="flex-1 rounded-xl bg-blue-600 text-white text-sm font-black py-3 uppercase shadow-[0_0_15px_rgba(37,99,235,0.4)] border border-blue-500 transition-all tracking-wider">Ruwan Cellular</button>
+                <button onclick="setHistoryShop('tharusalon')" id="hist-shop-tharu" class="flex-1 rounded-xl bg-slate-800 text-slate-400 text-sm font-black py-3 uppercase border border-slate-600 hover:bg-slate-700 hover:text-white transition-all tracking-wider">Salon Tharu</button>
+            </div>
+            
+            <div class="relative mb-6 group">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <span class="text-slate-500">🔍</span>
+                </div>
+                <input type="text" id="history-search-input" oninput="renderFullHistory()" placeholder="Search Invoice No or Customer Name..." class="w-full pl-10 p-4 bg-slate-800 border-2 border-slate-600 text-white rounded-xl shadow-inner outline-none focus:border-blue-500 glow-focus transition-colors placeholder-slate-500 font-bold text-lg">
+            </div>
+
+            <div id="full-history-list" class="space-y-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
             </div>
         </div>
 
         <div id="tab-reports" class="tab-content">
-            <div class="bg-white p-4 rounded shadow mb-4">
-                <h2 class="font-bold mb-3 underline text-blue-800">Business Reports</h2>
-                <div class="flex gap-2 mb-4">
-                    <button onclick="setReportFilter('day')" id="filter-day" class="flex-1 bg-blue-600 text-white py-2 rounded text-xs font-bold uppercase">Daily</button>
-                    <button onclick="setReportFilter('week')" id="filter-week" class="flex-1 bg-blue-100 text-blue-800 py-2 rounded text-xs font-bold uppercase">Weekly</button>
-                    <button onclick="setReportFilter('month')" id="filter-month" class="flex-1 bg-blue-100 text-blue-800 py-2 rounded text-xs font-bold uppercase">Monthly</button>
+            <div class="glass-panel p-6 rounded-2xl shadow-2xl mb-6 border border-slate-700">
+                <h2 class="font-black mb-6 text-white text-2xl tracking-wide uppercase border-b border-slate-700 pb-4">📊 Business Intelligence</h2>
+
+                <div class="flex gap-3 mb-6">
+                    <button onclick="setReportShop('ruwancell')" id="rep-shop-ruwan" class="flex-1 rounded-xl bg-blue-600 text-white text-sm font-black py-3 uppercase shadow-[0_0_15px_rgba(37,99,235,0.4)] border border-blue-500 transition-all tracking-wider">Ruwan Cellular</button>
+                    <button onclick="setReportShop('tharusalon')" id="rep-shop-tharu" class="flex-1 rounded-xl bg-slate-800 text-slate-400 text-sm font-black py-3 uppercase border border-slate-600 hover:bg-slate-700 hover:text-white transition-all tracking-wider">Salon Tharu</button>
                 </div>
-                <div class="grid grid-cols-2 gap-3 mb-6">
-                    <div class="bg-green-100 p-3 rounded border border-green-200">
-                        <p class="text-[10px] uppercase font-bold text-green-700">Total Profit</p>
-                        <h1 id="rep-profit" class="text-xl font-bold">LKR 0.00</h1>
+
+                <div class="bg-slate-900 p-1.5 rounded-xl border border-slate-700 flex gap-2 mb-8">
+                    <button onclick="setReportFilter('day')" id="filter-day" class="flex-1 bg-blue-600 text-white py-2.5 rounded-lg text-xs font-black uppercase shadow-sm transition-colors tracking-wider">Daily</button>
+                    <button onclick="setReportFilter('week')" id="filter-week" class="flex-1 bg-transparent hover:bg-slate-800 text-slate-400 py-2.5 rounded-lg text-xs font-black uppercase transition-colors tracking-wider">Weekly</button>
+                    <button onclick="setReportFilter('month')" id="filter-month" class="flex-1 bg-transparent hover:bg-slate-800 text-slate-400 py-2.5 rounded-lg text-xs font-black uppercase transition-colors tracking-wider">Monthly</button>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4 mb-8">
+                    <div class="bg-gradient-to-br from-emerald-900/50 to-green-900/20 p-5 rounded-xl border border-emerald-500/30 shadow-lg relative overflow-hidden">
+                        <div class="absolute -right-4 -bottom-4 text-6xl opacity-10">💰</div>
+                        <p class="text-[10px] uppercase font-black text-emerald-400 tracking-widest mb-1 relative z-10">Total Profit</p>
+                        <h1 id="rep-profit" class="text-2xl md:text-3xl font-black text-white relative z-10 drop-shadow">LKR 0.00</h1>
                     </div>
-                    <div class="bg-blue-100 p-3 rounded border border-blue-200">
-                        <p class="text-[10px] uppercase font-bold text-blue-700">Total Sales</p>
-                        <h1 id="rep-sales" class="text-xl font-bold">LKR 0.00</h1>
+                    <div class="bg-gradient-to-br from-blue-900/50 to-indigo-900/20 p-5 rounded-xl border border-blue-500/30 shadow-lg relative overflow-hidden">
+                        <div class="absolute -right-4 -bottom-4 text-6xl opacity-10">📈</div>
+                        <p class="text-[10px] uppercase font-black text-blue-400 tracking-widest mb-1 relative z-10">Total Revenue</p>
+                        <h1 id="rep-sales" class="text-2xl md:text-3xl font-black text-white relative z-10 drop-shadow">LKR 0.00</h1>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    <div class="p-3 border rounded-lg bg-gray-50 shadow-inner">
-                        <p class="text-center font-bold text-xs uppercase mb-2 text-gray-500">Credit vs Settled (Bar)</p>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                    <div class="p-5 border border-slate-700 rounded-2xl bg-slate-900/50 shadow-inner">
+                        <p class="text-center font-bold text-xs uppercase mb-4 text-slate-400 tracking-wider">Cash Flow Breakdown</p>
                         <canvas id="reportBarChart" height="200"></canvas>
                     </div>
-                    <div class="p-3 border rounded-lg bg-gray-50 shadow-inner">
-                        <p class="text-center font-bold text-xs uppercase mb-2 text-gray-500">Balance Breakdown (Pie)</p>
-                        <div class="flex justify-center">
-                            <canvas id="reportPieChart" style="max-height: 200px; max-width: 200px;"></canvas>
+                    <div class="p-5 border border-slate-700 rounded-2xl bg-slate-900/50 shadow-inner">
+                        <p class="text-center font-bold text-xs uppercase mb-4 text-slate-400 tracking-wider">Payment Distribution</p>
+                        <div class="flex justify-center relative">
+                            <canvas id="reportPieChart" style="max-height: 220px; max-width: 220px;"></canvas>
                         </div>
                     </div>
                 </div>
 
-                <div id="bill-history-list" class="space-y-2 max-h-80 overflow-y-auto"></div>
+                <h3 class="text-sm font-black text-slate-400 uppercase tracking-widest mb-4 border-b border-slate-700 pb-2">Recent Filtered Transactions</h3>
+                <div id="bill-history-list" class="space-y-3 max-h-96 overflow-y-auto pr-2 custom-scrollbar"></div>
             </div>
         </div>
     </main>
@@ -385,7 +669,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
-        import { getDatabase, ref, set, get, child } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+        import { getDatabase, ref, set, get, child, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCvbgoJj_-VWHw7y23_OFtt6lQDuknqJ0k",
@@ -401,6 +685,102 @@
         const app = initializeApp(firebaseConfig);
         const analytics = getAnalytics(app);
         const fb_db = getDatabase(app);
+        window.fb_db = fb_db;
+
+        // --- LIVE SYNC SERVER (HOST/CLIENT) ---
+        let isHost = false;
+        let isClient = false;
+        let liveSyncRoom = null;
+
+        window.startHostServer = async function() {
+            const ip = `192.168.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}`;
+            const password = Math.floor(1000 + Math.random() * 9000).toString();
+            document.getElementById('host-ip').value = ip;
+            document.getElementById('host-password').value = password;
+            document.getElementById('host-credentials').classList.remove('hidden');
+            document.getElementById('host-status').classList.remove('hidden');
+
+            liveSyncRoom = ip.replace(/\./g, '_');
+            isHost = true;
+
+            const roomRef = ref(fb_db, 'live_rooms/' + liveSyncRoom);
+            await set(roomRef, {
+                password: password,
+                status: 'active',
+                timestamp: Date.now()
+            });
+            
+            // Push initial state
+            window.broadcastInventoryUpdate();
+
+            // Listen for cashiers
+            onValue(child(roomRef, 'cashiers'), (snap) => {
+                const list = document.getElementById('connected-cashiers-list');
+                list.innerHTML = '';
+                if(snap.exists()){
+                    Object.values(snap.val()).forEach(c => {
+                        list.innerHTML += `<div class="p-3 bg-slate-900 rounded-lg border border-slate-700 mb-2 flex justify-between items-center shadow-inner"><span class="font-bold text-sm text-blue-300">🧑‍💼 ${c.name}</span> <span class="text-[10px] text-slate-500 font-mono bg-slate-800 px-2 py-1 rounded">${c.device}</span></div>`;
+                    });
+                } else {
+                    list.innerHTML = '<p class="text-sm text-slate-500 italic">No cashiers connected yet.</p>';
+                }
+            });
+        };
+
+        window.broadcastInventoryUpdate = async function() {
+            if(!isHost || !liveSyncRoom) return;
+            const allInv = await window.db.inventory.toArray();
+            const invObj = {};
+            allInv.forEach(item => invObj[String(item.code).replace(/[.#$\[\]/]/g, '_')] = item);
+            await set(ref(fb_db, 'live_rooms/' + liveSyncRoom + '/inventory'), invObj);
+        };
+
+        window.connectToHost = async function() {
+            const ipInput = document.getElementById('client-ip').value;
+            const pass = document.getElementById('client-password').value;
+            const deviceName = document.getElementById('client-device').value || 'Unknown Device';
+            const cashierName = document.getElementById('cashier-name').value || 'Cashier';
+
+            if(!ipInput || !pass) return alert("Enter IP and Password");
+            
+            const roomCode = ipInput.replace(/\./g, '_');
+            const roomRef = ref(fb_db, 'live_rooms/' + roomCode);
+            const snapshot = await get(roomRef);
+            
+            if(snapshot.exists() && snapshot.val().password === pass) {
+                document.getElementById('client-status').classList.remove('hidden');
+                document.getElementById('client-status').innerText = "🟢 Connected! Live updates active.";
+                isClient = true;
+                liveSyncRoom = roomCode;
+
+                // Register cashier to host
+                const sessionId = Date.now().toString();
+                await set(child(roomRef, 'cashiers/' + sessionId), {
+                    name: cashierName,
+                    device: deviceName
+                });
+
+                onValue(child(roomRef, 'inventory'), async (dataSnapshot) => {
+                    if(dataSnapshot.exists()) {
+                        const data = dataSnapshot.val();
+                        const itemsArray = Object.values(data);
+                        
+                        await window.db.inventory.clear();
+                        await window.db.inventory.bulkPut(itemsArray);
+
+                        if(typeof window.renderInventory === 'function' && document.getElementById('tab-inventory').classList.contains('active')) {
+                            window.renderInventory();
+                        }
+                        if(typeof window.syncCartWithInventory === 'function') await window.syncCartWithInventory();
+                        if(typeof window.searchItems === 'function' && document.getElementById('bill-search').value.length > 0) {
+                            window.searchItems(document.getElementById('bill-search').value);
+                        }
+                    }
+                });
+            } else {
+                alert("Invalid IP or Password, or Host Server not running.");
+            }
+        };
 
         // --- INVENTORY CLOUD SYNC ---
         window.uploadInventoryToCloud = async function() {
@@ -413,7 +793,7 @@
                 
                 if (items.length === 0) {
                     alert("Inventory is empty locally.");
-                    btn.innerText = "☁️ SYNC TO CLOUD";
+                    btn.innerHTML = "☁️ Sync Cloud";
                     btn.disabled = false;
                     return;
                 }
@@ -432,9 +812,12 @@
                         name: String(item.name || "UNNAMED"),
                         price: Number(item.price) || 0,
                         stock: Number(item.stock) || 0,
-                        wholesale: Number(item.wholesale) || 0,
+                        wholesale: Number(item.wholesale) || 0, 
+                        cost: Number(item.cost !== undefined ? item.cost : item.wholesale) || 0,
+                        wholesalePrice: Number(item.wholesalePrice) || 0,
                         discount: Number(item.discount) || 0,
-                        shop: itemShop 
+                        shop: itemShop,
+                        stockWarrantyExpiry: item.stockWarrantyExpiry || ''
                     };
                 });
 
@@ -456,7 +839,7 @@
                    alert("Upload failed: " + (error.message || error));
                 }
             } finally {
-                btn.innerText = "☁️ SYNC TO CLOUD";
+                btn.innerHTML = "☁️ Sync Cloud";
                 btn.disabled = false;
             }
         };
@@ -502,7 +885,7 @@
                    alert("Download failed: " + (error.message || error));
                 }
             } finally {
-                btn.innerText = "⬇️ FETCH CLOUD";
+                btn.innerHTML = "⬇️ Fetch Cloud";
                 btn.disabled = false;
             }
         };
@@ -545,7 +928,7 @@
                    alert("Upload failed: " + (error.message || error));
                 }
             } finally {
-                btn.innerText = "☁️ SYNC TO CLOUD";
+                btn.innerHTML = "☁️ Sync";
                 btn.disabled = false;
             }
         };
@@ -582,38 +965,303 @@
                 console.error(error);
                 alert("Download failed: " + (error.message || error));
             } finally {
-                btn.innerText = "⬇️ FETCH CLOUD";
+                btn.innerHTML = "⬇️ Fetch";
                 btn.disabled = false;
             }
         };
 
-        document.getElementById('upload-cloud-btn').addEventListener('click', window.uploadInventoryToCloud);
-        document.getElementById('download-cloud-btn').addEventListener('click', window.downloadInventoryFromCloud);
-        document.getElementById('upload-customers-btn')?.addEventListener('click', window.uploadCustomersToCloud);
-        document.getElementById('download-customers-btn')?.addEventListener('click', window.downloadCustomersFromCloud);
+        // --- HISTORY CLOUD SYNC ---
+        window.uploadHistoryToCloud = async function() {
+            try {
+                const items = await db.sales.toArray();
+                const salesObj = {};
+                items.forEach(item => salesObj[item.id] = item);
+                await set(ref(fb_db, 'sales'), salesObj);
+                alert("Sales History successfully uploaded to Cloud!");
+            } catch (error) {
+                console.error(error);
+                alert("Upload failed: " + error.message);
+            }
+        };
+
+        window.downloadHistoryFromCloud = async function() {
+            try {
+                const snapshot = await get(child(ref(fb_db), 'sales'));
+                if (snapshot.exists()) {
+                    const itemsArray = Object.values(snapshot.val());
+                    await db.sales.clear();
+                    await db.sales.bulkPut(itemsArray);
+                    alert("Sales History downloaded and updated from Cloud!");
+                    if(typeof renderFullHistory === 'function') renderFullHistory();
+                    if(typeof calculateReports === 'function') calculateReports();
+                } else {
+                    alert("No sales history found on Cloud.");
+                }
+            } catch (error) {
+                console.error(error);
+                alert("Download failed: " + error.message);
+            }
+        };
+
+        // --- MASTER CLOUD SYNC ---
+        window.uploadAllToCloud = async function() {
+            const btn = document.getElementById('master-upload-btn');
+            try {
+                btn.innerText = "⏳ UPLOADING ALL DATA...";
+                btn.disabled = true;
+
+                const invItems = await db.inventory.toArray();
+                const invObj = {};
+                invItems.forEach(item => invObj[String(item.code).replace(/[.#$\[\]/]/g, '_')] = item);
+
+                const custItems = await db.customers.toArray();
+                const custObj = {};
+                custItems.forEach(item => custObj[String(item.name).replace(/[.#$\[\]/]/g, '_')] = item);
+
+                const saleItems = await db.sales.toArray();
+                const saleObj = {};
+                saleItems.forEach(item => saleObj[item.id] = item);
+
+                const draftItems = await db.draftCart.toArray();
+                const draftObj = {};
+                draftItems.forEach(item => draftObj[item.id] = item);
+
+                await Promise.all([
+                    set(ref(fb_db, 'inventory'), invObj),
+                    set(ref(fb_db, 'customers'), custObj),
+                    set(ref(fb_db, 'sales'), saleObj),
+                    set(ref(fb_db, 'draftCart'), draftObj)
+                ]);
+
+                alert("All system data uploaded successfully!");
+            } catch (err) {
+                console.error(err);
+                alert("Upload failed: " + err.message);
+            } finally {
+                btn.innerHTML = "☁️ Upload All Data";
+                btn.disabled = false;
+            }
+        };
+
+        window.downloadAllFromCloud = async function() {
+            const btn = document.getElementById('master-download-btn');
+            try {
+                btn.innerText = "⏳ DOWNLOADING ALL DATA...";
+                btn.disabled = true;
+
+                const snapshot = await get(ref(fb_db));
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    
+                    if(data.inventory) {
+                        await db.inventory.clear();
+                        await db.inventory.bulkPut(Object.values(data.inventory));
+                    }
+                    if(data.customers) {
+                        await db.customers.clear();
+                        await db.customers.bulkPut(Object.values(data.customers));
+                    }
+                    if(data.sales) {
+                        await db.sales.clear();
+                        await db.sales.bulkPut(Object.values(data.sales));
+                    }
+                    if(data.draftCart) {
+                        await db.draftCart.clear();
+                        await db.draftCart.bulkPut(Object.values(data.draftCart));
+                    }
+                    
+                    alert("All system data downloaded and restored successfully!");
+                    
+                    // Re-render current active tab contents
+                    if(typeof renderInventory === 'function') renderInventory();
+                    if(typeof renderCustomers === 'function') renderCustomers();
+                    if(typeof renderFullHistory === 'function') renderFullHistory();
+                    if(typeof calculateReports === 'function') calculateReports();
+                    if(typeof renderCart === 'function') renderCart();
+                } else {
+                    alert("No data found on cloud.");
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Download failed: " + err.message);
+            } finally {
+                btn.innerHTML = "⬇️ Download All Data";
+                btn.disabled = false;
+            }
+        };
     </script>
 
     <script>
         const db = new Dexie("PiyaratnePOS");
         window.db = db; 
 
-        // Version 7 to ensure all indexes are thoroughly recreated
-        db.version(7).stores({ 
-            inventory: "code, name, price, wholesale, stock, discount, shop", 
+        db.version(11).stores({ 
+            inventory: "code, name, price, cost, wholesalePrice, wholesale, stock, discount, shop, stockWarrantyExpiry", 
             customers: "name, phone, status, creditAmount",
-            sales: "++id, date, total, profit, customer, type, items, invoiceNo, status",
-            draftCart: "++id, name, code, qty, price, wholesale, total, discount"
+            sales: "++id, date, total, profit, customer, type, items, invoiceNo, status, shop, cashierName",
+            draftCart: "++id, name, code, qty, price, cost, wholesalePrice, wholesale, total, discount, customerWarrantyMonths"
         });
 
         let cart = [];
         let paymentMode = 'cash';
+        let pricingMode = 'retail';
         let bleDevice = null;
         let bleCharacteristic = null;
         let currentFilter = 'day';
-        const ACCESS_PASSWORD = "0054";
+
+        // Read password from storage, default 0054
+        function getAdminPassword() { return localStorage.getItem('admin_password') || "0054"; }
+
+        // CUSTOM PASSWORD MODAL LOGIC
+        let passwordPromiseResolve = null;
+        function requirePassword(msg) {
+            return new Promise(resolve => {
+                document.getElementById('password-modal-msg').innerText = msg;
+                const input = document.getElementById('password-modal-input');
+                input.value = '';
+                document.getElementById('password-modal').classList.remove('hidden');
+                
+                // Slight delay for focus in Tailwind modals
+                setTimeout(() => input.focus(), 50);
+                passwordPromiseResolve = resolve;
+            });
+        }
+        
+        window.closePasswordModal = function(isSubmit) {
+            document.getElementById('password-modal').classList.add('hidden');
+            if(passwordPromiseResolve) {
+                passwordPromiseResolve(isSubmit ? document.getElementById('password-modal-input').value : null);
+                passwordPromiseResolve = null;
+            }
+        };
+
+        // Enter key support for modal
+        document.getElementById('password-modal-input').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') closePasswordModal(true);
+        });
+
+        window.changeAdminPassword = function() {
+            const oldP = document.getElementById('change-pass-old').value;
+            const newP = document.getElementById('change-pass-new').value;
+            
+            if(oldP !== getAdminPassword()) {
+                alert("Old password incorrect!");
+                return;
+            }
+            if(!newP) {
+                alert("New password cannot be empty!");
+                return;
+            }
+            
+            localStorage.setItem('admin_password', newP);
+            alert("Admin password updated successfully!");
+            document.getElementById('change-pass-old').value = '';
+            document.getElementById('change-pass-new').value = '';
+        };
 
         let currentBillShop = 'ruwancell';
         let currentInvShop = 'ruwancell';
+        let currentHistShop = 'ruwancell';
+        let currentRepShop = 'ruwancell';
+        
+        let currentRole = 'owner';
+
+        // --- ROLE MANAGEMENT ---
+        async function setRole(role) {
+            if (role === 'owner' && currentRole === 'cashier') {
+                const pass = await requirePassword("Enter Developer/Owner Password:");
+                if(pass !== getAdminPassword()) {
+                    if(pass !== null) alert("Access Denied! Incorrect Password.");
+                    return;
+                }
+            }
+
+            currentRole = role;
+            localStorage.setItem('app_role', role);
+            
+            if (role === 'cashier') {
+                document.getElementById('role-selection-buttons').classList.add('hidden');
+                document.getElementById('cashier-mode-header').classList.remove('hidden');
+                document.getElementById('cashier-setup-section').style.display = 'block';
+                document.getElementById('owner-setup-section').style.display = 'none';
+            } else {
+                document.getElementById('role-selection-buttons').classList.remove('hidden');
+                document.getElementById('cashier-mode-header').classList.add('hidden');
+                document.getElementById('cashier-setup-section').style.display = 'none';
+                document.getElementById('owner-setup-section').style.display = 'block';
+            }
+            
+            // Hide/Show sidebar elements
+            const restrictedTabs = ['nav-inventory', 'nav-add-items', 'nav-customers', 'nav-history', 'nav-reports', 'nav-printer', 'nav-cloud', 'nav-warranty'];
+            restrictedTabs.forEach(id => {
+                const el = document.getElementById(id);
+                if(el) el.style.display = role === 'owner' ? 'block' : 'none';
+            });
+
+            // Restrict views
+            if (role === 'cashier') {
+                const activeTab = document.querySelector('.tab-content.active')?.id;
+                const allowed = ['tab-billing', 'tab-serial', 'tab-profile', 'tab-warranty']; 
+                if (!allowed.includes(activeTab)) {
+                    showTab('billing');
+                }
+                renderCashierReport();
+            } else {
+                if(document.getElementById('tab-inventory').classList.contains('active')) renderInventory();
+            }
+        }
+        window.setRole = setRole;
+
+        function saveCashierInfo() {
+            localStorage.setItem('cashier_name', document.getElementById('cashier-name').value);
+            renderCashierReport();
+        }
+        window.saveCashierInfo = saveCashierInfo;
+
+        function handleCashierPhoto(input) {
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    localStorage.setItem('cashier_photo', e.target.result);
+                    loadCashierPhoto();
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+        window.handleCashierPhoto = handleCashierPhoto;
+
+        function loadCashierPhoto() {
+            const photoData = localStorage.getItem('cashier_photo');
+            const img = document.getElementById('cashier-photo-preview');
+            const placeholder = document.getElementById('cashier-photo-placeholder');
+            if (photoData) {
+                img.src = photoData;
+                img.style.display = 'block';
+                placeholder.style.display = 'none';
+            } else {
+                img.style.display = 'none';
+                placeholder.style.display = 'flex';
+            }
+        }
+
+        async function renderCashierReport() {
+            const now = new Date();
+            const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+            
+            const allSales = await db.sales.toArray();
+            const todaySales = allSales.filter(s => s.date >= startOfDay && s.status !== 'Canceled');
+            
+            const cName = localStorage.getItem('cashier_name') || '';
+            const mySales = cName ? todaySales.filter(s => s.cashierName === cName) : todaySales;
+
+            const ruwanSales = mySales.filter(s => s.shop === 'ruwancell' || (!s.shop)).reduce((sum, s) => sum + Number(s.total || 0), 0);
+            const tharuSales = mySales.filter(s => s.shop === 'tharusalon').reduce((sum, s) => sum + Number(s.total || 0), 0);
+
+            document.getElementById('cashier-sales-ruwan').innerText = 'LKR ' + ruwanSales.toFixed(2);
+            document.getElementById('cashier-sales-tharu').innerText = 'LKR ' + tharuSales.toFixed(2);
+        }
+        window.renderCashierReport = renderCashierReport;
 
         async function sendIndividualWhatsApp(name, phone, amount) {
             const phoneNumber = phone.trim().replace(/^0/, '94');
@@ -635,23 +1283,41 @@
 
         function setBillingShop(shop) {
             currentBillShop = shop;
-            document.getElementById('bill-shop-ruwan').className = shop === 'ruwancell' ? 'flex-1 rounded bg-blue-700 text-white text-xs font-bold py-2 uppercase' : 'flex-1 rounded bg-gray-200 text-gray-600 text-xs font-bold py-2 uppercase';
-            document.getElementById('bill-shop-tharu').className = shop === 'tharusalon' ? 'flex-1 rounded bg-pink-600 text-white text-xs font-bold py-2 uppercase' : 'flex-1 rounded bg-gray-200 text-gray-600 text-xs font-bold py-2 uppercase';
+            document.getElementById('bill-shop-ruwan').className = shop === 'ruwancell' ? 'flex-1 rounded-xl bg-blue-600 text-white text-sm font-black py-3 uppercase shadow-[0_0_15px_rgba(37,99,235,0.4)] border border-blue-500 transition-all tracking-wider' : 'flex-1 rounded-xl bg-slate-800 text-slate-400 text-sm font-black py-3 uppercase border border-slate-600 hover:bg-slate-700 hover:text-white transition-all tracking-wider';
+            document.getElementById('bill-shop-tharu').className = shop === 'tharusalon' ? 'flex-1 rounded-xl bg-pink-600 text-white text-sm font-black py-3 uppercase shadow-[0_0_15px_rgba(219,39,119,0.4)] border border-pink-500 transition-all tracking-wider' : 'flex-1 rounded-xl bg-slate-800 text-slate-400 text-sm font-black py-3 uppercase border border-slate-600 hover:bg-slate-700 hover:text-white transition-all tracking-wider';
             document.getElementById('bill-search').value = '';
             document.getElementById('search-results').style.display = 'none';
         }
+        window.setBillingShop = setBillingShop;
 
         function setInventoryShop(shop) {
             currentInvShop = shop;
-            document.getElementById('inv-shop-ruwan').className = shop === 'ruwancell' ? 'flex-1 rounded bg-blue-700 text-white text-xs font-bold py-2 uppercase' : 'flex-1 rounded bg-gray-200 text-gray-600 text-xs font-bold py-2 uppercase';
-            document.getElementById('inv-shop-tharu').className = shop === 'tharusalon' ? 'flex-1 rounded bg-pink-600 text-white text-xs font-bold py-2 uppercase' : 'flex-1 rounded bg-gray-200 text-gray-600 text-xs font-bold py-2 uppercase';
+            document.getElementById('inv-shop-ruwan').className = shop === 'ruwancell' ? 'flex-1 rounded-xl bg-blue-600 text-white text-sm font-black py-3 uppercase shadow-[0_0_15px_rgba(37,99,235,0.4)] border border-blue-500 transition-all tracking-wider' : 'flex-1 rounded-xl bg-slate-800 text-slate-400 text-sm font-black py-3 uppercase border border-slate-600 hover:bg-slate-700 hover:text-white transition-all tracking-wider';
+            document.getElementById('inv-shop-tharu').className = shop === 'tharusalon' ? 'flex-1 rounded-xl bg-pink-600 text-white text-sm font-black py-3 uppercase shadow-[0_0_15px_rgba(219,39,119,0.4)] border border-pink-500 transition-all tracking-wider' : 'flex-1 rounded-xl bg-slate-800 text-slate-400 text-sm font-black py-3 uppercase border border-slate-600 hover:bg-slate-700 hover:text-white transition-all tracking-wider';
             renderInventory();
         }
+        window.setInventoryShop = setInventoryShop;
+
+        function setHistoryShop(shop) {
+            currentHistShop = shop;
+            document.getElementById('hist-shop-ruwan').className = shop === 'ruwancell' ? 'flex-1 rounded-xl bg-blue-600 text-white text-sm font-black py-3 uppercase shadow-[0_0_15px_rgba(37,99,235,0.4)] border border-blue-500 transition-all tracking-wider' : 'flex-1 rounded-xl bg-slate-800 text-slate-400 text-sm font-black py-3 uppercase border border-slate-600 hover:bg-slate-700 hover:text-white transition-all tracking-wider';
+            document.getElementById('hist-shop-tharu').className = shop === 'tharusalon' ? 'flex-1 rounded-xl bg-pink-600 text-white text-sm font-black py-3 uppercase shadow-[0_0_15px_rgba(219,39,119,0.4)] border border-pink-500 transition-all tracking-wider' : 'flex-1 rounded-xl bg-slate-800 text-slate-400 text-sm font-black py-3 uppercase border border-slate-600 hover:bg-slate-700 hover:text-white transition-all tracking-wider';
+            renderFullHistory();
+        }
+        window.setHistoryShop = setHistoryShop;
+
+        function setReportShop(shop) {
+            currentRepShop = shop;
+            document.getElementById('rep-shop-ruwan').className = shop === 'ruwancell' ? 'flex-1 rounded-xl bg-blue-600 text-white text-sm font-black py-3 uppercase shadow-[0_0_15px_rgba(37,99,235,0.4)] border border-blue-500 transition-all tracking-wider' : 'flex-1 rounded-xl bg-slate-800 text-slate-400 text-sm font-black py-3 uppercase border border-slate-600 hover:bg-slate-700 hover:text-white transition-all tracking-wider';
+            document.getElementById('rep-shop-tharu').className = shop === 'tharusalon' ? 'flex-1 rounded-xl bg-pink-600 text-white text-sm font-black py-3 uppercase shadow-[0_0_15px_rgba(219,39,119,0.4)] border border-pink-500 transition-all tracking-wider' : 'flex-1 rounded-xl bg-slate-800 text-slate-400 text-sm font-black py-3 uppercase border border-slate-600 hover:bg-slate-700 hover:text-white transition-all tracking-wider';
+            calculateReports();
+        }
+        window.setReportShop = setReportShop;
 
         async function connectAndSaveBluetooth() {
             const status = document.getElementById('printer-status');
             try {
-                status.innerText = "Searching...";
+                status.innerHTML = `<span class="w-3 h-3 rounded-full bg-blue-500 inline-block animate-pulse"></span> Searching...`;
                 bleDevice = await navigator.bluetooth.requestDevice({
                     filters: [{ services: ['000018f0-0000-1000-8000-00805f9b34fb'] }, { namePrefix: 'RP' }, { namePrefix: 'MTP' }],
                     optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
@@ -660,15 +1326,47 @@
                 const server = await bleDevice.gatt.connect();
                 const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
                 bleCharacteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
-                status.innerText = "Status: Connected to " + bleDevice.name;
-            } catch (err) { status.innerText = "Error: " + err.message; }
+                status.innerHTML = `<span class="w-3 h-3 rounded-full bg-green-500 inline-block"></span> Connected: ${bleDevice.name}`;
+            } catch (err) { 
+                status.innerHTML = `<span class="w-3 h-3 rounded-full bg-red-500 inline-block"></span> Error: ${err.message}`; 
+            }
         }
+        window.connectAndSaveBluetooth = connectAndSaveBluetooth;
 
         function forgetPrinter() {
             localStorage.removeItem('persistent_printer_name');
-            document.getElementById('printer-status').innerText = "Status: Not Connected";
+            document.getElementById('printer-status').innerHTML = `<span class="w-3 h-3 rounded-full bg-slate-600 inline-block"></span> Status: Not Connected`;
             alert("Saved printer forgotten.");
         }
+        window.forgetPrinter = forgetPrinter;
+
+        window.syncCartWithInventory = async function() {
+            if(cart && cart.length > 0) {
+                for(let i=0; i<cart.length; i++) {
+                    if(cart[i].code && cart[i].code !== 'unlisted') {
+                        const freshItem = await db.inventory.get(cart[i].code);
+                        if(freshItem) {
+                            const unitPrice = pricingMode === 'wholesale' ? (Number(freshItem.wholesalePrice) || freshItem.price) : freshItem.price;
+                            const itemDiscount = pricingMode === 'wholesale' ? 0 : (freshItem.discount || 0);
+                            cart[i].price = unitPrice;
+                            cart[i].discount = itemDiscount * cart[i].qty;
+                            cart[i].total = (unitPrice * cart[i].qty) - cart[i].discount;
+                            cart[i].name = freshItem.name;
+                            if(cart[i].id) await db.draftCart.put(cart[i]);
+                        }
+                    }
+                }
+                renderCart();
+                updateLivePreview();
+            }
+        };
+
+        window.updateCartWarranty = async function(index, months) {
+            cart[index].customerWarrantyMonths = parseInt(months) || 0;
+            if(cart[index].id) await db.draftCart.put(cart[index]);
+            renderCart();
+            updateLivePreview();
+        };
 
         async function directPrint() {
             const custName = document.getElementById('bill-customer').value || "General Customer";
@@ -676,7 +1374,9 @@
             const extraDiscount = parseFloat(document.getElementById('bill-extra-discount').value) || 0;
             const subtotal = cart.reduce((sum, i) => sum + (paymentMode === 'credit' ? (i.price * i.qty) : i.total), 0) - extraDiscount;
             const discountProfit = (paymentMode === 'credit' ? 0 : cart.reduce((sum, i) => sum + (i.discount || 0), 0)) + extraDiscount;
-            const gavePriceInput = prompt("Amount Paid (Gave Price):", subtotal);
+            
+            // Native prompt for amount paid is safe to keep
+            const gavePriceInput = prompt("Amount Paid (Gave Price):", paymentMode === 'credit' ? 0 : subtotal);
             if(gavePriceInput === null) return;
             const gavePrice = parseFloat(gavePriceInput) || 0;
             const balance = gavePrice - subtotal;
@@ -705,7 +1405,9 @@
                 }
             }
             
-            const saleData = {
+            const currentCashier = currentRole === 'owner' ? 'Owner' : (localStorage.getItem('cashier_name') || 'Cashier');
+
+            const saleDataToSave = {
                 invoiceNo: String(invoiceNo),
                 customer: String(custName),
                 total: Number(subtotal),
@@ -717,11 +1419,13 @@
                 type: String(paymentMode),
                 remainingCredit: Number(creditAmount),
                 extraDiscount: Number(extraDiscount),
+                shop: String(currentBillShop),
+                cashierName: String(currentCashier),
                 status: 'Completed'
             };
             
             try {
-                await db.sales.add(saleData);
+                await db.sales.add(saleDataToSave);
             } catch (err) {
                 console.error("Failed to save sale to history:", err);
                 alert("ERROR: Bill could not be saved to History. Please check console.");
@@ -733,13 +1437,15 @@
 
             const printWindow = window.open('', '_blank', 'width=600,height=800');
             if(printWindow) {
-                generateBillPopup(saleData, printWindow);
+                generateBillPopup(saleDataToSave, printWindow);
             } else {
                 alert("⚠️ Print Preview blocked by your browser! Please allow popups.");
             }
             
             clearCart();
+            if(currentRole === 'cashier') renderCashierReport();
         }
+        window.directPrint = directPrint;
 
         async function closeBillWithoutPrint() {
             const custName = document.getElementById('bill-customer').value || "General Customer";
@@ -773,23 +1479,27 @@
                 }
             }
             
-            const saleData = {
+            const currentCashier = currentRole === 'owner' ? 'Owner' : (localStorage.getItem('cashier_name') || 'Cashier');
+
+            const saleDataToSave = {
                 invoiceNo: String(invoiceNo),
                 customer: String(custName),
                 total: Number(subtotal),
                 profit: Number(discountProfit),
-                gavePrice: Number(subtotal),
-                balance: 0,
+                gavePrice: Number(paymentMode === 'credit' ? 0 : subtotal),
+                balance: Number(paymentMode === 'credit' ? -subtotal : 0),
                 date: Number(saleDate),
                 items: JSON.parse(JSON.stringify(cart)),
                 type: String(paymentMode),
                 remainingCredit: Number(creditAmount),
                 extraDiscount: Number(extraDiscount),
+                shop: String(currentBillShop),
+                cashierName: String(currentCashier),
                 status: 'Closed'
             };
 
             try {
-                await db.sales.add(saleData);
+                await db.sales.add(saleDataToSave);
             } catch (err) {
                 console.error("Failed to save to history:", err);
                 alert("ERROR: Bill could not be saved to History.");
@@ -801,7 +1511,9 @@
 
             clearCart();
             alert("Bill Closed and Saved to History.");
+            if(currentRole === 'cashier') renderCashierReport();
         }
+        window.closeBillWithoutPrint = closeBillWithoutPrint;
 
         async function cancelBill() {
             if(cart.length === 0) return alert("Cart is empty");
@@ -820,7 +1532,9 @@
             const savedDate = localStorage.getItem('editingDate');
             const saleDate = savedDate ? parseInt(savedDate) : new Date().getTime();
             
-            const saleData = {
+            const currentCashier = currentRole === 'owner' ? 'Owner' : (localStorage.getItem('cashier_name') || 'Cashier');
+
+            const saleDataToSave = {
                 invoiceNo: String(invoiceNo),
                 customer: String(custName),
                 total: Number(subtotal),
@@ -832,11 +1546,13 @@
                 type: String(paymentMode),
                 remainingCredit: 0,
                 extraDiscount: Number(extraDiscount),
+                shop: String(currentBillShop),
+                cashierName: String(currentCashier),
                 status: 'Canceled'
             };
 
             try {
-                await db.sales.add(saleData);
+                await db.sales.add(saleDataToSave);
             } catch (err) {
                 console.error("Failed to save cancellation to history:", err);
                 alert("ERROR: Cancel record could not be saved to History.");
@@ -848,7 +1564,9 @@
 
             clearCart();
             alert("Bill Canceled and saved to history.");
+            if(currentRole === 'cashier') renderCashierReport();
         }
+        window.cancelBill = cancelBill;
 
         function generateBillPopup(sale, passedWindow = null) {
             const itemsHtml = (sale.items || []).map(i => {
@@ -857,14 +1575,15 @@
                 const total = i.total || 0;
                 const unitPriceAfterDiscount = total / qty;
                 const rowTotal = sale.type === 'credit' ? (price * qty) : total;
+                const wtyText = i.customerWarrantyMonths ? `<br><small style="font-size:13px; font-weight:normal;">(${i.customerWarrantyMonths} Months Wty)</small>` : '';
                 return `
                 <div style="margin-bottom: 8px; padding-bottom: 4px; clear: both;">
-                    <div class="print-item-name" style="text-transform: uppercase;">${i.name || 'Item'}</div>
-                    <div class="flex justify-between print-item-details">
-                        <span style="width:15%">${qty}</span>
-                        <span style="width:25%">${price.toFixed(0)}</span>
-                        <span style="width:13%; font-weight: bold;">${sale.type === 'credit' ? price.toFixed(0) : unitPriceAfterDiscount.toFixed(0)}</span>
-                        <span style="width:35%; text-align:right; font-weight: bold;">${rowTotal.toFixed(2)}</span>
+                    <div class="print-item-name" style="text-transform: uppercase; color: black !important;">${i.name || 'Item'}${wtyText}</div>
+                    <div class="flex justify-between print-item-details" style="color: black !important;">
+                        <span style="width:15%; color: black !important;">${qty}</span>
+                        <span style="width:25%; color: black !important;">${price.toFixed(0)}</span>
+                        <span style="width:13%; font-weight: bold; color: black !important;">${sale.type === 'credit' ? price.toFixed(0) : unitPriceAfterDiscount.toFixed(0)}</span>
+                        <span style="width:35%; text-align:right; font-weight: bold; color: black !important;">${rowTotal.toFixed(2)}</span>
                     </div>
                 </div>`;
             }).join('');
@@ -876,80 +1595,91 @@
             let footerHtml = "";
             if (safeExtraDisc > 0) {
                 footerHtml += `
-                    <div class="print-footer-info" style="margin-top:5px; clear: both; font-weight:bold;">
-                        <span>Subtotal:</span> <span style="text-decoration: line-through; opacity: 0.7;">Rs. ${baseTotal.toFixed(2)}</span>
+                    <div class="print-footer-info" style="margin-top:5px; clear: both; font-weight:bold; color: black !important;">
+                        <span>Subtotal:</span> <span style="text-decoration: line-through; opacity: 0.7; color: black !important;">Rs. ${baseTotal.toFixed(2)}</span>
                     </div>
-                    <div class="print-total-section" style="border-top: 1px solid black; margin-top: 2px;">
-                        <span>Net Total:</span> <span>Rs. ${safeTotal.toFixed(2)}</span>
+                    <div class="print-total-section" style="border-top: 1px solid black; margin-top: 2px; color: black !important;">
+                        <span>Net Total:</span> <span style="color: black !important;">Rs. ${safeTotal.toFixed(2)}</span>
                     </div>
                 `;
             } else {
                 footerHtml += `
-                    <div class="print-total-section">
-                        <span>Total Amount:</span> <span>Rs. ${safeTotal.toFixed(2)}</span>
+                    <div class="print-total-section" style="color: black !important;">
+                        <span>Total Amount:</span> <span style="color: black !important;">Rs. ${safeTotal.toFixed(2)}</span>
                     </div>
                 `;
             }
             
-            if(sale.type === 'cash' || sale.type === 'settlement') {
-              const gavePrice = sale.gavePrice || sale.total || 0;
-              const balance = sale.balance || 0;
-              footerHtml += `
-                <div class="print-footer-info" style="margin-top:5px; clear: both;">
-                    <span>Paid Amount:</span> <span>Rs. ${gavePrice.toFixed(2)}</span>
-                </div>
-                <div class="print-footer-info" style="margin-bottom:5px;">
-                    <span>Balance:</span> <span>Rs. ${balance.toFixed(2)}</span>
-                </div>
-              `;
-            }
+            const gavePrice = sale.gavePrice !== undefined ? sale.gavePrice : (sale.type === 'credit' ? 0 : safeTotal);
+            const balance = sale.balance !== undefined ? sale.balance : (gavePrice - safeTotal);
+            
+            footerHtml += `
+            <div class="print-footer-info" style="margin-top:5px; clear: both; color: black !important;">
+                <span>Paid Amount:</span> <span style="color: black !important;">Rs. ${gavePrice.toFixed(2)}</span>
+            </div>
+            <div class="print-footer-info" style="margin-bottom:5px; color: black !important;">
+                <span>Balance:</span> <span style="color: black !important;">Rs. ${balance.toFixed(2)}</span>
+            </div>
+            `;
+
             if((sale.profit || 0) > 0 && sale.type !== 'credit') {
               footerHtml += `
-                <div style="text-align: center; margin: 15px 0; clear: both;">
-                    <div style="display: inline-block; border: 1.5px solid black; padding: 10px 20px; font-weight: bold; font-size: 17px !important;">
+                <div style="text-align: center; margin: 15px 0; clear: both; color: black !important;">
+                    <div style="display: inline-block; border: 1.5px solid black; padding: 10px 20px; font-weight: bold; font-size: 17px !important; color: black !important;">
                         You Saved: Rs. ${(sale.profit || 0).toFixed(2)}
                     </div>
                 </div>`;
             }
             if(sale.type === 'credit' && (sale.remainingCredit || 0) > 0) {
               footerHtml += `
-                <div style="text-align: center; margin: 15px 0; clear: both;">
-                    <div style="display: inline-block; border: 1.5px solid black; padding: 10px 20px; font-weight: bold; font-size: 18px !important;">
+                <div style="text-align: center; margin: 15px 0; clear: both; color: black !important;">
+                    <div style="display: inline-block; border: 1.5px solid black; padding: 10px 20px; font-weight: bold; font-size: 18px !important; color: black !important;">
                         Credit Balance: Rs. ${(sale.remainingCredit || 0).toFixed(2)}
                     </div>
                 </div>`;
             }
             footerHtml += `
-                <div style="text-align: center; margin-top: 10px; border-top: 0.5px dashed #000; padding-top: 8px; clear: both;">
-                    <p class="print-footer-info" style="margin: 0; display:block;">Payment: ${(sale.type || 'cash').toUpperCase()}</p>
-                    <p class="print-footer-info" style="color: #333; margin: 2px 0; display:block;">${new Date(sale.date).toLocaleString()}</p>
-                    <div class="print-thanks-msg" style="margin-top:10px; width:100%; text-align:center;">Thank You Come Again!</div>
+                <div style="text-align: center; margin-top: 10px; border-top: 0.5px dashed #000; padding-top: 8px; clear: both; color: black !important;">
+                    <p class="print-footer-info" style="margin: 0; display:block; color: black !important;">Payment: ${(sale.type || 'cash').toUpperCase()}</p>
+                    <p class="print-footer-info" style="color: #333; margin: 2px 0; display:block; color: black !important;">${new Date(sale.date).toLocaleString()}</p>
+                    <div class="print-thanks-msg" style="margin-top:10px; width:100%; text-align:center; color: black !important;">Thank You Come Again!</div>
                 </div>
             `;
             const logoBase64 = localStorage.getItem('bill_logo');
             const logoHtml = logoBase64 ? `<img src="${logoBase64}" style="max-width: 100%; height: auto; display: block; margin: 0 auto 5px auto;">` : '';
+            
+            let hasWarranty = sale.items && sale.items.some(i => i.customerWarrantyMonths > 0);
+            let barcodeHtml = "";
+            if (hasWarranty) {
+                let canvas = document.createElement("canvas");
+                JsBarcode(canvas, "INV-" + sale.invoiceNo, { format: "CODE128", width: 1.5, height: 40, displayValue: true, margin: 0 });
+                barcodeHtml = `<div style="text-align:center; margin-top:10px; color: black !important;"><img src="${canvas.toDataURL()}" style="max-width:100%;"></div>`;
+            }
+
             const printContent = `
-                <div class="receipt-border text-center">
+                <div class="receipt-border text-center" style="color: black !important;">
                     ${logoHtml}
-                    <p class="print-shop-name">RUWAN CELLULAR & SALON THARU</p>
+                    <p class="print-shop-name" style="color: black !important;">RUWAN CELLULAR & SALON THARU</p>
                     <strong>
-                        <p class="print-shop-info">MADAGALLA ROAD, DAGAMA</p>
-                        <p class="print-shop-info">077 230 1099 / 075 548 5454</p>
+                        <p class="print-shop-info" style="color: black !important;">MADAGALLA ROAD, DAGAMA</p>
+                        <p class="print-shop-info" style="color: black !important;">077 230 1099 / 075 548 5454</p>
                     </strong>
                 </div>
-                <div class="print-bill-details" style="margin-bottom: 5px;">
-                    <div class="flex justify-between"><span>Inv: ${sale.invoiceNo}</span><span>Customer: ${sale.customer}</span></div>
+                <div class="print-bill-details" style="margin-bottom: 5px; color: black !important;">
+                    <div class="flex justify-between" style="color: black !important;"><span style="color: black !important;">Inv: ${sale.invoiceNo}</span><span style="color: black !important;">Cashier: ${sale.cashierName || 'Owner'}</span></div>
+                    <div class="flex justify-between" style="color: black !important;"><span style="color: black !important;">Customer: ${sale.customer}</span><span></span></div>
                 </div>
-                <div id="items-square-container">
-                    <div class="flex justify-between mb-1 print-table-head" style="border-bottom: 1px solid black;">
-                        <span style="width:10%">Qty</span>
-                        <span style="width:15%">Price</span>
-                        <span style="width:15%">Net</span>
-                        <span style="width:15%; text-align:right">Total</span>
+                <div id="items-square-container" style="color: black !important;">
+                    <div class="flex justify-between mb-1 print-table-head" style="border-bottom: 1px solid black; color: black !important;">
+                        <span style="width:10%; color: black !important;">Qty</span>
+                        <span style="width:15%; color: black !important;">Price</span>
+                        <span style="width:15%; color: black !important;">Net</span>
+                        <span style="width:15%; text-align:right; color: black !important;">Total</span>
                     </div>
                     ${itemsHtml}
                 </div>
-                <div class="text-right mt-1">${footerHtml}</div>
+                <div class="text-right mt-1" style="color: black !important;">${footerHtml}</div>
+                ${barcodeHtml}
             `;
             
             const printWindow = passedWindow || window.open('', '_blank', 'width=600,height=800');
@@ -957,25 +1687,25 @@
                 printWindow.document.open();
                 printWindow.document.write(`<html><head><title>Bill Preview</title><style>
                     body { width: 78mm; font-family: 'Courier New', Courier, monospace; margin: 0; padding: 0; text-align: left; background: white; color: black; } 
-                    #bill-wrap { width: 78mm; box-sizing: border-box; overflow: hidden; padding: 2mm; margin: 0 auto; } 
+                    #bill-wrap { width: 78mm; box-sizing: border-box; overflow: hidden; padding: 2mm; margin: 0 auto; background: white; color: black; } 
                     .print-btn { width: 100%; background: #2563eb; color: white; border: none; padding: 15px; font-weight: bold; border-radius: 5px; margin: 10px 0; display: block; cursor: pointer; font-size: 16px; } 
-                    .receipt-border { border:1.5px solid black; border-radius: 8px; padding: 5px; margin-bottom: 5px; text-align: center; line-height:1.1; } 
-                    #items-square-container { border-top: 1.5px solid black; border-bottom: 1.5px solid black; padding: 5px 0; margin: 5px 0; min-height: 20px; clear: both; width: 100%; } 
+                    .receipt-border { border:1.5px solid black; border-radius: 8px; padding: 5px; margin-bottom: 5px; text-align: center; line-height:1.1; color: black; } 
+                    #items-square-container { border-top: 1.5px solid black; border-bottom: 1.5px solid black; padding: 5px 0; margin: 5px 0; min-height: 20px; clear: both; width: 100%; color: black; } 
                     .flex { display: flex; } .justify-between { justify-content: space-between; } .text-right { text-align: right; } 
-                    .print-shop-name { font-size: 24px !important; font-weight: bold; margin: 0; text-align: center; } 
-                    .print-shop-info { font-size: 16px !important; margin: 0; padding: 0; line-height: 1.2; text-align: center; } 
-                    .print-bill-details { font-size: 16px !important; margin-bottom: 5px; } 
-                    .print-table-head { font-size: 16px !important; font-weight: bold; border-bottom: 1px solid black; } 
-                    .print-item-name { font-size: 18px !important; font-weight: bold; margin: 0; white-space: normal; } 
-                    .print-item-details { font-size: 16px !important; } 
-                    .print-total-section { font-size: 20px !important; font-weight: bold; border-top: 1.5px solid black; padding-top: 5px; margin-top: 5px; clear: both !important; width: 100%; display: flex; justify-content: space-between; } 
-                    .print-footer-info { font-size: 16px !important; display: flex; justify-content: space-between; } 
-                    .print-thanks-msg { font-size: 18px !important; font-weight: bold; text-align: center; margin-top: 10px; } 
+                    .print-shop-name { font-size: 24px !important; font-weight: bold; margin: 0; text-align: center; color: black; } 
+                    .print-shop-info { font-size: 16px !important; margin: 0; padding: 0; line-height: 1.2; text-align: center; color: black; } 
+                    .print-bill-details { font-size: 16px !important; margin-bottom: 5px; color: black; } 
+                    .print-table-head { font-size: 16px !important; font-weight: bold; border-bottom: 1px solid black; color: black; } 
+                    .print-item-name { font-size: 18px !important; font-weight: bold; margin: 0; white-space: normal; color: black; } 
+                    .print-item-details { font-size: 16px !important; color: black; } 
+                    .print-total-section { font-size: 20px !important; font-weight: bold; border-top: 1.5px solid black; padding-top: 5px; margin-top: 5px; clear: both !important; width: 100%; display: flex; justify-content: space-between; color: black; } 
+                    .print-footer-info { font-size: 16px !important; display: flex; justify-content: space-between; color: black; } 
+                    .print-thanks-msg { font-size: 18px !important; font-weight: bold; text-align: center; margin-top: 10px; color: black; } 
                     @media print { 
                         .print-btn { display: none !important; } 
                         @page { margin: 0; size: 80mm auto; } 
-                        body { width: 78mm !important; margin: 0; padding: 0; } 
-                        #bill-wrap { width: 78mm !important; padding: 0 !important; } 
+                        body { width: 78mm !important; margin: 0; padding: 0; background: white !important; color: black !important; } 
+                        #bill-wrap { width: 78mm !important; padding: 0 !important; background: white !important; color: black !important; } 
                     }
                 </style></head><body><button class=\"print-btn\" onclick=\"window.print();\">PRINT BILL NOW</button><div id=\"bill-wrap\">${printContent}</div></body></html>`);
                 printWindow.document.close();
@@ -984,6 +1714,7 @@
                 alert("⚠️ Print Preview blocked! Please allow popups for this site.");
             }
         }
+        window.generateBillPopup = generateBillPopup;
 
         async function clearCart() {
             cart = []; 
@@ -1011,15 +1742,17 @@
                 resultsDiv.innerHTML = items.map(i => {
                     const codeStr = String(i.code);
                     const displayCode = i.rawCode || codeStr.replace((i.shop || currentBillShop) + '_', '');
+                    const currentPrice = pricingMode === 'wholesale' ? (i.wholesalePrice || i.price) : i.price;
                     return `
-                    <div onclick="selectSearchResult('${codeStr}', '${i.name}')">
-                        <span class="font-bold">${i.name}</span> <span class="text-xs text-gray-500">(${displayCode})</span>
-                        <p class="text-xs">Price: LKR ${i.price} | Stock: ${i.stock}</p>
+                    <div onclick="selectSearchResult('${codeStr}', '${i.name}')" class="hover:bg-slate-700 transition-colors">
+                        <span class="font-bold text-white">${i.name}</span> <span class="text-xs text-slate-400">(${displayCode})</span>
+                        <p class="text-xs text-blue-300 font-bold mt-1">Price: LKR ${currentPrice} | Stock: ${i.stock}</p>
                     </div>
                 `}).join('');
                 resultsDiv.style.display = 'block';
             } else { resultsDiv.style.display = 'none'; }
         }
+        window.searchItems = searchItems;
 
         async function selectSearchResult(code, name) {
             const qtyInput = prompt(`Enter Quantity for ${name}:`, "1");
@@ -1033,6 +1766,7 @@
             document.getElementById('bill-search').value = '';
             document.getElementById('search-results').style.display = 'none';
         }
+        window.selectSearchResult = selectSearchResult;
 
         async function addToCart() {
             const code = document.getElementById('bill-code').value;
@@ -1040,13 +1774,16 @@
             const item = await db.inventory.get(code);
             if(item) {
                 if(item.stock - qty < 10) { alert(`⚠️ Low Stock: ${item.name} is under 10!`); }
-                const itemDiscount = item.discount || 0;
+                const unitPrice = pricingMode === 'wholesale' ? (Number(item.wholesalePrice) || item.price) : item.price;
+                const itemDiscount = pricingMode === 'wholesale' ? 0 : (item.discount || 0);
                 const totalDiscount = itemDiscount * qty;
                 const cartItem = { 
                     ...item, 
+                    price: unitPrice,
                     qty: qty, 
                     discount: totalDiscount, 
-                    total: (item.price * qty) - totalDiscount 
+                    total: (unitPrice * qty) - totalDiscount,
+                    customerWarrantyMonths: 0
                 };
                 cart.push(cartItem);
                 await db.draftCart.add(cartItem);
@@ -1069,35 +1806,43 @@
             renderCart(); 
             updateLivePreview();
         }
+        window.removeFromCart = removeFromCart;
 
         async function addUnlistedItem() {
             const name = prompt("Item Name:");
             const price = parseFloat(prompt("Price (LKR):"));
             if(name && !isNaN(price)) {
-                const cartItem = { name: name.toUpperCase(), price, qty: 1, wholesale: price, total: price, discount: 0 };
+                const cartItem = { name: name.toUpperCase(), price, qty: 1, cost: price, wholesalePrice: price, total: price, discount: 0, customerWarrantyMonths: 0 };
                 cart.push(cartItem); 
                 await db.draftCart.add(cartItem);
                 renderCart(); 
                 updateLivePreview();
             }
         }
+        window.addUnlistedItem = addUnlistedItem;
 
         function renderCart() {
             const extraDiscount = parseFloat(document.getElementById('bill-extra-discount').value) || 0;
             let total = cart.reduce((sum, i) => sum + (paymentMode === 'credit' ? (i.price * i.qty) : i.total), 0) - extraDiscount;
             document.getElementById('cart-items').innerHTML = cart.map((i, index) => {
                 const rowTotal = paymentMode === 'credit' ? (i.price * i.qty) : i.total;
+                const wtyText = i.customerWarrantyMonths ? ` <span class="text-[10px] text-orange-400 font-bold ml-1 bg-orange-900/30 px-1.5 py-0.5 rounded border border-orange-500/30">(${i.customerWarrantyMonths}M WTY)</span>` : '';
                 return `
-                <div class="flex justify-between border-b py-1">
-                    <span>${i.name} x ${i.qty} ${(i.discount > 0 && paymentMode !== 'credit') ? '<small class="text-blue-600">(-'+i.discount.toFixed(2)+')</small>' : ''}</span>
-                    <div class="flex gap-2">
-                        <span>${rowTotal.toFixed(2)}</span>
-                        <button onclick="removeFromCart(${index})" class="text-red-500 font-bold">✕</button>
+                <div class="flex justify-between border-b border-slate-700 py-3 items-center hover:bg-slate-800/50 transition-colors px-2 rounded">
+                    <div class="flex-1">
+                        <span class="text-sm font-bold text-white">${i.name} <span class="text-blue-400 opacity-80">x ${i.qty}</span>${wtyText}</span>
+                        ${(i.discount > 0 && paymentMode !== 'credit') ? '<br><small class="text-red-400 font-bold">(-LKR '+i.discount.toFixed(2)+')</small>' : ''}
+                    </div>
+                    <div class="flex gap-3 items-center">
+                        <input type="number" placeholder="Wty(Mo)" value="${i.customerWarrantyMonths || ''}" onchange="updateCartWarranty(${index}, this.value)" class="w-16 p-1.5 text-xs border rounded-md bg-slate-900 text-orange-300 border-slate-600 focus:border-orange-500 glow-focus outline-none text-center shadow-inner" title="Warranty in Months">
+                        <span class="font-black text-white w-20 text-right">${rowTotal.toFixed(2)}</span>
+                        <button onclick="removeFromCart(${index})" class="text-slate-400 hover:text-red-400 font-black p-1 transition-colors">✕</button>
                     </div>
                 </div>
             `}).join('');
             document.getElementById('cart-total').innerText = total.toFixed(2);
         }
+        window.renderCart = renderCart;
 
         async function updateLivePreview() {
             const extraDiscount = parseFloat(document.getElementById('bill-extra-discount').value) || 0;
@@ -1108,38 +1853,39 @@
             document.getElementById('print-items').innerHTML = cart.map(i => {
                 const unitPriceAfterDiscount = i.total / i.qty;
                 const rowTotal = paymentMode === 'credit' ? (i.price * i.qty) : i.total;
+                const wtyText = i.customerWarrantyMonths ? `<br><small style="font-size:13px; font-weight:normal;">(${i.customerWarrantyMonths} Months Wty)</small>` : '';
                 return `
-                <div style="margin-bottom: 8px; padding-bottom: 4px; clear: both;">
-                    <div class="print-item-name" style="text-transform: uppercase;">${i.name}</div>
-                    <div class="flex justify-between print-item-details">
-                        <span style="width:15%">${i.qty}</span>
-                        <span style="width:25%">${i.price.toFixed(0)}</span>
-                        <span style="width:13%; font-weight: bold;">${paymentMode === 'credit' ? i.price.toFixed(0) : unitPriceAfterDiscount.toFixed(0)}</span>
-                        <span style="width:35%; text-align:right; font-weight: bold;">${rowTotal.toFixed(2)}</span>
+                <div style="margin-bottom: 8px; padding-bottom: 4px; clear: both; color: black !important;">
+                    <div class="print-item-name" style="text-transform: uppercase; color: black !important;">${i.name}${wtyText}</div>
+                    <div class="flex justify-between print-item-details" style="color: black !important;">
+                        <span style="width:15%; color: black !important;">${i.qty}</span>
+                        <span style="width:25%; color: black !important;">${i.price.toFixed(0)}</span>
+                        <span style="width:13%; font-weight: bold; color: black !important;">${paymentMode === 'credit' ? i.price.toFixed(0) : unitPriceAfterDiscount.toFixed(0)}</span>
+                        <span style="width:35%; text-align:right; font-weight: bold; color: black !important;">${rowTotal.toFixed(2)}</span>
                     </div>
                 </div>
             `}).join('');
             let totalHtml = "";
             if (extraDiscount > 0) {
                 totalHtml += `
-                    <div class="print-footer-info" style="margin-top:5px; clear: both; font-weight:bold;">
-                        <span>Subtotal:</span> <span style="text-decoration: line-through; opacity: 0.7;">Rs. ${baseSubtotal.toFixed(2)}</span>
+                    <div class="print-footer-info" style="margin-top:5px; clear: both; font-weight:bold; color: black !important;">
+                        <span>Subtotal:</span> <span style="text-decoration: line-through; opacity: 0.7; color: black !important;">Rs. ${baseSubtotal.toFixed(2)}</span>
                     </div>
-                    <div class="print-total-section" style="border-top: 1px solid black; margin-top: 2px;">
-                        <span>Net Total:</span> <span>Rs. ${subtotal.toFixed(2)}</span>
+                    <div class="print-total-section" style="border-top: 1px solid black; margin-top: 2px; color: black !important;">
+                        <span>Net Total:</span> <span style="color: black !important;">Rs. ${subtotal.toFixed(2)}</span>
                     </div>
                 `;
             } else {
                 totalHtml += `
-                    <div class="print-total-section">
-                        <span>Total Amount:</span> <span>Rs. ${subtotal.toFixed(2)}</span>
+                    <div class="print-total-section" style="color: black !important;">
+                        <span>Total Amount:</span> <span style="color: black !important;">Rs. ${subtotal.toFixed(2)}</span>
                     </div>
                 `;
             }
             if(discountProfit > 0 && paymentMode !== 'credit') {
               totalHtml += `
-                <div style="text-align: center; margin: 15px 0; clear: both;">
-                    <div style="display: inline-block; border: 1.5px solid black; padding: 10px 20px; font-weight: bold; font-size: 17px;">
+                <div style="text-align: center; margin: 15px 0; clear: both; color: black !important;">
+                    <div style="display: inline-block; border: 1.5px solid black; padding: 10px 20px; font-weight: bold; font-size: 17px; color: black !important;">
                         You Saved: Rs. ${discountProfit.toFixed(2)}
                     </div>
                 </div>`;
@@ -1149,30 +1895,57 @@
                 if(customer) {
                     const currentCredit = (customer.creditAmount || 0) + subtotal;
                     totalHtml += `
-                    <div style="text-align: center; margin: 15px 0; clear: both;">
-                        <div style="display: inline-block; border: 1.5px solid black; padding: 10px 20px; font-weight: bold; font-size: 18px;">
+                    <div style="text-align: center; margin: 15px 0; clear: both; color: black !important;">
+                        <div style="display: inline-block; border: 1.5px solid black; padding: 10px 20px; font-weight: bold; font-size: 18px; color: black !important;">
                             Credit Balance: Rs. ${currentCredit.toFixed(2)}
                         </div>
                     </div>`;
                 }
             }
             totalHtml += `
-                <div style="text-align: center; margin-top: 10px; border-top: 0.5px dashed #000; padding-top: 8px; clear: both;">
-                    <p class="print-footer-info" style="margin: 0; display:block;">Payment: ${paymentMode.toUpperCase()}</p>
-                    <p class="print-footer-info" style="color: #333; margin: 2px 0; display:block;">${new Date().toLocaleString()}</p>
-                    <div class="print-thanks-msg" style="margin-top:10px; width:100%; text-align:center;">Thank You Come Again!</div>
+                <div style="text-align: center; margin-top: 10px; border-top: 0.5px dashed #000; padding-top: 8px; clear: both; color: black !important;">
+                    <p class="print-footer-info" style="margin: 0; display:block; color: black !important;">Payment: ${paymentMode.toUpperCase()}</p>
+                    <p class="print-footer-info" style="color: #333; margin: 2px 0; display:block; color: black !important;">${new Date().toLocaleString()}</p>
+                    <div class="print-thanks-msg" style="margin-top:10px; width:100%; text-align:center; color: black !important;">Thank You Come Again!</div>
                 </div>
             `;
             document.getElementById('print-totals').innerHTML = totalHtml;
             renderCart();
         }
+        window.updateLivePreview = updateLivePreview;
+
+        async function setPricingMode(mode) {
+            pricingMode = mode;
+            document.getElementById('btn-retail').className = mode === 'retail' ? 'flex-1 rounded-lg bg-indigo-600 text-white text-xs font-bold py-2.5 uppercase shadow-[0_0_10px_rgba(79,70,229,0.4)] border border-indigo-500 transition-all tracking-wider' : 'flex-1 rounded-lg bg-slate-800 text-slate-400 text-xs font-bold py-2.5 uppercase border border-slate-600 hover:bg-slate-700 hover:text-white transition-all tracking-wider';
+            document.getElementById('btn-wholesale').className = mode === 'wholesale' ? 'flex-1 rounded-lg bg-indigo-600 text-white text-xs font-bold py-2.5 uppercase shadow-[0_0_10px_rgba(79,70,229,0.4)] border border-indigo-500 transition-all tracking-wider' : 'flex-1 rounded-lg bg-slate-800 text-slate-400 text-xs font-bold py-2.5 uppercase border border-slate-600 hover:bg-slate-700 hover:text-white transition-all tracking-wider';
+            
+            // Re-evaluate cart item prices
+            for(let i=0; i<cart.length; i++) {
+                let item = cart[i];
+                if(item.code && item.code !== 'unlisted') {
+                    const invItem = await db.inventory.get(item.code);
+                    if(invItem) {
+                        const unitPrice = mode === 'wholesale' ? (Number(invItem.wholesalePrice) || invItem.price) : invItem.price;
+                        const itemDiscount = mode === 'wholesale' ? 0 : (invItem.discount || 0);
+                        item.price = unitPrice;
+                        item.discount = itemDiscount * item.qty;
+                        item.total = (unitPrice * item.qty) - item.discount;
+                        if(item.id) await db.draftCart.put(item);
+                    }
+                }
+            }
+            renderCart();
+            updateLivePreview();
+        }
+        window.setPricingMode = setPricingMode;
 
         function setPaymentMode(mode) {
             paymentMode = mode;
-            document.getElementById('btn-cash').className = mode === 'cash' ? 'flex-1 rounded bg-green-700 text-white text-xs font-bold' : 'flex-1 rounded bg-gray-200 text-xs font-bold';
-            document.getElementById('btn-credit').className = mode === 'credit' ? 'flex-1 rounded bg-red-700 text-white text-xs font-bold' : 'flex-1 rounded bg-gray-200 text-xs font-bold';
+            document.getElementById('btn-cash').className = mode === 'cash' ? 'flex-1 rounded-lg bg-emerald-600 text-white text-xs font-black shadow-[0_0_10px_rgba(16,185,129,0.3)] border border-emerald-500 transition-all uppercase tracking-wider' : 'flex-1 rounded-lg bg-slate-800 text-slate-400 text-xs font-black border border-slate-600 hover:bg-slate-700 hover:text-white transition-all uppercase tracking-wider';
+            document.getElementById('btn-credit').className = mode === 'credit' ? 'flex-1 rounded-lg bg-red-600 text-white text-xs font-black shadow-[0_0_10px_rgba(220,38,38,0.3)] border border-red-500 transition-all uppercase tracking-wider' : 'flex-1 rounded-lg bg-slate-800 text-slate-400 text-xs font-black border border-slate-600 hover:bg-slate-700 hover:text-white transition-all uppercase tracking-wider';
             updateLivePreview();
         }
+        window.setPaymentMode = setPaymentMode;
 
         function handleLogoUpload(input) {
             const file = input.files[0];
@@ -1182,6 +1955,7 @@
                 reader.readAsDataURL(file);
             }
         }
+        window.handleLogoUpload = handleLogoUpload;
 
         function loadLogo() {
             const logoBase64 = localStorage.getItem('bill_logo');
@@ -1191,15 +1965,25 @@
         }
 
         function removeLogo() { localStorage.removeItem('bill_logo'); loadLogo(); }
+        window.removeLogo = removeLogo;
 
         function toggleSidebar() {
             document.getElementById('sidebar').classList.toggle('open');
             document.getElementById('sidebar-overlay').classList.toggle('hidden');
         }
+        window.toggleSidebar = toggleSidebar;
 
         function showTab(id) {
+            if (currentRole === 'cashier' && !['billing', 'serial', 'profile', 'warranty'].includes(id)) {
+                alert("Access Denied for Cashier Profile!");
+                return;
+            }
+
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-            document.getElementById('tab-' + id).classList.add('active');
+            const targetTab = document.getElementById('tab-' + id);
+            if (targetTab) {
+                targetTab.classList.add('active');
+            }
             if(id === 'inventory') renderInventory();
             if(id === 'customers') renderCustomers();
             if(id === 'billing') updateCustomerDropdown();
@@ -1207,6 +1991,7 @@
             if(id === 'history') renderFullHistory();
             if(id === 'serial') document.getElementById('serial-time').value = new Date().toLocaleString();
         }
+        window.showTab = showTab;
 
         async function saveNewItem() {
             const shop = document.getElementById('add-shop').value;
@@ -1222,12 +2007,16 @@
                 rawCode: rawCode.startsWith(shop + '_') ? rawCode.replace(shop + '_', '') : rawCode,
                 name: document.getElementById('add-name').value.toUpperCase(),
                 price: parseFloat(document.getElementById('add-price').value) || 0,
+                wholesalePrice: parseFloat(document.getElementById('add-wholesale-price').value) || 0,
+                cost: parseFloat(document.getElementById('add-cost').value) || 0,
+                wholesale: parseFloat(document.getElementById('add-cost').value) || 0, // Fallback for old code references
                 discount: parseFloat(document.getElementById('add-discount').value) || 0,
-                wholesale: parseFloat(document.getElementById('add-wholesale').value) || 0,
-                stock: parseFloat(document.getElementById('add-stock').value) || 0
+                stock: parseFloat(document.getElementById('add-stock').value) || 0,
+                stockWarrantyExpiry: document.getElementById('add-stock-warranty').value || ''
             };
             
             await db.inventory.put(item);
+            if(window.broadcastInventoryUpdate) window.broadcastInventoryUpdate();
             alert("Saved!");
             showTab('inventory');
             
@@ -1235,12 +2024,17 @@
             document.getElementById('add-code').value = '';
             document.getElementById('add-name').value = '';
             document.getElementById('add-price').value = '';
+            document.getElementById('add-wholesale-price').value = '';
+            document.getElementById('add-cost').value = '';
             document.getElementById('add-discount').value = '';
-            document.getElementById('add-wholesale').value = '';
             document.getElementById('add-stock').value = '';
+            document.getElementById('add-stock-warranty').value = '';
         }
+        window.saveNewItem = saveNewItem;
 
         async function renderInventory() {
+            if (currentRole === 'cashier') return; // Double protection
+
             const searchTerm = document.getElementById('inventory-search-input')?.value.toLowerCase() || "";
             let items = await db.inventory.toArray();
             items = items.filter(i => i.shop === currentInvShop || !i.shop);
@@ -1252,44 +2046,67 @@
                 });
             }
             document.getElementById('inventory-list').innerHTML = items.map(i => {
-                const lowStockClass = i.stock < 10 ? 'border-red-500 bg-red-50' : 'border-slate-200 bg-white';
+                const lowStockClass = i.stock < 10 ? 'border-red-500/50 bg-red-900/20 shadow-[0_0_15px_rgba(220,38,38,0.2)]' : 'border-slate-700 bg-slate-800/80 hover:border-slate-500';
                 const codeStr = String(i.code);
                 const displayCode = i.rawCode || codeStr.replace((i.shop || currentInvShop) + '_', '');
+                
+                let warrantyHtml = '';
+                if(i.stockWarrantyExpiry) {
+                    const expDate = new Date(i.stockWarrantyExpiry);
+                    const now = new Date();
+                    const diffTime = expDate - now;
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    if(diffDays < 0) {
+                        warrantyHtml = `<span class="bg-red-900/80 border border-red-500 text-red-300 px-2 py-1 rounded text-[10px] font-bold mt-2 inline-block">WTY EXPIRED: ${expDate.toLocaleDateString()}</span>`;
+                    } else if(diffDays <= 30) {
+                        warrantyHtml = `<span class="bg-orange-900/80 border border-orange-500 text-orange-300 px-2 py-1 rounded text-[10px] font-bold mt-2 inline-block animate-pulse">WTY ENDING: ${diffDays} Days</span>`;
+                    } else {
+                        warrantyHtml = `<span class="bg-blue-900/40 border border-blue-500/50 text-blue-300 px-2 py-1 rounded text-[10px] font-bold mt-2 inline-block">Wty: ${expDate.toLocaleDateString()}</span>`;
+                    }
+                }
+
                 return `
-                <div class="p-4 rounded-xl shadow-sm border-2 ${lowStockClass} transition-all hover:shadow-md">
-                    <div class="flex justify-between items-start mb-3">
-                        <div class="flex-1">
+                <div class="p-5 rounded-2xl shadow-lg border-2 ${lowStockClass} transition-all relative overflow-hidden backdrop-blur-sm">
+                    ${i.stock < 10 ? `<div class="absolute top-0 right-0 w-24 h-24 bg-red-500 rounded-full mix-blend-multiply filter blur-2xl opacity-20 pointer-events-none"></div>` : ''}
+                    <div class="flex justify-between items-start mb-4 relative z-10">
+                        <div class="flex-1 pr-2">
                             <input type="text" onchange="updateItemName('${codeStr}', this.value)" value="${i.name}" 
-                                class="w-full font-bold text-slate-800 text-lg leading-tight uppercase bg-transparent border-b border-dashed border-slate-300 focus:border-blue-500 outline-none">
-                            <p class="text-xs font-mono text-slate-500 mt-1">Code: ${displayCode}</p>
+                                class="w-full font-black text-white text-xl leading-tight uppercase bg-transparent border-b border-dashed border-slate-600 focus:border-blue-500 glow-focus outline-none mb-1 pb-1">
+                            <p class="text-xs font-mono text-slate-400">Code: ${displayCode}</p>
+                            ${warrantyHtml}
                         </div>
-                        <div class="flex flex-col gap-1 items-end">
-                            <div class="px-2 py-1 rounded text-[10px] font-bold uppercase ${i.stock < 10 ? 'bg-red-200 text-red-800' : 'bg-green-100 text-green-800'}">
+                        <div class="flex flex-col gap-2 items-end">
+                            <div class="px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${i.stock < 10 ? 'bg-red-900/80 text-red-300 border border-red-500/50' : 'bg-emerald-900/40 text-emerald-400 border border-emerald-500/30'}">
                                 ${i.stock < 10 ? 'Low Stock' : 'In Stock'}
                             </div>
-                            <button onclick="deleteItem('${codeStr}')" class="text-[10px] text-red-500 font-bold uppercase hover:underline">🗑️ Delete Product</button>
+                            <button onclick="deleteItem('${codeStr}')" class="text-[10px] text-red-500 bg-red-900/20 px-2 py-1 rounded border border-red-900/50 font-bold uppercase hover:bg-red-900/50 transition-colors">🗑️ Del</button>
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 gap-3 mt-4">
+                    <div class="grid grid-cols-2 lg:grid-cols-3 gap-3 mt-4 relative z-10 bg-slate-900/50 p-3 rounded-xl border border-slate-700">
                         <div class="space-y-1">
-                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">📦 Current Stock</label>
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">📦 Stock</label>
                             <input type="number" step="0.001" inputmode="decimal" onchange="updateStock('${codeStr}', this.value)" value="${i.stock}" 
-                                class="w-full p-2 border border-slate-300 rounded-lg text-sm font-bold bg-slate-50 focus:ring-2 focus:ring-blue-400 outline-none">
+                                class="w-full p-2 border border-slate-600 rounded bg-slate-800 text-sm font-black text-white focus:border-blue-500 glow-focus outline-none">
                         </div>
                         <div class="space-y-1">
-                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">💰 Selling Price</label>
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">📉 Cost</label>
+                            <input type="number" inputmode="decimal" onchange="updateCost('${codeStr}', this.value)" value="${i.cost !== undefined ? i.cost : (i.wholesale || 0)}" 
+                                class="w-full p-2 border border-emerald-500/30 rounded bg-emerald-900/20 text-sm font-black text-emerald-400 focus:border-emerald-500 glow-focus outline-none">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">💰 Retail Price</label>
                             <input type="number" inputmode="decimal" onchange="updatePrice('${codeStr}', this.value)" value="${i.price}" 
-                                class="w-full p-2 border border-slate-300 rounded-lg text-sm font-bold text-blue-700 bg-slate-50 focus:ring-2 focus:ring-blue-400 outline-none">
+                                class="w-full p-2 border border-blue-500/30 rounded bg-blue-900/20 text-sm font-black text-blue-400 focus:border-blue-500 glow-focus outline-none">
                         </div>
                         <div class="space-y-1">
-                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">🏢 Wholesale Cost</label>
-                            <input type="number" inputmode="decimal" onchange="updateWholesale('${codeStr}', this.value)" value="${i.wholesale || 0}" 
-                                class="w-full p-2 border border-slate-300 rounded-lg text-sm font-bold text-emerald-700 bg-slate-50 focus:ring-2 focus:ring-blue-400 outline-none">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">🏢 Wholesale</label>
+                            <input type="number" inputmode="decimal" onchange="updateWholesalePrice('${codeStr}', this.value)" value="${i.wholesalePrice || 0}" 
+                                class="w-full p-2 border border-purple-500/30 rounded bg-purple-900/20 text-sm font-black text-purple-400 focus:border-purple-500 glow-focus outline-none">
                         </div>
                         <div class="space-y-1">
-                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">🏷️ Disc / Unit</label>
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">🏷️ Disc/Unit</label>
                             <input type="number" inputmode="decimal" onchange="updateDiscount('${codeStr}', this.value)" value="${i.discount || 0}" 
-                                class="w-full p-2 border border-slate-300 rounded-lg text-sm font-bold text-red-600 bg-slate-50 focus:ring-2 focus:ring-blue-400 outline-none">
+                                class="w-full p-2 border border-red-500/30 rounded bg-red-900/20 text-sm font-black text-red-400 focus:border-red-500 glow-focus outline-none">
                         </div>
                     </div>
                 </div>
@@ -1298,18 +2115,27 @@
 
         window.renderInventory = renderInventory; 
 
-        async function updateItemName(code, val) { await db.inventory.update(code, {name: val.toUpperCase()}); }
-        async function updateStock(code, val) { await db.inventory.update(code, {stock: parseFloat(val)}); }
-        async function updatePrice(code, val) { await db.inventory.update(code, {price: parseFloat(val)}); }
-        async function updateWholesale(code, val) { await db.inventory.update(code, {wholesale: parseFloat(val)}); }
-        async function updateDiscount(code, val) { await db.inventory.update(code, {discount: parseFloat(val)}); }
+        async function updateItemName(code, val) { await db.inventory.update(code, {name: val.toUpperCase()}); if(window.broadcastInventoryUpdate) window.broadcastInventoryUpdate(); }
+        window.updateItemName = updateItemName;
+        async function updateStock(code, val) { await db.inventory.update(code, {stock: parseFloat(val)}); if(window.broadcastInventoryUpdate) window.broadcastInventoryUpdate(); }
+        window.updateStock = updateStock;
+        async function updatePrice(code, val) { await db.inventory.update(code, {price: parseFloat(val)}); if(window.broadcastInventoryUpdate) window.broadcastInventoryUpdate(); }
+        window.updatePrice = updatePrice;
+        async function updateCost(code, val) { await db.inventory.update(code, {cost: parseFloat(val), wholesale: parseFloat(val)}); if(window.broadcastInventoryUpdate) window.broadcastInventoryUpdate(); } 
+        window.updateCost = updateCost;
+        async function updateWholesalePrice(code, val) { await db.inventory.update(code, {wholesalePrice: parseFloat(val)}); if(window.broadcastInventoryUpdate) window.broadcastInventoryUpdate(); }
+        window.updateWholesalePrice = updateWholesalePrice;
+        async function updateDiscount(code, val) { await db.inventory.update(code, {discount: parseFloat(val)}); if(window.broadcastInventoryUpdate) window.broadcastInventoryUpdate(); }
+        window.updateDiscount = updateDiscount;
         
         async function deleteItem(code) {
             if(confirm("Are you sure you want to PERMANENTLY DELETE this product?")) {
                 await db.inventory.delete(code);
+                if(window.broadcastInventoryUpdate) window.broadcastInventoryUpdate();
                 renderInventory();
             }
         }
+        window.deleteItem = deleteItem;
 
         async function saveCustomer() {
             const name = document.getElementById('cust-name').value;
@@ -1319,6 +2145,7 @@
             document.getElementById('cust-phone').value = '';
             renderCustomers();
         }
+        window.saveCustomer = saveCustomer;
 
         async function renderCustomers() {
             const searchTerm = document.getElementById('customer-search-input')?.value.toLowerCase() || "";
@@ -1330,34 +2157,35 @@
                 );
             }
             document.getElementById('customer-list').innerHTML = list.map(c => `
-                <div class="bg-white p-3 rounded flex justify-between shadow items-center border border-slate-200">
-                    <div>
-                        <p class="font-bold text-slate-800">${c.name} <small class="text-gray-400 font-normal ml-2">${c.phone || ''}</small></p>
-                        <div class="flex items-center gap-1 mt-1">
-                            <span class="text-xs font-bold uppercase ${c.status === 'credit' ? 'text-red-500' : 'text-green-500'}">${c.status}:</span>
+                <div class="glass-panel p-4 rounded-xl flex flex-col sm:flex-row justify-between shadow-lg items-start sm:items-center border border-slate-700 hover:bg-slate-800 transition-colors">
+                    <div class="mb-3 sm:mb-0">
+                        <p class="font-black text-lg text-white uppercase tracking-wider">${c.name} <span class="text-xs text-slate-400 font-mono font-normal ml-2">${c.phone || ''}</span></p>
+                        <div class="flex items-center gap-2 mt-2 bg-slate-900/50 p-2 rounded-lg border border-slate-700 inline-flex">
+                            <span class="text-[10px] font-black uppercase ${c.status === 'credit' ? 'text-red-400' : 'text-emerald-400'}">${c.status}:</span>
                             <input type="number" step="0.01" inputmode="decimal" onfocus="this.oldValue = this.value" onchange="updateCustomerCredit('${c.name}', this.value, this)" value="${c.creditAmount.toFixed(2)}" 
-                                class="w-24 p-1 border rounded text-xs font-bold focus:ring-1 focus:ring-blue-400">
-                            <span class="text-[10px] text-gray-400 font-bold">LKR</span>
+                                class="w-28 p-1.5 border border-slate-600 rounded bg-slate-800 text-white text-xs font-bold focus:border-blue-500 glow-focus outline-none text-right">
+                            <span class="text-[10px] text-slate-500 font-bold">LKR</span>
                         </div>
                     </div>
-                    <div class="flex gap-2">
+                    <div class="flex gap-3 w-full sm:w-auto">
                         ${c.creditAmount > 0 ? `
-                            <button onclick="sendIndividualWhatsApp('${c.name}', '${c.phone}', ${c.creditAmount})" class="p-2 bg-green-50 text-green-600 rounded-lg border border-green-200 hover:bg-green-100" title="Send Reminder">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                            <button onclick="sendIndividualWhatsApp('${c.name}', '${c.phone}', ${c.creditAmount})" class="flex-1 sm:flex-none p-3 bg-emerald-900/30 text-emerald-400 rounded-lg border border-emerald-500/50 hover:bg-emerald-900/50 transition-colors shadow-sm flex justify-center items-center" title="Send Reminder">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
                                   <path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z"/>
                                 </svg>
                             </button>
                         ` : ''}
-                        <button onclick="settleCredit('${c.name}')" class="text-xs bg-blue-100 p-2 rounded border border-blue-500 font-bold hover:bg-blue-200">Settle</button>
+                        <button onclick="settleCredit('${c.name}')" class="flex-1 sm:flex-none text-sm bg-blue-600 hover:bg-blue-500 text-white px-5 py-3 rounded-lg border border-blue-500 font-bold shadow-md transition-colors uppercase tracking-wider">Settle</button>
                     </div>
                 </div>
             `).join('');
         }
+        window.renderCustomers = renderCustomers;
 
         async function updateCustomerCredit(name, val, inputElem) {
-            const pass = prompt("Enter Password to change credit balance:");
-            if(pass !== ACCESS_PASSWORD) {
-                alert("Incorrect Password!");
+            const pass = await requirePassword("Enter Password to change credit balance:");
+            if(pass !== getAdminPassword()) {
+                if(pass !== null) alert("Incorrect Password!");
                 inputElem.value = inputElem.oldValue;
                 return;
             }
@@ -1368,10 +2196,14 @@
             });
             renderCustomers();
         }
+        window.updateCustomerCredit = updateCustomerCredit;
 
         async function settleCredit(name) {
-            const pass = prompt("Enter Password to Settle:");
-            if(pass !== ACCESS_PASSWORD) return alert("Incorrect Password!");
+            const pass = await requirePassword("Enter Password to Settle:");
+            if(pass !== getAdminPassword()) {
+                if(pass !== null) alert("Incorrect Password!");
+                return;
+            }
 
             const amount = parseFloat(prompt(`Enter amount paid by ${name}:`));
             if(isNaN(amount) || amount <= 0) return;
@@ -1379,7 +2211,9 @@
             const newAmount = Math.max(0, c.creditAmount - amount);
             await db.customers.update(name, { creditAmount: newAmount, status: newAmount <= 0 ? 'cash' : 'credit' });
             
-            const saleData = {
+            const currentCashier = currentRole === 'owner' ? 'Owner' : (localStorage.getItem('cashier_name') || 'Cashier');
+
+            const saleDataToSave = {
                 date: Number(new Date().getTime()),
                 total: Number(amount),
                 profit: 0,
@@ -1391,15 +2225,19 @@
                 gavePrice: Number(amount),
                 balance: 0,
                 remainingCredit: Number(newAmount),
-                extraDiscount: 0
+                extraDiscount: 0,
+                shop: String(currentBillShop), // Record which shop settled it
+                cashierName: String(currentCashier)
             };
             try {
-                await db.sales.add(saleData);
+                await db.sales.add(saleDataToSave);
             } catch (err) {
                 console.error("Error saving settlement:", err);
             }
             renderCustomers();
+            if(currentRole === 'cashier') renderCashierReport();
         }
+        window.settleCredit = settleCredit;
 
         // Ensuring we safely preserve selected customer dropdown choice
         async function updateCustomerDropdown() {
@@ -1419,6 +2257,9 @@
                 const searchQ = (document.getElementById('history-search-input')?.value || "").toLowerCase();
                 let sales = await db.sales.toArray();
                 
+                // Filter by selected shop (handle older data that might not have a shop property)
+                sales = sales.filter(s => s.shop === currentHistShop || (!s.shop && currentHistShop === 'ruwancell'));
+
                 // Sort descending by date
                 sales.sort((a, b) => b.date - a.date);
                 
@@ -1430,40 +2271,41 @@
                 }
 
                 if (sales.length === 0) {
-                    document.getElementById('full-history-list').innerHTML = `<p class="text-center text-gray-500 py-4 font-bold">No history records found.</p>`;
+                    document.getElementById('full-history-list').innerHTML = `<p class="text-center text-slate-500 py-6 font-bold bg-slate-900/50 rounded-xl border border-slate-700">No history records found.</p>`;
                     return;
                 }
 
                 document.getElementById('full-history-list').innerHTML = sales.map(s => {
-                    const statusColor = s.status === 'Completed' ? 'bg-green-100 text-green-700 border-green-200' : 
-                                      (s.status === 'Canceled' ? 'bg-red-100 text-red-700 border-red-200' : 
-                                      'bg-orange-100 text-orange-700 border-orange-200');
+                    const statusColor = s.status === 'Completed' ? 'bg-emerald-900/40 text-emerald-400 border-emerald-500/50' : 
+                                      (s.status === 'Canceled' ? 'bg-red-900/40 text-red-400 border-red-500/50' : 
+                                      'bg-orange-900/40 text-orange-400 border-orange-500/50');
                                       
-                    const typeColor = s.type === 'credit' ? 'text-red-600' : (s.type === 'settlement' ? 'text-blue-600' : 'text-green-600');
-                    
+                    const typeColor = s.type === 'credit' ? 'text-red-400' : (s.type === 'settlement' ? 'text-blue-400' : 'text-emerald-400');
+                    const cashierDisplay = s.cashierName ? `<span class="text-[10px] ml-3 text-blue-300 bg-blue-900/30 px-2 py-0.5 rounded border border-blue-500/30 uppercase tracking-wider">🧑‍💼 ${s.cashierName}</span>` : '';
+
                     return `
-                    <div class="p-4 border rounded-xl bg-white shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all hover:shadow-md ${s.status === 'Canceled' ? 'opacity-75' : ''}">
+                    <div class="p-5 rounded-2xl bg-slate-800/80 shadow-lg border border-slate-600 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 transition-all hover:bg-slate-700 hover:border-slate-500 ${s.status === 'Canceled' ? 'opacity-60' : ''}">
                         <div class="flex-1">
-                            <div class="flex items-center gap-2 mb-1">
-                                <span class="font-bold text-lg text-slate-800">INV: ${s.invoiceNo || 'N/A'}</span>
-                                <span class="text-[10px] font-bold px-2 py-0.5 rounded border ${statusColor}">${s.status || 'Done'}</span>
+                            <div class="flex items-center gap-3 mb-2">
+                                <span class="font-black text-xl text-white tracking-widest">INV: ${s.invoiceNo || 'N/A'}</span>
+                                <span class="text-[10px] font-black px-3 py-1 rounded-full border ${statusColor} uppercase tracking-wider shadow-sm">${s.status || 'Done'}</span>
                             </div>
-                            <p class="font-semibold text-gray-700">👤 ${s.customer}</p>
-                            <p class="text-xs text-gray-500 font-mono mt-1">🕒 ${new Date(s.date).toLocaleString()}</p>
+                            <p class="font-bold text-slate-300 text-lg uppercase tracking-wide">👤 ${s.customer} ${cashierDisplay}</p>
+                            <p class="text-xs text-slate-500 font-mono mt-1 flex items-center gap-1">🕒 ${new Date(s.date).toLocaleString()}</p>
                         </div>
-                        <div class="flex flex-col items-end gap-2">
-                            <p class="text-lg font-black ${typeColor}">LKR ${Number(s.total).toFixed(2)} <span class="text-xs font-bold uppercase ml-1">(${s.type})</span></p>
-                            <div class="flex flex-wrap gap-2 justify-end">
-                                <button onclick='reprintSale(${s.id})' class="bg-indigo-50 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-lg text-xs font-bold uppercase hover:bg-indigo-100 transition-colors">🖨️ View</button>
-                                <button onclick='editSale(${s.id})' class="bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1.5 rounded-lg text-xs font-bold uppercase hover:bg-blue-100 transition-colors">✏️ Edit</button>
-                                <button onclick='deleteSale(${s.id})' class="bg-red-50 text-red-700 border border-red-200 px-3 py-1.5 rounded-lg text-xs font-bold uppercase hover:bg-red-100 transition-colors">🗑️ Del</button>
+                        <div class="flex flex-col items-end gap-3 w-full lg:w-auto">
+                            <p class="text-2xl font-black ${typeColor} tracking-wide bg-slate-900/50 px-4 py-2 rounded-lg border border-slate-700 shadow-inner w-full text-right">LKR ${Number(s.total).toFixed(2)} <span class="text-[10px] font-bold uppercase ml-1 opacity-70">(${s.type})</span></p>
+                            <div class="flex flex-wrap gap-2 justify-end w-full">
+                                <button onclick='reprintSale(${s.id})' class="flex-1 lg:flex-none bg-blue-900/30 text-blue-400 border border-blue-500/50 px-4 py-2.5 rounded-lg text-xs font-black uppercase hover:bg-blue-600 hover:text-white transition-colors shadow-sm">🖨️ View</button>
+                                <button onclick='editSale(${s.id})' class="flex-1 lg:flex-none bg-indigo-900/30 text-indigo-400 border border-indigo-500/50 px-4 py-2.5 rounded-lg text-xs font-black uppercase hover:bg-indigo-600 hover:text-white transition-colors shadow-sm">✏️ Edit</button>
+                                <button onclick='deleteSale(${s.id})' class="flex-1 lg:flex-none bg-red-900/30 text-red-400 border border-red-500/50 px-4 py-2.5 rounded-lg text-xs font-black uppercase hover:bg-red-600 hover:text-white transition-colors shadow-sm">🗑️ Del</button>
                             </div>
                         </div>
                     </div>
                 `}).join('');
             } catch (err) {
                 console.error("Error loading history:", err);
-                document.getElementById('full-history-list').innerHTML = `<p class="text-red-500 text-center py-4">Error loading history. Please check console.</p>`;
+                document.getElementById('full-history-list').innerHTML = `<p class="text-red-500 text-center py-4 bg-red-900/20 rounded border border-red-500/50">Error loading history. Please check console.</p>`;
             }
         }
         window.renderFullHistory = renderFullHistory;
@@ -1556,37 +2398,127 @@
             showTab('billing');
         }
 
+        // WARRANTY BARCODE SCANNER LOGIC
+        window.checkWarranty = async function(invNo) {
+            const sales = await db.sales.toArray();
+            const sale = sales.find(s => s.invoiceNo === invNo);
+            
+            if(!sale) {
+                document.getElementById('warranty-result-container').innerHTML = `<p class="text-red-400 font-black text-lg tracking-wider text-center py-8 bg-red-900/30 rounded-xl border border-red-500/50 shadow-inner">Bill No: ${invNo} Not Found!</p>`;
+                showTab('warranty');
+                return;
+            }
+            
+            let html = `
+            <div class="bg-slate-800 p-6 rounded-2xl border border-slate-600 shadow-xl mb-6 relative overflow-hidden">
+                <div class="absolute -right-4 -top-4 w-32 h-32 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>
+                <h3 class="font-black text-2xl text-blue-400 mb-2 tracking-widest uppercase">Invoice: ${sale.invoiceNo}</h3>
+                <p class="text-sm text-slate-300 font-mono mb-1">Date Sold: <span class="text-white">${new Date(sale.date).toLocaleString()}</span></p>
+                <p class="text-sm text-slate-300 font-mono">Customer: <span class="text-white font-bold">${sale.customer}</span></p>
+                <p class="text-sm text-slate-300 font-mono mt-1">Cashier: <span class="text-white font-bold">${sale.cashierName || 'Owner'}</span></p>
+            </div>
+            <div class="space-y-4">
+            `;
+            
+            let hasWarrantyItems = false;
+
+            sale.items.forEach(i => {
+                if(i.customerWarrantyMonths > 0) {
+                    hasWarrantyItems = true;
+                    const purchaseDate = new Date(sale.date);
+                    const expiryDate = new Date(purchaseDate.setMonth(purchaseDate.getMonth() + i.customerWarrantyMonths));
+                    const now = new Date();
+                    const isExpired = now > expiryDate;
+                    const statusHtml = isExpired ? `<span class="bg-red-600 text-white px-4 py-1.5 rounded-full text-xs font-black shadow-[0_0_10px_rgba(220,38,38,0.5)] uppercase tracking-wider">EXPIRED</span>` : `<span class="bg-emerald-500 text-slate-900 px-4 py-1.5 rounded-full text-xs font-black shadow-[0_0_10px_rgba(16,185,129,0.5)] animate-pulse uppercase tracking-wider">VALID</span>`;
+                    
+                    html += `
+                    <div class="p-6 border-2 ${isExpired ? 'border-red-500/50 bg-red-900/20' : 'border-emerald-500/50 bg-emerald-900/20'} rounded-2xl shadow-lg relative overflow-hidden backdrop-blur-sm transition-all hover:scale-[1.01]">
+                        ${!isExpired ? `<div class="absolute top-0 right-0 w-24 h-24 bg-emerald-500 rounded-bl-full opacity-20 filter blur-xl pointer-events-none"></div>` : `<div class="absolute top-0 right-0 w-24 h-24 bg-red-500 rounded-bl-full opacity-20 filter blur-xl pointer-events-none"></div>`}
+                        <p class="font-black text-xl text-white uppercase tracking-wider relative z-10">${i.name}</p>
+                        <div class="flex justify-between items-center mt-4 relative z-10 bg-slate-900/50 p-3 rounded-lg border border-slate-700">
+                            <div>
+                                <span class="block text-[10px] text-slate-400 uppercase font-black tracking-widest">Warranty Period</span>
+                                <span class="font-bold text-lg text-white">${i.customerWarrantyMonths} Months</span>
+                            </div>
+                            ${statusHtml}
+                        </div>
+                        <div class="mt-4 pt-4 border-t border-dashed ${isExpired ? 'border-red-500/50' : 'border-emerald-500/50'} relative z-10 flex justify-between items-center">
+                            <span class="text-xs text-slate-400 font-bold uppercase tracking-wider">Expiry Date</span>
+                            <span class="font-black text-lg ${isExpired ? 'text-red-400' : 'text-emerald-400'}">${expiryDate.toLocaleDateString()}</span>
+                        </div>
+                    </div>`;
+                } else {
+                    html += `
+                    <div class="p-4 border border-slate-700 rounded-xl bg-slate-800 opacity-50 grayscale flex justify-between items-center">
+                        <p class="font-bold text-slate-400 uppercase tracking-wider">${i.name}</p>
+                        <span class="text-xs font-bold text-slate-500 bg-slate-900 px-2 py-1 rounded border border-slate-700 uppercase tracking-widest">No Warranty</span>
+                    </div>`;
+                }
+            });
+            
+            if(!hasWarrantyItems) {
+                html += `<p class="text-center text-slate-400 py-6 font-bold bg-slate-900/50 rounded-xl border border-slate-700 tracking-wider">No warranty items found in this bill.</p>`;
+            }
+
+            html += `</div>`;
+            
+            document.getElementById('warranty-result-container').innerHTML = html;
+            showTab('warranty');
+        };
+        window.checkWarranty = checkWarranty;
+
         let html5QrCode;
         async function startScanner() {
             document.getElementById('scanner-container').classList.remove('hidden');
             html5QrCode = new Html5Qrcode("reader");
             try {
                 await html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, async (decodedText) => {
-                    let item = await db.inventory.get(currentBillShop + '_' + decodedText);
-                    if(!item) {
-                        item = await db.inventory.get(decodedText); 
+                    stopScanner();
+                    
+                    if(decodedText.startsWith('INV-')) {
+                        const invNo = decodedText.replace('INV-', '');
+                        checkWarranty(invNo);
+                    } else {
+                        let item = await db.inventory.get(currentBillShop + '_' + decodedText);
+                        if(!item) {
+                            item = await db.inventory.get(decodedText); 
+                        }
+                        if(item) { 
+                            if(document.querySelector('.tab-content.active').id !== 'tab-billing') {
+                                showTab('billing');
+                            }
+                            selectSearchResult(item.code, item.name); 
+                        } else {
+                            alert("Barcode not recognized in system.");
+                        }
                     }
-                    if(item) { stopScanner(); selectSearchResult(item.code, item.name); }
                 });
             } catch (err) { stopScanner(); }
         }
+        window.startScanner = startScanner;
 
         function stopScanner() { if(html5QrCode) html5QrCode.stop().then(() => document.getElementById('scanner-container').classList.add('hidden')); }
+        window.stopScanner = stopScanner;
 
         function setReportFilter(range) { 
             currentFilter = range; 
             ['day', 'week', 'month'].forEach(f => {
                 const btn = document.getElementById('filter-' + f);
                 if(f === range) {
-                    btn.classList.replace('bg-blue-100', 'bg-blue-600');
-                    btn.classList.replace('text-blue-800', 'text-white');
+                    btn.classList.replace('bg-transparent', 'bg-blue-600');
+                    btn.classList.replace('hover:bg-slate-800', 'hover:bg-blue-500');
+                    btn.classList.replace('text-slate-400', 'text-white');
+                    btn.classList.add('shadow-sm');
                 } else {
-                    btn.classList.replace('bg-blue-600', 'bg-blue-100');
-                    btn.classList.replace('text-white', 'text-blue-800');
+                    btn.classList.replace('bg-blue-600', 'bg-transparent');
+                    btn.classList.replace('hover:bg-blue-500', 'hover:bg-slate-800');
+                    btn.classList.replace('text-white', 'text-slate-400');
+                    btn.classList.remove('shadow-sm');
                 }
             });
             calculateReports(); 
         }
+        window.setReportFilter = setReportFilter;
 
         let barChartInstance = null;
         let pieChartInstance = null;
@@ -1597,7 +2529,11 @@
             let startTime = currentFilter === 'day' ? new Date().setHours(0,0,0,0) : (currentFilter === 'week' ? new Date(now.setDate(now.getDate() - 7)).getTime() : new Date(now.setMonth(now.getMonth() - 1)).getTime());
             
             let allDbSales = await db.sales.toArray();
-            const allSales = allDbSales.filter(s => s.date >= startTime);
+            
+            // Filter by the currently selected shop
+            let shopSales = allDbSales.filter(s => s.shop === currentRepShop || (!s.shop && currentRepShop === 'ruwancell'));
+
+            const allSales = shopSales.filter(s => s.date >= startTime);
             const validSales = allSales.filter(s => s.status !== 'Canceled');
 
             document.getElementById('rep-profit').innerText = `LKR ${validSales.reduce((s, a) => s + (a.profit || 0), 0).toFixed(2)}`;
@@ -1606,6 +2542,10 @@
             const creditSettled = validSales.filter(s => s.type === 'settlement').reduce((s, a) => s + (Number(a.total) || 0), 0);
             const cashSales = validSales.filter(s => s.type === 'cash').reduce((s, a) => s + (Number(a.total) || 0), 0);
             
+            // Re-skin Charts for Dark Mode
+            Chart.defaults.color = '#94a3b8';
+            Chart.defaults.borderColor = '#334155';
+
             if (barChartInstance) barChartInstance.destroy();
             if (pieChartInstance) pieChartInstance.destroy();
             const chartLabels = ['Credit Issued', 'Credit Settled', 'Direct Cash'];
@@ -1619,13 +2559,15 @@
                         label: 'LKR Amount',
                         data: chartData,
                         backgroundColor: ['#ef4444', '#10b981', '#3b82f6'],
-                        borderRadius: 5
+                        borderRadius: 5,
+                        borderWidth: 1,
+                        borderColor: 'rgba(255,255,255,0.1)'
                     }]
                 },
                 options: { 
                     responsive: true, 
                     plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true } }
+                    scales: { y: { beginAtZero: true, grid: {color: '#1e293b'} }, x: { grid: {color: '#1e293b'} } }
                 }
             });
             const pieCtx = document.getElementById('reportPieChart').getContext('2d');
@@ -1635,80 +2577,41 @@
                     labels: chartLabels,
                     datasets: [{
                         data: chartData,
-                        backgroundColor: ['#ef4444', '#10b981', '#3b82f6']
+                        backgroundColor: ['#ef4444', '#10b981', '#3b82f6'],
+                        borderColor: '#0f172a',
+                        borderWidth: 2
                     }]
                 },
-                options: { responsive: true }
+                options: { responsive: true, plugins: { legend: { labels: { color: '#cbd5e1' } } } }
             });
             
             // Sort reports manually to guarantee ordering
             document.getElementById('bill-history-list').innerHTML = allSales.sort((a,b) => b.date - a.date).map(s => {
-                const statusFlag = s.status === 'Canceled' ? '<span class="text-red-500 font-bold ml-1">(CANCELED)</span>' : '';
+                const statusFlag = s.status === 'Canceled' ? '<span class="text-red-400 font-bold ml-1 border border-red-500/50 bg-red-900/30 px-1 rounded uppercase tracking-wider text-[10px]">Canceled</span>' : '';
                 return `
-                <div class="border p-2 rounded text-sm bg-white shadow-sm mb-1 ${s.status === 'Canceled' ? 'opacity-70 bg-red-50' : ''}">
-                    <div class="flex justify-between font-bold"><span>${s.customer} ${statusFlag}</span><span class="${s.status === 'Canceled' ? 'text-red-700' : 'text-blue-700'}">${Number(s.total).toFixed(2)}</span></div>
-                    <div class="flex justify-between text-[10px] text-gray-500"><span>${new Date(s.date).toLocaleString()}</span><span class="text-green-600">Profit: ${Number(s.profit).toFixed(2)}</span></div>
+                <div class="p-3 rounded-lg text-sm bg-slate-800/80 shadow-sm mb-2 border border-slate-700 transition-colors hover:bg-slate-700 ${s.status === 'Canceled' ? 'opacity-60 bg-red-900/10 border-red-900/50' : ''}">
+                    <div class="flex justify-between font-black text-white mb-1"><span class="uppercase tracking-wide">${s.customer} ${statusFlag}</span><span class="${s.status === 'Canceled' ? 'text-red-400' : 'text-blue-400'}">LKR ${Number(s.total).toFixed(2)}</span></div>
+                    <div class="flex justify-between text-[11px] font-mono text-slate-400"><span>${new Date(s.date).toLocaleString()}</span><span class="text-emerald-400 font-bold bg-emerald-900/30 px-2 rounded border border-emerald-500/30">Profit: LKR ${Number(s.profit).toFixed(2)}</span></div>
                 </div>
             `}).join('');
         }
-
-        function printSerialRecord() {
-            const owner = document.getElementById('serial-owner').value;
-            const item = document.getElementById('serial-item').value;
-            const time = document.getElementById('serial-time').value;
-            const photoInput = document.getElementById('serial-photo');
-            if(!owner || !item) return alert("Please enter Owner and Item names");
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const photoSrc = e.target.result;
-                const printWindow = window.open('', '_blank', 'width=600,height=800');
-                const logoBase64 = localStorage.getItem('bill_logo');
-                const logoHtml = logoBase64 ? `<img src="${logoBase64}" style="max-width: 150px; margin: 0 auto;">` : '';
-                printWindow.document.write(`
-                    <html><head><title>Repair Record</title>
-                    <style>
-                        body { font-family: 'Courier New', Courier, monospace; width: 80mm; padding: 10px; }
-                        .header { text-align: center; border-bottom: 2px solid black; padding-bottom: 10px; }
-                        .content { margin-top: 15px; }
-                        .field { margin-bottom: 10px; font-size: 14px; }
-                        .label { font-weight: bold; text-transform: uppercase; display: block; font-size: 11px; color: #555; }
-                        .val { font-size: 18px; font-weight: bold; }
-                        img.preview { max-width: 100%; border: 1px solid #ccc; margin-top: 10px; }
-                        .footer { margin-top: 20px; text-align: center; border-top: 1px dashed black; padding-top: 10px; font-size: 12px; }
-                    </style></head>
-                    <body onload="window.print()">
-                        <div class="header">
-                            ${logoHtml}
-                            <h3>REPAIR SERVICE</h3>
-                            <p>RUWAN CELLULAR & SALON THARU</p>
-                        </div>
-                        <div class="content">
-                            <div class="field"><span class="label">Owner Name:</span><span class="val">${owner}</span></div>
-                            <div class="field"><span class="label">Item/Model:</span><span class="val">${item}</span></div>
-                            <div class="field"><span class="label">Date & Time:</span><span class="val">${time}</span></div>
-                            ${photoSrc ? `<img src="${photoSrc}" class="preview">` : ''}
-                        </div>
-                        <div class="footer">
-                            <p>Thank you for choosing us!</p>
-                            <p style="font-weight: bold; font-size: 13px; margin-top: 8px;">Contact: 077 230 1099 / 075 548 5454</p>
-                        </div>
-                    </body></html>
-                `);
-                printWindow.document.close();
-            };
-            if(photoInput.files[0]) {
-                reader.readAsDataURL(photoInput.files[0]);
-            } else {
-                reader.onload({ target: { result: '' } });
-            }
-        }
+        window.calculateReports = calculateReports;
 
         async function init() {
+            const savedRole = localStorage.getItem('app_role') || 'owner';
+            
+            // Temporarily bypass strict initialization constraint for Dev switch behavior logic
+            currentRole = 'owner'; // default to pass validation check briefly
+            setRole(savedRole);
+            
+            document.getElementById('cashier-name').value = localStorage.getItem('cashier_name') || '';
+            loadCashierPhoto();
+
             const savedCart = await db.draftCart.toArray();
             if(savedCart.length > 0) { cart = savedCart; renderCart(); }
             loadLogo(); updateCustomerDropdown(); updateLivePreview();
             const savedName = localStorage.getItem('persistent_printer_name');
-            if(savedName) { document.getElementById('printer-status').innerText = "Status: Saved Printer - " + savedName; }
+            if(savedName) { document.getElementById('printer-status').innerHTML = `<span class="w-3 h-3 rounded-full bg-blue-500 inline-block"></span> Status: Saved Printer - ` + savedName; }
         }
         init();
     </script>
