@@ -121,6 +121,20 @@
         </div>
     </div>
 
+    <div id="profit-modal" class="hidden fixed inset-0 bg-slate-950 bg-opacity-90 z-[200] flex items-center justify-center backdrop-blur-sm transition-opacity">
+        <div class="bg-slate-800 p-6 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.8)] border border-slate-600 w-11/12 max-w-lg">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-white font-bold text-lg tracking-wide flex items-center gap-2"><span>💰</span> Advanced Profit Details</h3>
+                <button onclick="document.getElementById('profit-modal').classList.add('hidden')" class="text-slate-400 hover:text-white font-black text-xl">&times;</button>
+            </div>
+            <div id="profit-modal-content" class="text-sm space-y-3 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar text-slate-300">
+            </div>
+            <div class="mt-6 pt-4 border-t border-slate-600 text-right">
+                <button onclick="document.getElementById('profit-modal').classList.add('hidden')" class="bg-slate-700 hover:bg-slate-600 text-white px-6 py-2 rounded-lg font-bold transition-colors">Close</button>
+            </div>
+        </div>
+    </div>
+
     <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black opacity-60 z-[70] hidden backdrop-blur-sm"></div>
     <nav id="sidebar" class="fixed top-0 left-0 h-full w-64 bg-slate-950 text-white z-[80] shadow-2xl p-4 border-r border-slate-800">
         <div class="flex justify-between items-center mb-8">
@@ -157,7 +171,10 @@
     <main class="p-2 md:p-4 max-w-7xl mx-auto">
         <div id="tab-profile" class="tab-content">
             <div class="glass-panel p-6 md:p-8 rounded-2xl shadow-2xl border-t-4 border-blue-500 mb-4 text-center max-w-2xl mx-auto mt-4">
-                <h2 class="font-black text-3xl mb-6 text-white tracking-wide">👤 User Profile Selection</h2>
+                <h2 class="font-black text-2xl md:text-3xl mb-6 text-white tracking-wide flex flex-col md:flex-row items-center justify-center gap-3">
+                    👤 User Profile Selection
+                    <span class="px-3 py-1 bg-gradient-to-r from-amber-400 to-yellow-600 text-slate-900 text-xs font-black rounded-full uppercase tracking-widest shadow-[0_0_15px_rgba(251,191,36,0.6)] animate-pulse border border-yellow-300">👑 Premium Version</span>
+                </h2>
                 
                 <div id="role-selection-buttons" class="flex flex-col sm:flex-row gap-4 mb-6 transition-all duration-300">
                     <button id="btn-role-owner" onclick="setRole('owner')" class="flex-1 rounded-xl bg-blue-600 text-white font-black text-lg py-5 shadow-[0_0_15px_rgba(37,99,235,0.4)] hover:bg-blue-500 hover:shadow-[0_0_25px_rgba(37,99,235,0.6)] border border-blue-500 transition-all uppercase tracking-widest">👑 Owner</button>
@@ -175,8 +192,8 @@
                     <div class="bg-slate-800/80 p-6 rounded-xl border border-slate-600 shadow-lg text-left mb-6 relative overflow-hidden">
                         <div class="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>
                         <h4 class="font-bold text-lg text-blue-400 mb-2 relative z-10">📡 Live Connection Link</h4>
-                        <p class="text-sm text-slate-400 mb-4 relative z-10">Create a temporary server to stream live inventory updates to your cashier.</p>
-                        <button onclick="startHostServer()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-lg font-bold shadow-[0_0_10px_rgba(37,99,235,0.3)] transition-colors mb-4 relative z-10">Generate Server Details</button>
+                        <p class="text-sm text-slate-400 mb-4 relative z-10">Create a persistent server to stream live inventory updates to your cashier.</p>
+                        <button onclick="startHostServer()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-lg font-bold shadow-[0_0_10px_rgba(37,99,235,0.3)] transition-colors mb-4 relative z-10">Start / Resume Live Server</button>
                         <div id="host-credentials" class="hidden grid grid-cols-2 gap-4 relative z-10">
                             <div>
                                 <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Server IP</label>
@@ -608,6 +625,21 @@
                 <button onclick="setHistoryShop('tharusalon')" id="hist-shop-tharu" class="flex-1 rounded-xl bg-slate-800 text-slate-400 text-sm font-black py-3 uppercase border border-slate-600 hover:bg-slate-700 hover:text-white transition-all tracking-wider">Salon Tharu</button>
             </div>
             
+            <div class="flex flex-col md:flex-row gap-3 mb-6 bg-slate-900/50 p-4 rounded-xl border border-slate-700">
+                <div class="flex-1">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Start Date</label>
+                    <input type="date" id="history-start-date" class="w-full p-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm outline-none focus:border-blue-500">
+                </div>
+                <div class="flex-1">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">End Date</label>
+                    <input type="date" id="history-end-date" class="w-full p-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm outline-none focus:border-blue-500">
+                </div>
+                <div class="flex items-end">
+                    <button onclick="renderFullHistory()" class="w-full md:w-auto bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-lg font-bold shadow transition-colors h-[38px]">Filter</button>
+                    <button onclick="clearHistoryFilter()" class="w-full md:w-auto ml-2 bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg font-bold shadow transition-colors h-[38px]">Clear</button>
+                </div>
+            </div>
+
             <div class="relative mb-6 group">
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <span class="text-slate-500">🔍</span>
@@ -635,9 +667,9 @@
                 </div>
                 
                 <div class="grid grid-cols-2 gap-4 mb-8">
-                    <div class="bg-gradient-to-br from-emerald-900/50 to-green-900/20 p-5 rounded-xl border border-emerald-500/30 shadow-lg relative overflow-hidden">
+                    <div onclick="showProfitModal()" class="cursor-pointer bg-gradient-to-br from-emerald-900/50 to-green-900/20 p-5 rounded-xl border border-emerald-500/30 shadow-lg relative overflow-hidden transition-transform hover:scale-105">
                         <div class="absolute -right-4 -bottom-4 text-6xl opacity-10">💰</div>
-                        <p class="text-[10px] uppercase font-black text-emerald-400 tracking-widest mb-1 relative z-10">Total Profit</p>
+                        <p class="text-[10px] uppercase font-black text-emerald-400 tracking-widest mb-1 relative z-10 flex justify-between">Total Profit <span class="text-[8px] bg-emerald-900/80 px-1 py-0.5 rounded border border-emerald-500">VIEW</span></p>
                         <h1 id="rep-profit" class="text-2xl md:text-3xl font-black text-white relative z-10 drop-shadow">LKR 0.00</h1>
                     </div>
                     <div class="bg-gradient-to-br from-blue-900/50 to-indigo-900/20 p-5 rounded-xl border border-blue-500/30 shadow-lg relative overflow-hidden">
@@ -693,8 +725,15 @@
         let liveSyncRoom = null;
 
         window.startHostServer = async function() {
-            const ip = `192.168.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}`;
-            const password = Math.floor(1000 + Math.random() * 9000).toString();
+            let ip = localStorage.getItem('host_ip');
+            let password = localStorage.getItem('host_password');
+            if(!ip) {
+                ip = `192.168.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}`;
+                password = Math.floor(1000 + Math.random() * 9000).toString();
+                localStorage.setItem('host_ip', ip);
+                localStorage.setItem('host_password', password);
+            }
+
             document.getElementById('host-ip').value = ip;
             document.getElementById('host-password').value = password;
             document.getElementById('host-credentials').classList.remove('hidden');
@@ -1098,7 +1137,7 @@
         db.version(11).stores({ 
             inventory: "code, name, price, cost, wholesalePrice, wholesale, stock, discount, shop, stockWarrantyExpiry", 
             customers: "name, phone, status, creditAmount",
-            sales: "++id, date, total, profit, customer, type, items, invoiceNo, status, shop, cashierName",
+            sales: "++id, date, total, profit, customerSaved, customer, type, items, invoiceNo, status, shop, cashierName",
             draftCart: "++id, name, code, qty, price, cost, wholesalePrice, wholesale, total, discount, customerWarrantyMonths"
         });
 
@@ -1373,7 +1412,10 @@
             if(cart.length === 0) return alert("Cart is empty");
             const extraDiscount = parseFloat(document.getElementById('bill-extra-discount').value) || 0;
             const subtotal = cart.reduce((sum, i) => sum + (paymentMode === 'credit' ? (i.price * i.qty) : i.total), 0) - extraDiscount;
-            const discountProfit = (paymentMode === 'credit' ? 0 : cart.reduce((sum, i) => sum + (i.discount || 0), 0)) + extraDiscount;
+            
+            const totalCost = cart.reduce((sum, i) => sum + ((i.cost || 0) * i.qty), 0);
+            const actualProfit = paymentMode === 'credit' ? 0 : (subtotal - totalCost);
+            const customerSaved = (paymentMode === 'credit' ? 0 : cart.reduce((sum, i) => sum + (i.discount || 0), 0)) + extraDiscount;
             
             // Native prompt for amount paid is safe to keep
             const gavePriceInput = prompt("Amount Paid (Gave Price):", paymentMode === 'credit' ? 0 : subtotal);
@@ -1411,7 +1453,8 @@
                 invoiceNo: String(invoiceNo),
                 customer: String(custName),
                 total: Number(subtotal),
-                profit: Number(discountProfit),
+                profit: Number(actualProfit),
+                customerSaved: Number(customerSaved),
                 gavePrice: Number(gavePrice),
                 balance: Number(balance),
                 date: Number(saleDate),
@@ -1452,7 +1495,10 @@
             if(cart.length === 0) return alert("Cart is empty");
             const extraDiscount = parseFloat(document.getElementById('bill-extra-discount').value) || 0;
             const subtotal = cart.reduce((sum, i) => sum + (paymentMode === 'credit' ? (i.price * i.qty) : i.total), 0) - extraDiscount;
-            const discountProfit = (paymentMode === 'credit' ? 0 : cart.reduce((sum, i) => sum + (i.discount || 0), 0)) + extraDiscount;
+            
+            const totalCost = cart.reduce((sum, i) => sum + ((i.cost || 0) * i.qty), 0);
+            const actualProfit = paymentMode === 'credit' ? 0 : (subtotal - totalCost);
+            const customerSaved = (paymentMode === 'credit' ? 0 : cart.reduce((sum, i) => sum + (i.discount || 0), 0)) + extraDiscount;
             
             const salesData = await db.sales.toArray();
             const lastSale = salesData.length > 0 ? salesData[salesData.length - 1] : null;
@@ -1485,7 +1531,8 @@
                 invoiceNo: String(invoiceNo),
                 customer: String(custName),
                 total: Number(subtotal),
-                profit: Number(discountProfit),
+                profit: Number(actualProfit),
+                customerSaved: Number(customerSaved),
                 gavePrice: Number(paymentMode === 'credit' ? 0 : subtotal),
                 balance: Number(paymentMode === 'credit' ? -subtotal : 0),
                 date: Number(saleDate),
@@ -1539,6 +1586,7 @@
                 customer: String(custName),
                 total: Number(subtotal),
                 profit: 0,
+                customerSaved: 0,
                 gavePrice: 0,
                 balance: 0,
                 date: Number(saleDate),
@@ -1622,11 +1670,11 @@
             </div>
             `;
 
-            if((sale.profit || 0) > 0 && sale.type !== 'credit') {
+            if((sale.customerSaved || 0) > 0 && sale.type !== 'credit') {
               footerHtml += `
                 <div style="text-align: center; margin: 15px 0; clear: both; color: black !important;">
                     <div style="display: inline-block; border: 1.5px solid black; padding: 10px 20px; font-weight: bold; font-size: 17px !important; color: black !important;">
-                        You Saved: Rs. ${(sale.profit || 0).toFixed(2)}
+                        You Saved: Rs. ${(sale.customerSaved || 0).toFixed(2)}
                     </div>
                 </div>`;
             }
@@ -1848,7 +1896,7 @@
             const extraDiscount = parseFloat(document.getElementById('bill-extra-discount').value) || 0;
             const subtotal = cart.reduce((sum, i) => sum + (paymentMode === 'credit' ? (i.price * i.qty) : i.total), 0) - extraDiscount;
             const baseSubtotal = cart.reduce((sum, i) => sum + (paymentMode === 'credit' ? (i.price * i.qty) : i.total), 0);
-            const discountProfit = (paymentMode === 'credit' ? 0 : cart.reduce((sum, i) => sum + (i.discount || 0), 0)) + extraDiscount;
+            const customerSaved = (paymentMode === 'credit' ? 0 : cart.reduce((sum, i) => sum + (i.discount || 0), 0)) + extraDiscount;
             const custName = document.getElementById('bill-customer').value || "General Customer";
             document.getElementById('print-items').innerHTML = cart.map(i => {
                 const unitPriceAfterDiscount = i.total / i.qty;
@@ -1882,11 +1930,11 @@
                     </div>
                 `;
             }
-            if(discountProfit > 0 && paymentMode !== 'credit') {
+            if(customerSaved > 0 && paymentMode !== 'credit') {
               totalHtml += `
                 <div style="text-align: center; margin: 15px 0; clear: both; color: black !important;">
                     <div style="display: inline-block; border: 1.5px solid black; padding: 10px 20px; font-weight: bold; font-size: 17px; color: black !important;">
-                        You Saved: Rs. ${discountProfit.toFixed(2)}
+                        You Saved: Rs. ${customerSaved.toFixed(2)}
                     </div>
                 </div>`;
             }
@@ -2217,6 +2265,7 @@
                 date: Number(new Date().getTime()),
                 total: Number(amount),
                 profit: 0,
+                customerSaved: 0,
                 customer: String(name),
                 type: 'settlement',
                 items: [{name: 'Settlement', total: Number(amount), qty: 1, price: Number(amount)}],
@@ -2251,10 +2300,19 @@
         }
         window.updateCustomerDropdown = updateCustomerDropdown;
 
+        window.clearHistoryFilter = function() {
+            if(document.getElementById('history-start-date')) document.getElementById('history-start-date').value = '';
+            if(document.getElementById('history-end-date')) document.getElementById('history-end-date').value = '';
+            renderFullHistory();
+        }
+
         // --- ROBUST HISTORY RENDERER ---
         async function renderFullHistory() {
             try {
                 const searchQ = (document.getElementById('history-search-input')?.value || "").toLowerCase();
+                const startDateStr = document.getElementById('history-start-date')?.value;
+                const endDateStr = document.getElementById('history-end-date')?.value;
+
                 let sales = await db.sales.toArray();
                 
                 // Filter by selected shop (handle older data that might not have a shop property)
@@ -2263,6 +2321,13 @@
                 // Sort descending by date
                 sales.sort((a, b) => b.date - a.date);
                 
+                // Date Filter logic
+                if(startDateStr && endDateStr) {
+                    const sDate = new Date(startDateStr).setHours(0,0,0,0);
+                    const eDate = new Date(endDateStr).setHours(23,59,59,999);
+                    sales = sales.filter(s => s.date >= sDate && s.date <= eDate);
+                }
+
                 if (searchQ) {
                     sales = sales.filter(s => 
                         (s.invoiceNo && String(s.invoiceNo).toLowerCase().includes(searchQ)) || 
@@ -2523,6 +2588,52 @@
         let barChartInstance = null;
         let pieChartInstance = null;
 
+        window.showProfitModal = async function() {
+            const now = new Date();
+            let startTime = currentFilter === 'day' ? new Date().setHours(0,0,0,0) : (currentFilter === 'week' ? new Date(now.setDate(now.getDate() - 7)).getTime() : new Date(now.setMonth(now.getMonth() - 1)).getTime());
+            
+            let allDbSales = await db.sales.toArray();
+            let shopSales = allDbSales.filter(s => s.shop === currentRepShop || (!s.shop && currentRepShop === 'ruwancell'));
+            const validSales = shopSales.filter(s => s.date >= startTime && s.status !== 'Canceled');
+
+            let totalRev = 0;
+            let totalCost = 0;
+            let netProfit = 0;
+
+            let html = validSales.map(s => {
+                let sCost = s.items ? s.items.reduce((sum, i) => sum + ((i.cost || 0) * i.qty), 0) : 0;
+                let sRev = s.total || 0;
+                let sProf = s.profit || (sRev - sCost);
+                // Credit sales do not realize profit yet in cash basis
+                if (s.type === 'credit') {
+                    sProf = 0;
+                }
+                
+                totalRev += sRev;
+                totalCost += sCost;
+                netProfit += sProf;
+
+                return `<div class="flex justify-between border-b border-slate-700 py-2">
+                            <span>INV: ${s.invoiceNo} ${s.type === 'credit' ? '<span class="text-[10px] text-red-400 font-bold ml-1 uppercase">(Credit)</span>' : ''}</span>
+                            <span class="text-slate-400">Rev: ${sRev.toFixed(2)}</span>
+                            <span class="${s.type === 'credit' ? 'text-slate-600' : 'text-emerald-400 font-bold'}">Profit: ${sProf.toFixed(2)}</span>
+                        </div>`;
+            }).join('');
+
+            if(validSales.length === 0) {
+                html = `<p class="text-center text-slate-500 py-4 italic">No transactions found for this period.</p>`;
+            } else {
+                html = `<div class="mb-4 bg-slate-900 p-4 rounded-xl border border-slate-700">
+                            <div class="flex justify-between mb-1"><span class="font-bold text-white">Total Revenue:</span> <span class="text-blue-400 font-black">LKR ${totalRev.toFixed(2)}</span></div>
+                            <div class="flex justify-between mb-1"><span class="font-bold text-white">Total Cost (Items):</span> <span class="text-red-400 font-black">- LKR ${totalCost.toFixed(2)}</span></div>
+                            <div class="flex justify-between mt-3 pt-3 border-t border-slate-600 text-lg"><span class="font-black text-white uppercase tracking-widest">Net Profit:</span> <span class="font-black text-emerald-400">LKR ${netProfit.toFixed(2)}</span></div>
+                        </div>` + html;
+            }
+
+            document.getElementById('profit-modal-content').innerHTML = html;
+            document.getElementById('profit-modal').classList.remove('hidden');
+        };
+
         // Bulletproof Reports avoiding problematic indexed queries
         async function calculateReports() {
             const now = new Date();
@@ -2591,7 +2702,7 @@
                 return `
                 <div class="p-3 rounded-lg text-sm bg-slate-800/80 shadow-sm mb-2 border border-slate-700 transition-colors hover:bg-slate-700 ${s.status === 'Canceled' ? 'opacity-60 bg-red-900/10 border-red-900/50' : ''}">
                     <div class="flex justify-between font-black text-white mb-1"><span class="uppercase tracking-wide">${s.customer} ${statusFlag}</span><span class="${s.status === 'Canceled' ? 'text-red-400' : 'text-blue-400'}">LKR ${Number(s.total).toFixed(2)}</span></div>
-                    <div class="flex justify-between text-[11px] font-mono text-slate-400"><span>${new Date(s.date).toLocaleString()}</span><span class="text-emerald-400 font-bold bg-emerald-900/30 px-2 rounded border border-emerald-500/30">Profit: LKR ${Number(s.profit).toFixed(2)}</span></div>
+                    <div class="flex justify-between text-[11px] font-mono text-slate-400"><span>${new Date(s.date).toLocaleString()}</span><span class="text-emerald-400 font-bold bg-emerald-900/30 px-2 rounded border border-emerald-500/30">Profit: LKR ${Number(s.profit || 0).toFixed(2)}</span></div>
                 </div>
             `}).join('');
         }
@@ -2612,6 +2723,11 @@
             loadLogo(); updateCustomerDropdown(); updateLivePreview();
             const savedName = localStorage.getItem('persistent_printer_name');
             if(savedName) { document.getElementById('printer-status').innerHTML = `<span class="w-3 h-3 rounded-full bg-blue-500 inline-block"></span> Status: Saved Printer - ` + savedName; }
+
+            // Check if server should resume automatically
+            if (savedRole === 'owner' && localStorage.getItem('host_ip')) {
+                // startHostServer(); // Optional automatic restart 
+            }
         }
         init();
     </script>
