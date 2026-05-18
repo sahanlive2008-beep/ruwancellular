@@ -797,6 +797,10 @@
         let isHost = false;
         let isClient = false;
         let liveSyncRoom = null;
+        Object.defineProperty(window, '_liveSyncRoom', {
+            get: () => liveSyncRoom,
+            set: (v) => { liveSyncRoom = v; }
+        });
 
         // Track heartbeat so we only register once
         let _hostHeartbeat = null;
@@ -924,11 +928,35 @@
             await set(ref(fb_db, 'live_rooms/' + liveSyncRoom + '/inventory'), invObj);
         };
 
+        // ── Owner cashier management (must live in module scope for Firebase access) ──
+        window.disconnectCashier = async function(sessionId) {
+            if(!liveSyncRoom) { alert('Server not running. Start the Live Server first.'); return; }
+            try {
+                await set(ref(fb_db, 'live_rooms/' + liveSyncRoom + '/cashiers/' + sessionId), null);
+            } catch(e) { alert('Failed to disconnect cashier: ' + e.message); }
+        };
+
+        window.removeCashier = async function(sessionId) {
+            if(!liveSyncRoom) { alert('Server not running. Start the Live Server first.'); return; }
+            try {
+                await set(ref(fb_db, 'live_rooms/' + liveSyncRoom + '/cashiers/' + sessionId), null);
+            } catch(e) { alert('Failed to remove cashier: ' + e.message); }
+        };
+
+        window.removeAllCashiers = async function() {
+            if(!liveSyncRoom) { alert('Server not running. Start the Live Server first.'); return; }
+            if(!confirm('Remove all cashiers from the connected list?')) return;
+            try {
+                await set(ref(fb_db, 'live_rooms/' + liveSyncRoom + '/cashiers'), null);
+            } catch(e) { alert('Failed: ' + e.message); }
+        };
+
         window.connectToHost = async function() {
             const ipInput = document.getElementById('client-ip').value;
             const pass = document.getElementById('client-password').value;
             const deviceName = document.getElementById('client-device').value || 'Unknown Device';
-            const cashierName = document.getElementById('cashier-name').value || 'Cashier';
+            const cashierName = (document.getElementById('cashier-name') && document.getElementById('cashier-name').value.trim())
+                || localStorage.getItem('cashier_name') || 'Cashier';
 
             if(!ipInput || !pass) return alert("Enter IP and Password");
             
@@ -949,9 +977,7 @@
                 localStorage.setItem('cashier_saved_password', pass);
                 localStorage.setItem('cashier_saved_device', deviceName);
 
-                // Clear ALL previous cashiers then register only this session
-                const _cref = child(roomRef, 'cashiers');
-                await set(_cref, null);
+                // Register this cashier's session (onDisconnect auto-removes it)
                 const sessionId = 'session_' + Date.now().toString();
                 const _ph = localStorage.getItem('cashier_photo') || '';
                 await set(child(roomRef, 'cashiers/' + sessionId), {
@@ -963,8 +989,9 @@
                 // Auto-remove when tab closes
                 try {
                     const { onDisconnect: _od } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js");
-                    _od(child(roomRef, 'cashiers/' + sessionId)).remove();
-                } catch(_e) {}
+                    const _cashierRef = child(roomRef, 'cashiers/' + sessionId);
+                    _od(_cashierRef).remove();
+                } catch(_e) { console.warn('onDisconnect setup failed:', _e); }
 
                 onValue(child(roomRef, 'inventory'), async (dataSnapshot) => {
                     if(dataSnapshot.exists()) {
@@ -3147,19 +3174,8 @@
         }
         window.calculateReports = calculateReports;
 
-        // Owner: kick (remove) a single cashier session
-        window.disconnectCashier = async function(sessionId) {
-            if(!liveSyncRoom) return alert('Server not running.');
-            await set(ref(fb_db, 'live_rooms/' + liveSyncRoom + '/cashiers/' + sessionId), null);
-        };
-        window.removeCashier = window.disconnectCashier;
-
-        // Owner: remove ALL cashier entries
-        window.removeAllCashiers = async function() {
-            if(!liveSyncRoom) return alert('Server not running.');
-            if(!confirm('Remove all cashiers from the connected list?')) return;
-            await set(ref(fb_db, 'live_rooms/' + liveSyncRoom + '/cashiers'), null);
-        };
+        // NOTE: disconnectCashier / removeCashier / removeAllCashiers are defined
+        // in the module script above (for Firebase scope access).
 
         async function init() {
             // --- 48 HOUR FULL ACCESS LOGIC ---
@@ -3195,6 +3211,11 @@
                     if (ipEl) ipEl.value = savedIp;
                     if (passEl) passEl.value = savedPass;
                     if (devEl && savedDevice) devEl.value = savedDevice;
+                    // Ensure cashier name is loaded into input before reconnect
+                    const _rnEl = document.getElementById('cashier-name');
+                    if (_rnEl && !_rnEl.value.trim()) {
+                        _rnEl.value = localStorage.getItem('cashier_name') || 'Cashier';
+                    }
                     try {
                         await window.connectToHost();
                     } catch(e) {
