@@ -229,6 +229,12 @@
                                 <p class="text-sm text-slate-500 italic">No cashiers connected yet.</p>
                             </div>
                         </div>
+
+                        <div class="mt-6 pt-6 border-t border-slate-700 relative z-10">
+                            <h5 class="font-bold text-sm text-slate-300 mb-3 uppercase tracking-wider">📊 View Bills by Cashier</h5>
+                            <p class="text-xs text-slate-500 mb-3">Click any cashier name above, or search all cashiers below:</p>
+                            <button onclick="openCashierBillsSearch()" class="w-full bg-yellow-600 hover:bg-yellow-500 text-slate-900 font-black py-3 rounded-xl uppercase tracking-wider border border-yellow-400 shadow transition-all text-sm">📋 Browse All Cashier Bills</button>
+                        </div>
                     </div>
 
                     <div class="bg-slate-800/80 p-6 rounded-xl border border-slate-600 shadow-lg text-left relative overflow-hidden">
@@ -257,7 +263,7 @@
                         </div>
                         <div class="flex-1 w-full space-y-4 text-left">
                             <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Cashier Name</label>
-                            <input type="text" id="cashier-name" placeholder="Enter Your Name" class="w-full p-3 bg-slate-900 border border-slate-600 text-white rounded-lg font-bold shadow-inner focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 glow-focus outline-none text-lg" onchange="saveCashierInfo()">
+                            <input type="text" id="cashier-name" placeholder="Enter Your Name" class="w-full p-3 bg-slate-900 border border-slate-600 text-white rounded-lg font-bold shadow-inner focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 glow-focus outline-none text-lg" oninput="saveCashierInfo()">
                             
                             <label class="text-xs font-bold text-slate-400 uppercase tracking-wider block mt-2">Update Photo</label>
                             <input type="file" id="cashier-photo-upload" accept="image/*" class="w-full text-sm text-slate-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-slate-700 file:text-white hover:file:bg-slate-600 transition-colors" onchange="handleCashierPhoto(this)">
@@ -301,6 +307,42 @@
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <div class="bg-slate-800/80 p-6 rounded-xl border border-slate-600 shadow-lg text-left mt-6 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10"></div>
+                    <h4 class="font-bold text-lg text-emerald-400 mb-1 relative z-10">⏱️ Cloud Auto-Sync Timer</h4>
+                    <p class="text-xs text-slate-400 mb-4 relative z-10">Automatically upload all data to cloud at a set interval. A countdown popup will appear before each sync.</p>
+                    <div class="flex flex-col sm:flex-row gap-4 items-end relative z-10">
+                        <div class="flex items-center gap-3">
+                            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Enable</label>
+                            <input type="checkbox" id="auto-sync-toggle" class="w-5 h-5 accent-emerald-500 cursor-pointer" onchange="saveAutoSyncSettings()">
+                        </div>
+                        <div class="flex-1">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Interval (Minutes)</label>
+                            <input type="number" id="auto-sync-minutes-input" min="1" max="60" value="3" class="w-full p-3 bg-slate-900 border border-slate-600 text-white rounded-lg font-bold shadow-inner focus:border-emerald-500 glow-focus outline-none text-center text-lg">
+                        </div>
+                        <button onclick="saveAutoSyncSettings()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-lg font-bold border border-emerald-500 shadow transition-colors uppercase tracking-wider whitespace-nowrap">💾 Save</button>
+                    </div>
+                    <p id="auto-sync-status" class="text-xs text-emerald-400 font-bold mt-3 hidden relative z-10">✅ Auto-sync is active.</p>
+                </div>
+
+                <div class="bg-slate-800/80 p-6 rounded-xl border border-blue-500/40 shadow-lg text-left mt-6 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10"></div>
+                    <h4 class="font-bold text-lg text-blue-300 mb-1 relative z-10">⬇️ Auto Cloud Data Download Reminder</h4>
+                    <p class="text-xs text-slate-400 mb-4 relative z-10">Set a timer to auto-download the latest cloud data (inventory, customers, history) at a set interval. A reminder popup will appear before each download.</p>
+                    <div class="flex flex-col sm:flex-row gap-4 items-end relative z-10">
+                        <div class="flex items-center gap-3">
+                            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Enable</label>
+                            <input type="checkbox" id="auto-download-toggle" class="w-5 h-5 accent-blue-500 cursor-pointer" onchange="saveAutoDownloadSettings()">
+                        </div>
+                        <div class="flex-1">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Interval (Minutes)</label>
+                            <input type="number" id="auto-download-minutes-input" min="1" max="60" value="4" class="w-full p-3 bg-slate-900 border border-slate-600 text-white rounded-lg font-bold shadow-inner focus:border-blue-500 glow-focus outline-none text-center text-lg">
+                        </div>
+                        <button onclick="saveAutoDownloadSettings()" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-lg font-bold border border-blue-500 shadow transition-colors uppercase tracking-wider whitespace-nowrap">💾 Save</button>
+                    </div>
+                    <p id="auto-download-status" class="text-xs text-blue-400 font-bold mt-3 hidden relative z-10">✅ Auto-download reminder is active.</p>
                 </div>
             </div>
         </div>
@@ -756,7 +798,11 @@
         let isClient = false;
         let liveSyncRoom = null;
 
-        window.startHostServer = async function() {
+        // Track heartbeat so we only register once
+        let _hostHeartbeat = null;
+        let _hostCashierListener = null;
+
+        window.startHostServer = async function(silent = false) {
             let ip = localStorage.getItem('host_ip');
             let password = localStorage.getItem('host_password');
             if(!ip) {
@@ -766,37 +812,109 @@
                 localStorage.setItem('host_password', password);
             }
 
-            document.getElementById('host-ip').value = ip;
-            document.getElementById('host-password').value = password;
-            document.getElementById('host-credentials').classList.remove('hidden');
-            document.getElementById('host-status').classList.remove('hidden');
+            const ipEl = document.getElementById('host-ip');
+            const pwEl = document.getElementById('host-password');
+            const credEl = document.getElementById('host-credentials');
+            const statEl = document.getElementById('host-status');
+            if(ipEl) ipEl.value = ip;
+            if(pwEl) pwEl.value = password;
+            if(credEl) credEl.classList.remove('hidden');
+            if(statEl) statEl.classList.remove('hidden');
 
             liveSyncRoom = ip.replace(/\./g, '_');
             isHost = true;
+            localStorage.setItem('is_host', 'true');
 
             const roomRef = ref(fb_db, 'live_rooms/' + liveSyncRoom);
-            await set(roomRef, {
+
+            // ── Write room record (keeps inventory data, only updates meta) ──
+            await set(child(roomRef, 'meta'), {
                 password: password,
                 status: 'active',
                 timestamp: Date.now()
             });
-            
-            // Push initial state
+
+            // ── onDisconnect: mark offline so cashiers know, but data stays ──
+            const { onDisconnect: fbOnDisconnect } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js");
+            fbOnDisconnect(child(roomRef, 'meta/status')).set('offline');
+
+            // ── Wipe stale cashier entries on every server start ──
+            try { await set(child(roomRef, 'cashiers'), null); } catch(_e) {}
+
+            // ── Push inventory immediately ──
             window.broadcastInventoryUpdate();
 
-            // Listen for cashiers
-            onValue(child(roomRef, 'cashiers'), (snap) => {
-                const list = document.getElementById('connected-cashiers-list');
-                list.innerHTML = '';
-                if(snap.exists()){
-                    Object.values(snap.val()).forEach(c => {
-                        list.innerHTML += `<div class="p-3 bg-slate-900 rounded-lg border border-slate-700 mb-2 flex justify-between items-center shadow-inner"><span class="font-bold text-sm text-blue-300">🧑‍💼 ${c.name}</span> <span class="text-[10px] text-slate-500 font-mono bg-slate-800 px-2 py-1 rounded">${c.device}</span></div>`;
-                    });
-                } else {
-                    list.innerHTML = '<p class="text-sm text-slate-500 italic">No cashiers connected yet.</p>';
-                }
-            });
+            // ── Heartbeat: re-mark active + re-broadcast every 30 s ──
+            if(_hostHeartbeat) clearInterval(_hostHeartbeat);
+            _hostHeartbeat = setInterval(async () => {
+                try {
+                    await set(child(roomRef, 'meta/status'), 'active');
+                    await set(child(roomRef, 'meta/timestamp'), Date.now());
+                    await window.broadcastInventoryUpdate();
+                } catch(e) { console.warn('Heartbeat failed:', e); }
+            }, 30000);
+
+            // ── Listen for connected cashiers (only register once) ──
+            if(!_hostCashierListener) {
+                _hostCashierListener = onValue(child(roomRef, 'cashiers'), (snap) => {
+                    const list = document.getElementById('connected-cashiers-list');
+                    if(!list) return;
+                    list.innerHTML = '';
+                    if(snap.exists()){
+                        const _ents = Object.entries(snap.val());
+                        list.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
+                            + '<span style="font-size:10px;font-weight:900;color:#94a3b8;text-transform:uppercase;letter-spacing:0.1em;">Live (' + _ents.length + ')</span>'
+                            + '<button onclick="removeAllCashiers()" style="font-size:10px;font-weight:700;color:#f87171;background:rgba(153,27,27,0.3);border:1px solid rgba(239,68,68,0.4);padding:3px 10px;border-radius:6px;cursor:pointer;">Remove All</button>'
+                            + '</div>';
+                        _ents.forEach(([_sid, _c]) => {
+                            const _ph = _c.photo
+                                ? '<img src="' + _c.photo + '" style="width:38px;height:38px;border-radius:50%;object-fit:cover;border:2px solid #22c55e;flex-shrink:0;">'
+                                : '<div style="width:38px;height:38px;border-radius:50%;background:#0f172a;border:2px solid #334155;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">🧑‍💼</div>';
+                            const _tm = _c.connectedAt ? new Date(_c.connectedAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : '';
+                            const _name = (_c.name || '').replace(/'/g, "\\'");
+                            list.innerHTML += '<div style="background:#0f172a;border:1px solid rgba(34,197,94,0.2);border-radius:10px;padding:9px 10px;margin-bottom:7px;">'
+                                + '<div style="display:flex;align-items:center;gap:9px;">'
+                                + _ph
+                                + '<div style="flex:1;min-width:0;">'
+                                + '<button onclick="showCashierBills(\'' + _name + '\')" style="font-weight:900;font-size:13px;color:#6ee7b7;text-decoration:underline;text-underline-offset:3px;background:none;border:none;cursor:pointer;padding:0;display:block;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;">' + _c.name + '</button>'
+                                + '<div style="font-size:10px;color:#64748b;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + _c.device + (_tm ? ' · ' + _tm : '') + '</div>'
+                                + '</div>'
+                                + '<div style="display:flex;flex-direction:column;gap:3px;align-items:flex-end;flex-shrink:0;">'
+                                + '<span style="width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block;"></span>'
+                                + '<button onclick="disconnectCashier(\'' + _sid + '\')" style="font-size:9px;font-weight:900;color:#fbbf24;background:rgba(120,53,15,0.4);border:1px solid rgba(251,191,36,0.4);padding:2px 6px;border-radius:5px;cursor:pointer;white-space:nowrap;">⏹ Kick</button>'
+                                + '<button onclick="removeCashier(\'' + _sid + '\')" style="font-size:9px;font-weight:900;color:#f87171;background:rgba(127,29,29,0.4);border:1px solid rgba(248,113,113,0.4);padding:2px 6px;border-radius:5px;cursor:pointer;white-space:nowrap;">🗑 Remove</button>'
+                                + '</div>'
+                                + '</div>'
+                                + '</div>';
+                        });
+                    } else {
+                        list.innerHTML = '<p style="font-size:12px;color:#475569;font-style:italic;text-align:center;padding:10px 0;">No cashiers connected yet.</p>';
+                    }
+                });
+            }
+
+            if(!silent) console.info('[HOST] Server active on room:', liveSyncRoom);
         };
+
+        // ── Visibility change: re-activate server when tab regains focus ──
+        document.addEventListener('visibilitychange', async () => {
+            if(document.visibilityState === 'visible' && localStorage.getItem('is_host') === 'true') {
+                if(!isHost) {
+                    console.info('[HOST] Tab visible again — resuming server...');
+                    try { await window.startHostServer(true); } catch(e) { console.warn(e); }
+                } else {
+                    // Just re-mark active + broadcast
+                    try {
+                        const ip = localStorage.getItem('host_ip');
+                        if(ip && liveSyncRoom) {
+                            const roomRef = ref(fb_db, 'live_rooms/' + liveSyncRoom);
+                            await set(child(roomRef, 'meta/status'), 'active');
+                            await window.broadcastInventoryUpdate();
+                        }
+                    } catch(e) { console.warn(e); }
+                }
+            }
+        });
 
         window.broadcastInventoryUpdate = async function() {
             if(!isHost || !liveSyncRoom) return;
@@ -818,18 +936,35 @@
             const roomRef = ref(fb_db, 'live_rooms/' + roomCode);
             const snapshot = await get(roomRef);
             
-            if(snapshot.exists() && snapshot.val().password === pass) {
+            const _rd = snapshot.exists() ? snapshot.val() : null;
+            const _sp = _rd ? (_rd.meta ? _rd.meta.password : _rd.password) : null;
+            if(snapshot.exists() && _sp === pass) {
                 document.getElementById('client-status').classList.remove('hidden');
                 document.getElementById('client-status').innerText = "🟢 Connected! Live updates active.";
                 isClient = true;
                 liveSyncRoom = roomCode;
 
-                // Register cashier to host
-                const sessionId = Date.now().toString();
+                // Save credentials for auto-reconnect on next page load
+                localStorage.setItem('cashier_saved_ip', ipInput);
+                localStorage.setItem('cashier_saved_password', pass);
+                localStorage.setItem('cashier_saved_device', deviceName);
+
+                // Clear ALL previous cashiers then register only this session
+                const _cref = child(roomRef, 'cashiers');
+                await set(_cref, null);
+                const sessionId = 'session_' + Date.now().toString();
+                const _ph = localStorage.getItem('cashier_photo') || '';
                 await set(child(roomRef, 'cashiers/' + sessionId), {
                     name: cashierName,
-                    device: deviceName
+                    device: deviceName,
+                    photo: _ph,
+                    connectedAt: Date.now()
                 });
+                // Auto-remove when tab closes
+                try {
+                    const { onDisconnect: _od } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js");
+                    _od(child(roomRef, 'cashiers/' + sessionId)).remove();
+                } catch(_e) {}
 
                 onValue(child(roomRef, 'inventory'), async (dataSnapshot) => {
                     if(dataSnapshot.exists()) {
@@ -1199,9 +1334,12 @@
         }
         
         window.closePasswordModal = function(isSubmit) {
-            document.getElementById('password-modal-input').classList.add('hidden');
+            const _inp = document.getElementById('password-modal-input');
+            const _val = isSubmit ? _inp.value : null;
+            document.getElementById('password-modal').classList.add('hidden');
+            _inp.value = '';
             if(passwordPromiseResolve) {
-                passwordPromiseResolve(isSubmit ? document.getElementById('password-modal-input').value : null);
+                passwordPromiseResolve(_val);
                 passwordPromiseResolve = null;
             }
         };
@@ -1287,7 +1425,10 @@
         window.setRole = setRole;
 
         function saveCashierInfo() {
-            localStorage.setItem('cashier_name', document.getElementById('cashier-name').value);
+            const _ne = document.getElementById('cashier-name');
+            if (!_ne) return;
+            const _nv = _ne.value.trim();
+            if (_nv) localStorage.setItem('cashier_name', _nv);
             renderCashierReport();
         }
         window.saveCashierInfo = saveCashierInfo;
@@ -1309,11 +1450,13 @@
             const photoData = localStorage.getItem('cashier_photo');
             const img = document.getElementById('cashier-photo-preview');
             const placeholder = document.getElementById('cashier-photo-placeholder');
+            if (!img || !placeholder) return;
             if (photoData) {
                 img.src = photoData;
                 img.style.display = 'block';
                 placeholder.style.display = 'none';
             } else {
+                img.src = '';
                 img.style.display = 'none';
                 placeholder.style.display = 'flex';
             }
@@ -1660,6 +1803,128 @@
         }
         window.cancelBill = cancelBill;
 
+        window.printSerialRecord = function() {
+            const owner = document.getElementById('serial-owner').value.trim();
+            const phone = document.getElementById('serial-phone').value.trim();
+            const item = document.getElementById('serial-item').value.trim();
+            const advance = document.getElementById('serial-advance').value.trim();
+            const note = document.getElementById('serial-note').value.trim();
+            const time = document.getElementById('serial-time').value.trim();
+            const photoFile = document.getElementById('serial-photo').files[0];
+
+            if(!owner && !item) return alert("Please enter at least Owner Name and Item/Model.");
+
+            function buildAndPrint(photoSrc) {
+                const photoHtml = photoSrc
+                    ? `<div style="text-align:center;margin:12px 0;"><img src="${photoSrc}" style="max-width:100%;max-height:160px;border-radius:8px;border:1px solid #ccc;"></div>`
+                    : '';
+                const printContent = `
+                    <div style="text-align:center;border:2px solid #000;border-radius:8px;padding:8px;margin-bottom:10px;">
+                        <p style="font-size:22px;font-weight:900;margin:0;letter-spacing:1px;">RUWAN CELL & THARU SALON</p>
+                        <p style="font-size:13px;margin:2px 0;">MADAGALLA ROAD, DAGAMA</p>
+                        <p style="font-size:13px;margin:2px 0;">077 230 1099 / 075 548 5454</p>
+                    </div>
+                    <p style="text-align:center;font-size:16px;font-weight:bold;margin:6px 0;border-bottom:1px dashed #000;padding-bottom:6px;">📱 REPAIR JOB SLIP</p>
+                    ${photoHtml}
+                    <table style="width:100%;font-size:14px;border-collapse:collapse;">
+                        <tr><td style="padding:5px 2px;font-weight:bold;width:40%;color:#333;">Owner Name:</td><td style="padding:5px 2px;font-weight:bold;">${owner || '—'}</td></tr>
+                        <tr style="background:#f5f5f5;"><td style="padding:5px 2px;font-weight:bold;color:#333;">Phone:</td><td style="padding:5px 2px;">${phone || '—'}</td></tr>
+                        <tr><td style="padding:5px 2px;font-weight:bold;color:#333;">Item / Model:</td><td style="padding:5px 2px;font-weight:bold;">${item || '—'}</td></tr>
+                        <tr style="background:#f5f5f5;"><td style="padding:5px 2px;font-weight:bold;color:#333;">Advance Paid:</td><td style="padding:5px 2px;font-weight:bold;color:#16a34a;">LKR ${advance || '0.00'}</td></tr>
+                        <tr><td style="padding:5px 2px;font-weight:bold;color:#333;vertical-align:top;">Issues / Notes:</td><td style="padding:5px 2px;white-space:pre-wrap;">${note || '—'}</td></tr>
+                        <tr style="background:#f5f5f5;"><td style="padding:5px 2px;font-weight:bold;color:#333;">Date & Time:</td><td style="padding:5px 2px;font-size:12px;">${time || '—'}</td></tr>
+                    </table>
+                    <div style="margin-top:14px;border-top:1px dashed #000;padding-top:8px;text-align:center;font-size:12px;color:#555;">
+                        Customer Copy — Keep this slip to collect your device.
+                    </div>`;
+
+                const printWindow = window.open('', '_blank', 'width=500,height=750');
+                if (!printWindow) { alert("⚠️ Popup blocked! Please allow popups for this site."); return; }
+                printWindow.document.open();
+                printWindow.document.write(`<html><head><title>Repair Slip</title><style>
+                    body{width:78mm;font-family:'Courier New',Courier,monospace;margin:0;padding:6px;background:#fff;color:#000;}
+                    .print-btn{width:100%;background:#2563eb;color:#fff;border:none;padding:12px;font-weight:bold;border-radius:5px;margin:8px 0;display:block;cursor:pointer;font-size:15px;}
+                    @media print{.print-btn{display:none!important;}@page{margin:0;size:80mm auto;}body{width:78mm!important;margin:0;padding:4px;}}
+                </style></head><body>
+                <button class="print-btn" onclick="window.print()">🖨️ PRINT REPAIR SLIP</button>
+                ${printContent}
+                
+    <!-- ═══ CASHIER BILLS MODAL ═══ -->
+    <div id="cashier-bills-modal" class="hidden fixed inset-0 bg-slate-950 bg-opacity-95 z-[200] flex items-center justify-center backdrop-blur-sm p-3">
+        <div class="bg-slate-800 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.9)] border border-slate-600 w-full max-w-2xl flex flex-col max-h-[92vh]">
+            <div class="flex justify-between items-center p-5 border-b border-slate-700">
+                <h3 id="cashier-bills-modal-title" class="text-white font-black text-xl tracking-wide uppercase">📋 Cashier Bills</h3>
+                <button onclick="document.getElementById('cashier-bills-modal').classList.add('hidden')" class="text-slate-400 hover:text-white font-black text-2xl transition-colors">&times;</button>
+            </div>
+
+            <!-- Search bar for browse mode -->
+            <div id="cashier-bills-search-bar" class="p-4 border-b border-slate-700 bg-slate-900/50 hidden">
+                <input type="text" id="cashier-bills-name-search" placeholder="Type cashier name..." oninput="loadCashierBillsByName(this.value)" class="w-full p-3 bg-slate-800 border-2 border-slate-600 text-white rounded-xl font-bold focus:border-yellow-500 outline-none glow-focus">
+            </div>
+
+            <div class="overflow-y-auto flex-1 p-4 space-y-5">
+                <!-- RUWAN section -->
+                <div>
+                    <div class="flex items-center gap-2 mb-3">
+                        <div class="flex-1 h-px bg-blue-500/30"></div>
+                        <span class="text-blue-400 font-black text-xs uppercase tracking-widest px-2 bg-slate-800 border border-blue-500/30 rounded-full py-1">📱 RUWAN CELLULAR</span>
+                        <div class="flex-1 h-px bg-blue-500/30"></div>
+                    </div>
+                    <div id="cashier-bills-ruwan" class="space-y-2">
+                        <p class="text-slate-500 text-sm text-center py-4 italic">No bills found.</p>
+                    </div>
+                </div>
+                <!-- THARU section -->
+                <div>
+                    <div class="flex items-center gap-2 mb-3">
+                        <div class="flex-1 h-px bg-pink-500/30"></div>
+                        <span class="text-pink-400 font-black text-xs uppercase tracking-widest px-2 bg-slate-800 border border-pink-500/30 rounded-full py-1">💇 SALON THARU</span>
+                        <div class="flex-1 h-px bg-pink-500/30"></div>
+                    </div>
+                    <div id="cashier-bills-tharu" class="space-y-2">
+                        <p class="text-slate-500 text-sm text-center py-4 italic">No bills found.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-4 border-t border-slate-700 text-right">
+                <button onclick="document.getElementById('cashier-bills-modal').classList.add('hidden')" class="bg-slate-700 hover:bg-slate-600 text-white px-6 py-2 rounded-lg font-bold transition-colors">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ BILL ACTION MODAL (Print / Edit) ═══ -->
+    <div id="bill-action-modal" class="hidden fixed inset-0 bg-slate-950 bg-opacity-95 z-[300] flex items-center justify-center backdrop-blur-sm p-4">
+        <div class="bg-slate-800 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.9)] border border-slate-600 w-full max-w-sm">
+            <div class="p-6 border-b border-slate-700">
+                <h3 id="bill-action-title" class="text-white font-black text-lg tracking-wide text-center">📄 Bill Options</h3>
+                <p id="bill-action-subtitle" class="text-slate-400 text-xs text-center mt-1"></p>
+            </div>
+            <div class="p-6 space-y-3">
+                <button onclick="doPrintBillFromModal()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-xl font-black text-lg uppercase tracking-wider border border-blue-500 shadow-[0_0_15px_rgba(37,99,235,0.3)] transition-all">🖨️ Print Bill</button>
+                <button onclick="doEditBillFromModal()" class="w-full bg-yellow-600 hover:bg-yellow-500 text-slate-900 py-4 rounded-xl font-black text-lg uppercase tracking-wider border border-yellow-400 shadow transition-all">✏️ Edit Bill</button>
+            </div>
+            <div class="p-4 border-t border-slate-700 text-center">
+                <button onclick="document.getElementById('bill-action-modal').classList.add('hidden')" class="text-slate-400 hover:text-white font-bold text-sm transition-colors">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>`);
+                printWindow.document.close();
+                printWindow.focus();
+            }
+
+            if (photoFile) {
+                const reader = new FileReader();
+                reader.onload = function(e) { buildAndPrint(e.target.result); };
+                reader.readAsDataURL(photoFile);
+            } else {
+                buildAndPrint(null);
+            }
+        };
+
         function generateBillPopup(sale, passedWindow = null) {
             const itemsHtml = (sale.items || []).map(i => {
                 const qty = i.qty || 1;
@@ -1914,6 +2179,16 @@
             } else { resultsDiv.style.display = 'none'; }
         }
         window.searchItems = searchItems;
+
+        document.addEventListener('click', function(e) {
+            const searchInput = document.getElementById('bill-search');
+            const resultsDiv = document.getElementById('search-results');
+            if (resultsDiv && searchInput) {
+                if (!searchInput.contains(e.target) && !resultsDiv.contains(e.target)) {
+                    resultsDiv.style.display = 'none';
+                }
+            }
+        });
 
         async function selectSearchResult(code, name) {
             const qtyInput = prompt(`Enter Quantity for ${name}:`, "1");
@@ -2872,6 +3147,20 @@
         }
         window.calculateReports = calculateReports;
 
+        // Owner: kick (remove) a single cashier session
+        window.disconnectCashier = async function(sessionId) {
+            if(!liveSyncRoom) return alert('Server not running.');
+            await set(ref(fb_db, 'live_rooms/' + liveSyncRoom + '/cashiers/' + sessionId), null);
+        };
+        window.removeCashier = window.disconnectCashier;
+
+        // Owner: remove ALL cashier entries
+        window.removeAllCashiers = async function() {
+            if(!liveSyncRoom) return alert('Server not running.');
+            if(!confirm('Remove all cashiers from the connected list?')) return;
+            await set(ref(fb_db, 'live_rooms/' + liveSyncRoom + '/cashiers'), null);
+        };
+
         async function init() {
             // --- 48 HOUR FULL ACCESS LOGIC ---
             if (!localStorage.getItem('cashier_full_access_expiry')) {
@@ -2884,7 +3173,8 @@
             currentRole = 'owner'; // default to pass validation check briefly
             setRole(savedRole);
             
-            document.getElementById('cashier-name').value = localStorage.getItem('cashier_name') || '';
+            const _cne = document.getElementById('cashier-name');
+            if (_cne) _cne.value = localStorage.getItem('cashier_name') || '';
             loadCashierPhoto();
 
             const savedCart = await db.draftCart.toArray();
@@ -2893,12 +3183,370 @@
             const savedName = localStorage.getItem('persistent_printer_name');
             if(savedName) { document.getElementById('printer-status').innerHTML = `<span class="w-3 h-3 rounded-full bg-blue-500 inline-block"></span> Status: Saved Printer - ` + savedName; }
 
-            // Check if server should resume automatically
-            if (savedRole === 'owner' && localStorage.getItem('host_ip')) {
-                // startHostServer(); // Optional automatic restart 
+            // Auto-reconnect cashier to admin panel if previously connected
+            if (savedRole === 'cashier') {
+                const savedIp = localStorage.getItem('cashier_saved_ip');
+                const savedPass = localStorage.getItem('cashier_saved_password');
+                const savedDevice = localStorage.getItem('cashier_saved_device');
+                if (savedIp && savedPass) {
+                    const ipEl = document.getElementById('client-ip');
+                    const passEl = document.getElementById('client-password');
+                    const devEl = document.getElementById('client-device');
+                    if (ipEl) ipEl.value = savedIp;
+                    if (passEl) passEl.value = savedPass;
+                    if (devEl && savedDevice) devEl.value = savedDevice;
+                    try {
+                        await window.connectToHost();
+                    } catch(e) {
+                        console.warn('Auto-reconnect failed:', e);
+                    }
+                }
             }
+
+            // Auto-resume host server on refresh/reopen if previously started
+            if (savedRole === 'owner' && localStorage.getItem('host_ip') && localStorage.getItem('is_host') === 'true') {
+                try {
+                    await window.startHostServer(true);
+                    console.info('[INIT] Host server auto-resumed.');
+                } catch(e) {
+                    console.warn('[INIT] Host auto-resume failed:', e);
+                }
+            }
+
+            // Start cloud auto-sync timer if enabled
+            startCloudAutoSync();
         }
+
+        // ─── CLOUD AUTO-SYNC TIMER ───────────────────────────────────────────
+        let _autoSyncInterval = null;
+
+        function startCloudAutoSync() {
+            if (_autoSyncInterval) clearInterval(_autoSyncInterval);
+            const enabled = localStorage.getItem('auto_sync_enabled') === 'true';
+            const minutes = parseInt(localStorage.getItem('auto_sync_minutes') || '3');
+
+            // Restore UI state
+            const toggle = document.getElementById('auto-sync-toggle');
+            const minInput = document.getElementById('auto-sync-minutes-input');
+            const statusEl = document.getElementById('auto-sync-status');
+            if (toggle) toggle.checked = enabled;
+            if (minInput) minInput.value = minutes;
+            if (statusEl) { statusEl.classList.toggle('hidden', !enabled); }
+
+            if (!enabled) return;
+            const ms = minutes * 60 * 1000;
+            _autoSyncInterval = setInterval(() => showAutoSyncCountdown(minutes), ms);
+        }
+
+        function showAutoSyncCountdown(minutes) {
+            const existing = document.getElementById('auto-sync-popup');
+            if (existing) existing.remove();
+
+            let secondsLeft = 10;
+            const popup = document.createElement('div');
+            popup.id = 'auto-sync-popup';
+            popup.style.cssText = `
+                position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+                background:#0f172a;border:2px solid #22c55e;border-radius:16px;
+                padding:28px 36px;z-index:99999;text-align:center;min-width:280px;
+                box-shadow:0 0 40px rgba(34,197,94,0.4);font-family:inherit;`;
+            popup.innerHTML = `
+                <p style="color:#22c55e;font-size:11px;font-weight:900;letter-spacing:2px;text-transform:uppercase;margin:0 0 6px;">☁️ Cloud Auto-Sync</p>
+                <p style="color:#fff;font-size:14px;margin:0 0 12px;">Every ${minutes} min backup starting in:</p>
+                <div id="auto-sync-countdown" style="font-size:56px;font-weight:900;color:#22c55e;font-family:monospace;line-height:1;">00:10</div>
+                <p style="color:#94a3b8;font-size:12px;margin:10px 0 16px;">Uploading all data to cloud...</p>
+                <button onclick="document.getElementById('auto-sync-popup').remove();window.uploadAllToCloud();" 
+                    style="background:#22c55e;color:#000;border:none;border-radius:8px;padding:10px 24px;font-weight:900;cursor:pointer;font-size:14px;margin-right:8px;">
+                    Sync Now
+                </button>
+                <button onclick="document.getElementById('auto-sync-popup').remove();" 
+                    style="background:#334155;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-weight:700;cursor:pointer;font-size:14px;">
+                    Cancel
+                </button>`;
+            document.body.appendChild(popup);
+
+            const countdownEl = document.getElementById('auto-sync-countdown');
+            const tick = setInterval(() => {
+                secondsLeft--;
+                const m = String(Math.floor(secondsLeft / 60)).padStart(2, '0');
+                const s = String(secondsLeft % 60).padStart(2, '0');
+                if (countdownEl) countdownEl.textContent = `${m}:${s}`;
+                if (secondsLeft <= 0) {
+                    clearInterval(tick);
+                    const p = document.getElementById('auto-sync-popup');
+                    if (p) p.remove();
+                    window.uploadAllToCloud();
+                }
+            }, 1000);
+        }
+
+        window.saveAutoSyncSettings = function() {
+            const enabled = document.getElementById('auto-sync-toggle').checked;
+            const minutes = Math.max(1, parseInt(document.getElementById('auto-sync-minutes-input').value) || 3);
+            localStorage.setItem('auto_sync_enabled', enabled ? 'true' : 'false');
+            localStorage.setItem('auto_sync_minutes', String(minutes));
+            const statusEl = document.getElementById('auto-sync-status');
+            if (statusEl) {
+                statusEl.textContent = enabled ? `✅ Auto-sync active — every ${minutes} minute(s).` : '';
+                statusEl.classList.toggle('hidden', !enabled);
+            }
+            startCloudAutoSync();
+            alert(enabled ? `☁️ Auto-sync enabled! Will upload every ${minutes} minute(s).` : '⏹️ Auto-sync disabled.');
+        };
+
+        // ─── AUTO CLOUD DATA DOWNLOAD REMINDER ──────────────────────────────────
+        let _autoDownloadInterval = null;
+
+        function startCloudAutoDownload() {
+            if (_autoDownloadInterval) clearInterval(_autoDownloadInterval);
+            const enabled = localStorage.getItem('auto_download_enabled') === 'true';
+            const minutes = parseInt(localStorage.getItem('auto_download_minutes') || '4');
+
+            const toggle = document.getElementById('auto-download-toggle');
+            const minInput = document.getElementById('auto-download-minutes-input');
+            const statusEl = document.getElementById('auto-download-status');
+            if (toggle) toggle.checked = enabled;
+            if (minInput) minInput.value = minutes;
+            if (statusEl) statusEl.classList.toggle('hidden', !enabled);
+
+            if (!enabled) return;
+            const ms = minutes * 60 * 1000;
+            _autoDownloadInterval = setInterval(() => showAutoDownloadCountdown(minutes), ms);
+        }
+
+        function showAutoDownloadCountdown(minutes) {
+            const existing = document.getElementById('auto-download-popup');
+            if (existing) existing.remove();
+
+            let secondsLeft = 10;
+            const popup = document.createElement('div');
+            popup.id = 'auto-download-popup';
+            popup.style.cssText = `
+                position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+                background:#0f172a;border:2px solid #3b82f6;border-radius:16px;
+                padding:28px 36px;z-index:99999;text-align:center;min-width:280px;
+                box-shadow:0 0 40px rgba(59,130,246,0.4);font-family:inherit;`;
+            popup.innerHTML = `
+                <p style="color:#3b82f6;font-size:11px;font-weight:900;letter-spacing:2px;text-transform:uppercase;margin:0 0 6px;">⬇️ Cloud Auto-Download</p>
+                <p style="color:#fff;font-size:14px;margin:0 0 12px;">Every ${minutes} min data refresh in:</p>
+                <div id="auto-download-countdown" style="font-size:56px;font-weight:900;color:#3b82f6;font-family:monospace;line-height:1;">00:10</div>
+                <p style="color:#94a3b8;font-size:12px;margin:10px 0 16px;">Downloading latest cloud data...</p>
+                <button onclick="document.getElementById('auto-download-popup').remove();window.downloadAllFromCloud();"
+                    style="background:#3b82f6;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-weight:900;cursor:pointer;font-size:14px;margin-right:8px;">
+                    Download Now
+                </button>
+                <button onclick="document.getElementById('auto-download-popup').remove();"
+                    style="background:#334155;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-weight:700;cursor:pointer;font-size:14px;">
+                    Cancel
+                </button>`;
+            document.body.appendChild(popup);
+
+            const countdownEl = document.getElementById('auto-download-countdown');
+            const tick = setInterval(() => {
+                secondsLeft--;
+                const m = String(Math.floor(secondsLeft / 60)).padStart(2, '0');
+                const s = String(secondsLeft % 60).padStart(2, '0');
+                if (countdownEl) countdownEl.textContent = `${m}:${s}`;
+                if (secondsLeft <= 0) {
+                    clearInterval(tick);
+                    const p = document.getElementById('auto-download-popup');
+                    if (p) p.remove();
+                    window.downloadAllFromCloud();
+                }
+            }, 1000);
+        }
+
+        window.saveAutoDownloadSettings = function() {
+            const enabled = document.getElementById('auto-download-toggle').checked;
+            const minutes = Math.max(1, parseInt(document.getElementById('auto-download-minutes-input').value) || 4);
+            localStorage.setItem('auto_download_enabled', enabled ? 'true' : 'false');
+            localStorage.setItem('auto_download_minutes', String(minutes));
+            const statusEl = document.getElementById('auto-download-status');
+            if (statusEl) {
+                statusEl.textContent = enabled ? `✅ Auto-download active — every ${minutes} minute(s).` : '';
+                statusEl.classList.toggle('hidden', !enabled);
+            }
+            startCloudAutoDownload();
+            alert(enabled ? `⬇️ Auto-download enabled! Will refresh every ${minutes} minute(s).` : '⏹️ Auto-download disabled.');
+        };
+
+        // ─── CASHIER BILLS VIEWER ────────────────────────────────────────────────
+        let _currentBillActionId = null;
+
+        window.showCashierBills = async function(cashierName) {
+            document.getElementById('cashier-bills-modal-title').textContent = '📋 Bills by: ' + cashierName.toUpperCase();
+            document.getElementById('cashier-bills-search-bar').classList.add('hidden');
+            document.getElementById('cashier-bills-modal').classList.remove('hidden');
+            await _renderCashierBillsSections(cashierName);
+        };
+
+        window.openCashierBillsSearch = function() {
+            document.getElementById('cashier-bills-modal-title').textContent = '📋 Browse Cashier Bills';
+            document.getElementById('cashier-bills-search-bar').classList.remove('hidden');
+            document.getElementById('cashier-bills-name-search').value = '';
+            document.getElementById('cashier-bills-modal').classList.remove('hidden');
+            document.getElementById('cashier-bills-ruwan').innerHTML = '<p class="text-slate-500 text-sm text-center py-4 italic">Type a cashier name above to search.</p>';
+            document.getElementById('cashier-bills-tharu').innerHTML = '<p class="text-slate-500 text-sm text-center py-4 italic">Type a cashier name above to search.</p>';
+            setTimeout(() => document.getElementById('cashier-bills-name-search').focus(), 100);
+        };
+
+        window.loadCashierBillsByName = async function(name) {
+            if (!name.trim()) {
+                document.getElementById('cashier-bills-ruwan').innerHTML = '<p class="text-slate-500 text-sm text-center py-4 italic">Type a cashier name above to search.</p>';
+                document.getElementById('cashier-bills-tharu').innerHTML = '<p class="text-slate-500 text-sm text-center py-4 italic">Type a cashier name above to search.</p>';
+                return;
+            }
+            await _renderCashierBillsSections(name.trim());
+        };
+
+        async function _renderCashierBillsSections(cashierName) {
+            const allSales = await db.sales.toArray();
+            const filtered = allSales.filter(s =>
+                s.cashierName && s.cashierName.toLowerCase().includes(cashierName.toLowerCase()) && s.status !== 'Canceled'
+            ).sort((a, b) => b.date - a.date);
+
+            const ruwanBills = filtered.filter(s => s.shop === 'ruwancell' || !s.shop);
+            const tharuBills = filtered.filter(s => s.shop === 'tharusalon');
+
+            document.getElementById('cashier-bills-ruwan').innerHTML = _buildBillCards(ruwanBills, 'blue');
+            document.getElementById('cashier-bills-tharu').innerHTML = _buildBillCards(tharuBills, 'pink');
+        }
+
+        function _buildBillCards(bills, color) {
+            if (!bills.length) return '<p style="font-size:12px;color:#475569;font-style:italic;text-align:center;padding:12px 0;">No bills found.</p>';
+            const _bc = color === 'blue' ? 'rgba(59,130,246,0.25)' : 'rgba(236,72,153,0.25)';
+            const _tc = color === 'blue' ? '#93c5fd' : '#f9a8d4';
+            return bills.map(s => {
+                const d = new Date(s.date);
+                const dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                const _items = Array.isArray(s.items) ? s.items.map(it =>
+                    '<div style="display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;padding:1px 0;">'
+                    + '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + (it.name||'Item') + ' x' + (it.qty||1) + '</span>'
+                    + '<span style="font-weight:bold;color:#e2e8f0;flex-shrink:0;margin-left:6px;">LKR ' + Number(it.total||0).toFixed(2) + '</span>'
+                    + '</div>'
+                ).join('') : '';
+                const _sc = s.status === 'Completed' ? '#22c55e' : s.status === 'Closed' ? '#60a5fa' : s.status === 'Canceled' ? '#ef4444' : '#94a3b8';
+                return '<div style="background:#0f172a;border:1px solid ' + _bc + ';border-radius:12px;padding:11px 12px;margin-bottom:8px;">'
+                    + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;">'
+                    + '<div><span style="font-weight:900;font-size:13px;color:' + _tc + ';">#' + (s.invoiceNo||s.id) + '</span>'
+                    + '<span style="font-size:9px;font-weight:700;color:' + _sc + ';margin-left:6px;text-transform:uppercase;">' + (s.status||'Paid') + '</span></div>'
+                    + '<span style="font-weight:900;font-size:13px;color:#f1f5f9;">LKR ' + Number(s.total||0).toFixed(2) + '</span>'
+                    + '</div>'
+                    + '<div style="font-size:10px;color:#64748b;margin-bottom:5px;display:flex;justify-content:space-between;">'
+                    + '<span>' + (s.customer||'General Customer') + '</span><span>' + dateStr + '</span></div>'
+                    + '<div style="border-top:1px solid rgba(255,255,255,0.06);padding-top:5px;margin-bottom:7px;">' + _items + '</div>'
+                    + '<div style="display:flex;gap:6px;">'
+                    + '<button onclick="doPrintBillDirect(' + s.id + ')" style="flex:1;padding:7px;font-size:11px;font-weight:900;color:#fff;background:#2563eb;border:none;border-radius:7px;cursor:pointer;text-transform:uppercase;">🖨 Print</button>'
+                    + '<button onclick="doEditBillDirect(' + s.id + ')" style="flex:1;padding:7px;font-size:11px;font-weight:900;color:#0f172a;background:#ca8a04;border:none;border-radius:7px;cursor:pointer;text-transform:uppercase;">✏ Edit</button>'
+                    + '</div></div>';
+            }).join('');
+        }
+
+        window.openBillAction = function(billId) {
+            _currentBillActionId = billId;
+            db.sales.get(billId).then(sale => {
+                if (!sale) return;
+                document.getElementById('bill-action-title').textContent = '📄 Invoice #' + (sale.invoiceNo || billId);
+                document.getElementById('bill-action-subtitle').textContent = 'LKR ' + Number(sale.total||0).toFixed(2) + '  •  ' + (sale.customer || 'General Customer');
+                document.getElementById('bill-action-modal').classList.remove('hidden');
+            });
+        };
+
+        window.doPrintBillFromModal = async function() {
+            if (!_currentBillActionId) return;
+            const sale = await db.sales.get(_currentBillActionId);
+            if (!sale || !sale.items) return alert('Bill data not found.');
+            document.getElementById('bill-action-modal').classList.add('hidden');
+
+            // Build a temporary print area for the historical bill
+            const shopName = (sale.shop === 'tharusalon') ? 'SALON THARU' : 'RUWAN CELLULAR';
+            const itemsHtml = sale.items.map(i => `
+                <div style="margin-bottom:6px;color:black;">
+                    <div style="font-weight:bold;text-transform:uppercase;">${i.name}</div>
+                    <div style="display:flex;justify-content:space-between;font-size:15px;">
+                        <span style="width:15%">${i.qty}</span>
+                        <span style="width:25%">${Number(i.price||0).toFixed(0)}</span>
+                        <span style="width:20%">${Number(i.total/i.qty||0).toFixed(0)}</span>
+                        <span style="width:40%;text-align:right;font-weight:bold;">${Number(i.total||0).toFixed(2)}</span>
+                    </div>
+                </div>`).join('');
+
+            const printWrap = document.getElementById('temp-print-wrap');
+            const oldContent = document.getElementById('print-area').innerHTML;
+            const pa = document.getElementById('print-area');
+            pa.innerHTML = `
+                <div style="border:2px solid black;border-radius:8px;padding:5px;margin-bottom:5px;text-align:center;">
+                    <p style="font-size:22px;font-weight:900;color:black;">${shopName}</p>
+                    <p style="font-size:14px;color:black;">MADAGALLA ROAD, DAGAMA</p>
+                    <p style="font-size:14px;color:black;">077 230 1099 / 075 548 5454</p>
+                </div>
+                <div style="font-size:14px;margin:6px 0;color:black;">
+                    <div style="display:flex;justify-content:space-between;"><span>Invoice:</span><span style="font-weight:bold;">#${sale.invoiceNo||sale.id}</span></div>
+                    <div style="display:flex;justify-content:space-between;"><span>Customer:</span><span>${sale.customer||'General Customer'}</span></div>
+                    <div style="display:flex;justify-content:space-between;"><span>Cashier:</span><span>${sale.cashierName||''}</span></div>
+                    <div style="display:flex;justify-content:space-between;"><span>Date:</span><span>${new Date(sale.date).toLocaleString()}</span></div>
+                </div>
+                <div style="border-top:1.5px solid black;border-bottom:1.5px solid black;padding:8px 0;margin:8px 0;">
+                    <div style="display:flex;justify-content:space-between;font-weight:bold;font-size:15px;border-bottom:1px solid black;margin-bottom:4px;">
+                        <span style="width:15%">Qty</span><span style="width:25%">Price</span><span style="width:20%">Net</span><span style="width:40%;text-align:right">Total</span>
+                    </div>
+                    ${itemsHtml}
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:20px;font-weight:900;border-top:1.5px solid black;padding-top:6px;color:black;">
+                    <span>TOTAL:</span><span>Rs. ${Number(sale.total||0).toFixed(2)}</span>
+                </div>
+                <div style="text-align:center;margin-top:10px;font-size:16px;font-weight:bold;color:black;">Payment: ${(sale.type||'CASH').toUpperCase()}</div>
+                <div style="text-align:center;margin-top:10px;font-size:18px;font-weight:900;color:black;">Thank You Come Again!</div>`;
+            window.print();
+            setTimeout(() => { pa.innerHTML = oldContent; }, 800);
+        };
+
+        window.doEditBillFromModal = async function() {
+            if (!_currentBillActionId) return;
+            const sale = await db.sales.get(_currentBillActionId);
+            if (!sale || !sale.items) return alert('Bill data not found.');
+            document.getElementById('bill-action-modal').classList.add('hidden');
+            document.getElementById('cashier-bills-modal').classList.add('hidden');
+
+            // Restore bill to cart
+            await db.draftCart.clear();
+            cart = [];
+            for (const item of sale.items) {
+                const cartItem = { ...item };
+                delete cartItem.id;
+                const draftId = await db.draftCart.add(cartItem);
+                cart.push({ ...cartItem, id: draftId });
+            }
+
+            // Set payment/shop mode
+            if (sale.type === 'credit') setPaymentMode('credit'); else setPaymentMode('cash');
+            if (sale.shop) {
+                currentBillShop = sale.shop;
+                setBillingShop(sale.shop);
+            }
+            if (sale.customer) document.getElementById('bill-customer').value = sale.customer;
+
+            // Cancel original sale
+            await db.sales.update(_currentBillActionId, { status: 'Canceled' });
+
+            showTab('billing');
+            renderCart();
+            updateLivePreview();
+            alert('✏️ Bill loaded for editing. Original marked as Canceled. Finish and print when done.');
+        };
+
+        // Direct print/edit from bill card (bypass action modal)
+        window.doPrintBillDirect = function(billId) {
+            _currentBillActionId = billId;
+            window.doPrintBillFromModal();
+        };
+        window.doEditBillDirect = function(billId) {
+            _currentBillActionId = billId;
+            window.doEditBillFromModal();
+        };
+
         init();
+        startCloudAutoDownload();
     </script>
 </body>
 </html>
