@@ -121,6 +121,23 @@
         </div>
     </div>
 
+    <div id="item-select-modal" class="hidden fixed inset-0 bg-slate-950 bg-opacity-90 z-[200] flex items-center justify-center backdrop-blur-sm transition-opacity p-4">
+        <div class="bg-slate-800 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.8)] border border-slate-600 w-full max-w-3xl flex flex-col max-h-[85vh]">
+            <div class="flex justify-between items-center p-5 border-b border-slate-700">
+                <h3 class="text-white font-black text-xl tracking-wide uppercase flex items-center gap-2"><span>📋</span> Select Item / Service</h3>
+                <button onclick="closeItemSelectModal()" class="text-slate-400 hover:text-white font-black text-2xl transition-colors">&times;</button>
+            </div>
+            <div class="p-4 border-b border-slate-700 bg-slate-900/50">
+                <div class="relative group">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><span class="text-slate-500">🔍</span></div>
+                    <input type="text" id="modal-item-search" oninput="filterModalItems(this.value)" placeholder="Search by name or code..." class="w-full pl-10 p-3 bg-slate-800 border-2 border-slate-600 text-white rounded-xl shadow-inner focus:border-blue-500 glow-focus outline-none font-bold transition-colors">
+                </div>
+            </div>
+            <div id="modal-item-list" class="p-4 overflow-y-auto flex-1 custom-scrollbar grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                </div>
+        </div>
+    </div>
+
     <div id="profit-modal" class="hidden fixed inset-0 bg-slate-950 bg-opacity-90 z-[200] flex items-center justify-center backdrop-blur-sm transition-opacity">
         <div class="bg-slate-800 p-6 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.8)] border border-slate-600 w-11/12 max-w-lg">
             <div class="flex justify-between items-center mb-4">
@@ -370,12 +387,17 @@
                     <button onclick="setPricingMode('wholesale')" id="btn-wholesale" class="flex-1 rounded-lg bg-slate-800 text-slate-400 text-xs font-bold py-2.5 uppercase border border-slate-600 hover:bg-slate-700 hover:text-white transition-all tracking-wider">Wholesale Sale</button>
                 </div>
 
-                <div class="relative mb-5 group">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <span class="text-slate-500">🔍</span>
+                <div class="flex gap-2 mb-5">
+                    <div class="relative flex-1 group">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span class="text-slate-500">🔍</span>
+                        </div>
+                        <input type="text" id="bill-search" onclick="searchItems(this.value)" oninput="searchItems(this.value)" placeholder="Search Item Name or Code..." class="w-full pl-10 p-4 bg-slate-900 border-2 border-slate-600 text-white rounded-xl font-bold shadow-inner focus:border-blue-500 focus:ring-1 focus:ring-blue-500 glow-focus outline-none text-lg transition-colors placeholder-slate-500">
+                        <div id="search-results" class="search-results absolute w-full bg-slate-800 border border-slate-600 z-[60] shadow-2xl rounded-b-xl mt-1 overflow-hidden divide-y divide-slate-700"></div>
                     </div>
-                    <input type="text" id="bill-search" onclick="searchItems(this.value)" oninput="searchItems(this.value)" placeholder="Search Item Name or Code..." class="w-full pl-10 p-4 bg-slate-900 border-2 border-slate-600 text-white rounded-xl font-bold shadow-inner focus:border-blue-500 focus:ring-1 focus:ring-blue-500 glow-focus outline-none text-lg transition-colors placeholder-slate-500">
-                    <div id="search-results" class="search-results absolute w-full bg-slate-800 border border-slate-600 z-[60] shadow-2xl rounded-b-xl mt-1 overflow-hidden divide-y divide-slate-700"></div>
+                    <button onclick="openItemSelectModal()" class="bg-blue-600 hover:bg-blue-500 text-white px-5 rounded-xl font-bold shadow-lg transition-colors border border-blue-500 flex items-center justify-center whitespace-nowrap">
+                        📋 Browse
+                    </button>
                 </div>
                 
                 <input type="hidden" id="bill-code">
@@ -387,9 +409,8 @@
                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-end bg-slate-900/50 p-4 rounded-xl border border-slate-700">
                     <div class="lg:col-span-5">
                         <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1 block mb-1">Customer</label>
-                        <select id="bill-customer" class="w-full p-3 bg-slate-800 border border-slate-600 text-white rounded-lg text-sm font-bold shadow-inner focus:border-blue-500 glow-focus outline-none appearance-none cursor-pointer" onchange="updateLivePreview()">
-                            <option value="General Customer">General Customer</option>
-                        </select>
+                        <input type="text" id="bill-customer" list="customer-datalist" placeholder="General Customer" autocomplete="off" class="w-full p-3 bg-slate-800 border border-slate-600 text-white rounded-lg text-sm font-bold shadow-inner focus:border-blue-500 glow-focus outline-none" oninput="updateLivePreview()">
+                        <datalist id="customer-datalist"></datalist>
                     </div>
 
                     <div class="lg:col-span-2">
@@ -405,10 +426,17 @@
                         <button onclick="setPaymentMode('credit')" id="btn-credit" class="flex-1 rounded-lg bg-slate-800 text-slate-400 text-xs font-black border border-slate-600 hover:bg-slate-700 hover:text-white transition-all uppercase tracking-wider">CREDIT</button>
                     </div>
 
-                    <div class="lg:col-span-2 h-[46px]">
-                        <button onclick="addUnlistedItem()" class="w-full h-full bg-slate-800 hover:bg-blue-900/40 text-blue-400 border border-blue-500/50 rounded-lg text-xs font-black uppercase tracking-wider transition-colors shadow-sm">+ Unlisted</button>
+                    <div class="lg:col-span-2 flex gap-2 h-[46px]">
+                        <button onclick="addUnlistedItem()" class="flex-1 bg-slate-800 hover:bg-blue-900/40 text-blue-400 border border-blue-500/50 rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors shadow-sm">+ Item</button>
+                        <button onclick="addServiceNote()" class="flex-1 bg-slate-800 hover:bg-pink-900/40 text-pink-400 border border-pink-500/50 rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors shadow-sm">+ Svc</button>
                     </div>
                 </div>
+
+                <div class="mt-4 bg-slate-900/50 p-3 rounded-xl border border-slate-700">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1 block mb-1">Bill Note (Optional)</label>
+                    <input type="text" id="bill-note" oninput="updateLivePreview()" placeholder="Type a note to appear at the bottom of the bill..." class="w-full p-3 bg-slate-800 border border-slate-600 text-white rounded-lg text-sm font-bold shadow-inner focus:border-blue-500 glow-focus outline-none">
+                </div>
+
             </div>
 
             <div class="glass-panel rounded-2xl shadow-2xl p-4 md:p-6 border border-slate-700 relative overflow-hidden">
@@ -547,7 +575,7 @@
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <label class="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1 text-red-400">Max Discount/Unit</label>
                             <input type="number" id="add-discount" inputmode="decimal" placeholder="0.00" class="w-full p-3 bg-slate-900 border border-slate-600 text-red-400 font-bold rounded-lg shadow-inner focus:border-red-500 glow-focus outline-none mt-1">
@@ -555,6 +583,10 @@
                         <div>
                             <label class="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1">Initial Stock Qty</label>
                             <input type="number" id="add-stock" inputmode="decimal" placeholder="0" class="w-full p-3 bg-slate-900 border border-slate-600 text-white font-bold rounded-lg shadow-inner focus:border-blue-500 glow-focus outline-none mt-1">
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1 text-yellow-400">Low Stock Alert Qty</label>
+                            <input type="number" id="add-low-stock-alert" inputmode="decimal" placeholder="e.g. 5" class="w-full p-3 bg-slate-900 border border-slate-600 text-yellow-400 font-bold rounded-lg shadow-inner focus:border-yellow-500 glow-focus outline-none mt-1">
                         </div>
                     </div>
                     
@@ -1385,7 +1417,7 @@
         window.syncCartWithInventory = async function() {
             if(cart && cart.length > 0) {
                 for(let i=0; i<cart.length; i++) {
-                    if(cart[i].code && cart[i].code !== 'unlisted') {
+                    if(cart[i].code && cart[i].code !== 'unlisted' && cart[i].code !== 'service') {
                         const freshItem = await db.inventory.get(cart[i].code);
                         if(freshItem) {
                             const unitPrice = pricingMode === 'wholesale' ? (Number(freshItem.wholesalePrice) || freshItem.price) : freshItem.price;
@@ -1411,10 +1443,12 @@
         };
 
         async function directPrint() {
-            const custName = document.getElementById('bill-customer').value || "General Customer";
+            const custName = document.getElementById('bill-customer').value.trim() || "General Customer";
             if(cart.length === 0) return alert("Cart is empty");
+            await autoSaveCustomerName(custName);
             const extraDiscount = parseFloat(document.getElementById('bill-extra-discount').value) || 0;
             const subtotal = cart.reduce((sum, i) => sum + (paymentMode === 'credit' ? (i.price * i.qty) : i.total), 0) - extraDiscount;
+            const billNote = document.getElementById('bill-note') ? document.getElementById('bill-note').value.trim() : "";
             
             const totalCost = cart.reduce((sum, i) => sum + ((i.cost || 0) * i.qty), 0);
             const actualProfit = paymentMode === 'credit' ? 0 : (subtotal - totalCost);
@@ -1436,7 +1470,7 @@
             const saleDate = savedDate ? parseInt(savedDate) : new Date().getTime();
 
             for(let i of cart) {
-                if(i.code && i.code !== 'unlisted') {
+                if(i.code && i.code !== 'unlisted' && i.code !== 'service') {
                     const invItem = await db.inventory.get(i.code);
                     if(invItem) await db.inventory.update(i.code, {stock: invItem.stock - i.qty});
                 }
@@ -1467,6 +1501,7 @@
                 extraDiscount: Number(extraDiscount),
                 shop: String(currentBillShop),
                 cashierName: String(currentCashier),
+                note: String(billNote),
                 status: 'Completed'
             };
             
@@ -1494,10 +1529,12 @@
         window.directPrint = directPrint;
 
         async function closeBillWithoutPrint() {
-            const custName = document.getElementById('bill-customer').value || "General Customer";
+            const custName = document.getElementById('bill-customer').value.trim() || "General Customer";
             if(cart.length === 0) return alert("Cart is empty");
+            await autoSaveCustomerName(custName);
             const extraDiscount = parseFloat(document.getElementById('bill-extra-discount').value) || 0;
             const subtotal = cart.reduce((sum, i) => sum + (paymentMode === 'credit' ? (i.price * i.qty) : i.total), 0) - extraDiscount;
+            const billNote = document.getElementById('bill-note') ? document.getElementById('bill-note').value.trim() : "";
             
             const totalCost = cart.reduce((sum, i) => sum + ((i.cost || 0) * i.qty), 0);
             const actualProfit = paymentMode === 'credit' ? 0 : (subtotal - totalCost);
@@ -1513,7 +1550,7 @@
             const saleDate = savedDate ? parseInt(savedDate) : new Date().getTime();
 
             for(let i of cart) {
-                if(i.code && i.code !== 'unlisted') {
+                if(i.code && i.code !== 'unlisted' && i.code !== 'service') {
                     const invItem = await db.inventory.get(i.code);
                     if(invItem) await db.inventory.update(i.code, {stock: invItem.stock - i.qty});
                 }
@@ -1545,6 +1582,7 @@
                 extraDiscount: Number(extraDiscount),
                 shop: String(currentBillShop),
                 cashierName: String(currentCashier),
+                note: String(billNote),
                 status: 'Closed'
             };
 
@@ -1569,9 +1607,11 @@
             if(cart.length === 0) return alert("Cart is empty");
             if(!confirm("Are you sure you want to CANCEL this bill? It will be saved to history as Canceled.")) return;
             
-            const custName = document.getElementById('bill-customer').value || "General Customer";
+            const custName = document.getElementById('bill-customer').value.trim() || "General Customer";
+            await autoSaveCustomerName(custName);
             const extraDiscount = parseFloat(document.getElementById('bill-extra-discount').value) || 0;
             const subtotal = cart.reduce((sum, i) => sum + (paymentMode === 'credit' ? (i.price * i.qty) : i.total), 0) - extraDiscount;
+            const billNote = document.getElementById('bill-note') ? document.getElementById('bill-note').value.trim() : "";
             
             const salesData = await db.sales.toArray();
             const lastSale = salesData.length > 0 ? salesData[salesData.length - 1] : null;
@@ -1599,6 +1639,7 @@
                 extraDiscount: Number(extraDiscount),
                 shop: String(currentBillShop),
                 cashierName: String(currentCashier),
+                note: String(billNote),
                 status: 'Canceled'
             };
 
@@ -1689,6 +1730,16 @@
                     </div>
                 </div>`;
             }
+
+            if (sale.note) {
+                footerHtml += `
+                    <div style="text-align: center; margin: 10px 0; clear: both; color: black !important;">
+                        <div style="font-weight: bold; font-size: 16px !important; color: black !important; border-top: 1px dashed black; padding-top: 5px;">
+                            Note: ${sale.note}
+                        </div>
+                    </div>`;
+            }
+
             footerHtml += `
                 <div style="text-align: center; margin-top: 10px; border-top: 0.5px dashed #000; padding-top: 8px; clear: both; color: black !important;">
                     <p class="print-footer-info" style="margin: 0; display:block; color: black !important;">Payment: ${(sale.type || 'cash').toUpperCase()}</p>
@@ -1771,9 +1822,68 @@
             cart = []; 
             await db.draftCart.clear(); 
             document.getElementById('bill-extra-discount').value = 0;
+            if(document.getElementById('bill-note')) document.getElementById('bill-note').value = '';
             renderCart(); 
             updateLivePreview();
         }
+
+        // --- ITEM SELECT MODAL LOGIC ---
+        window.openItemSelectModal = async function() {
+            document.getElementById('item-select-modal').classList.remove('hidden');
+            document.getElementById('modal-item-search').value = '';
+            await renderModalItems('');
+        };
+        
+        window.closeItemSelectModal = function() {
+            document.getElementById('item-select-modal').classList.add('hidden');
+        };
+        
+        window.filterModalItems = async function(query) {
+            await renderModalItems(query);
+        };
+        
+        window.renderModalItems = async function(query) {
+            const listDiv = document.getElementById('modal-item-list');
+            let allItems = await db.inventory.toArray();
+            let shopItems = allItems.filter(i => i.shop === currentBillShop || !i.shop);
+            if(query) {
+                shopItems = shopItems.filter(i => {
+                    const codeStr = String(i.code);
+                    const rawCode = i.rawCode || codeStr.replace((i.shop || currentBillShop) + '_', '');
+                    return i.name.toLowerCase().includes(query.toLowerCase()) || rawCode.toLowerCase().includes(query.toLowerCase());
+                });
+            }
+            if(shopItems.length === 0) {
+                listDiv.innerHTML = `<p class="col-span-full text-center text-slate-500 font-bold py-10">No items found.</p>`;
+                return;
+            }
+            listDiv.innerHTML = shopItems.map(i => {
+                const codeStr = String(i.code);
+                const displayCode = i.rawCode || codeStr.replace((i.shop || currentBillShop) + '_', '');
+                const currentPrice = pricingMode === 'wholesale' ? (i.wholesalePrice || i.price) : i.price;
+                const safeName = i.name.replace(/'/g, "\\'");
+                return `<div onclick="selectItemFromModal('${codeStr}', '${safeName}')" class="bg-slate-900 p-3 rounded-xl border border-slate-700 cursor-pointer hover:bg-slate-700 hover:border-blue-500 transition-all flex flex-col justify-between">
+                    <p class="font-bold text-white text-sm truncate" title="${i.name}">${i.name}</p>
+                    <div class="flex justify-between items-center mt-2">
+                        <span class="text-xs font-mono text-slate-400 bg-slate-800 px-1 rounded">${displayCode}</span>
+                        <span class="text-sm font-black text-blue-400">LKR ${currentPrice}</span>
+                    </div>
+                    <div class="text-[10px] mt-2 font-bold ${i.stock < (i.lowStockAlert || 10) ? 'text-red-400' : 'text-emerald-400'} uppercase">Stock: ${i.stock}</div>
+                </div>`;
+            }).join('');
+        };
+        
+        window.selectItemFromModal = async function(code, name) {
+            const qtyInput = prompt(`Enter Quantity for ${name}:`, "1");
+            if (qtyInput === null) return;
+            const qty = parseFloat(qtyInput);
+            if (isNaN(qty) || qty <= 0) { alert("Invalid quantity"); return; }
+            document.getElementById('bill-code').value = code;
+            document.getElementById('bill-name').value = name;
+            document.getElementById('bill-qty').value = qty;
+            await addToCart();
+            closeItemSelectModal();
+        };
 
         async function searchItems(query) {
             const resultsDiv = document.getElementById('search-results');
@@ -1795,7 +1905,7 @@
                     const displayCode = i.rawCode || codeStr.replace((i.shop || currentBillShop) + '_', '');
                     const currentPrice = pricingMode === 'wholesale' ? (i.wholesalePrice || i.price) : i.price;
                     return `
-                    <div onclick="selectSearchResult('${codeStr}', '${i.name}')" class="hover:bg-slate-700 transition-colors">
+                    <div onclick="selectSearchResult('${codeStr}', '${i.name.replace(/'/g, "\\'")}')" class="hover:bg-slate-700 transition-colors">
                         <span class="font-bold text-white">${i.name}</span> <span class="text-xs text-slate-400">(${displayCode})</span>
                         <p class="text-xs text-blue-300 font-bold mt-1">Price: LKR ${currentPrice} | Stock: ${i.stock}</p>
                     </div>
@@ -1824,7 +1934,8 @@
             const qty = parseFloat(document.getElementById('bill-qty').value);
             const item = await db.inventory.get(code);
             if(item) {
-                if(item.stock - qty < 10) { alert(`⚠️ Low Stock: ${item.name} is under 10!`); }
+                const alertThresh = item.lowStockAlert || 10;
+                if(item.stock - qty < alertThresh) { alert(`⚠️ Low Stock: ${item.name} is under ${alertThresh}!`); }
                 const unitPrice = pricingMode === 'wholesale' ? (Number(item.wholesalePrice) || item.price) : item.price;
                 const itemDiscount = pricingMode === 'wholesale' ? 0 : (item.discount || 0);
                 const totalDiscount = itemDiscount * qty;
@@ -1861,9 +1972,10 @@
 
         async function addUnlistedItem() {
             const name = prompt("Item Name:");
+            if(!name) return;
             const price = parseFloat(prompt("Price (LKR):"));
-            if(name && !isNaN(price)) {
-                const cartItem = { name: name.toUpperCase(), price, qty: 1, cost: price, wholesalePrice: price, total: price, discount: 0, customerWarrantyMonths: 0 };
+            if(!isNaN(price)) {
+                const cartItem = { name: name.toUpperCase(), code: 'unlisted', price, qty: 1, cost: price, wholesalePrice: price, total: price, discount: 0, customerWarrantyMonths: 0 };
                 cart.push(cartItem); 
                 await db.draftCart.add(cartItem);
                 renderCart(); 
@@ -1871,6 +1983,24 @@
             }
         }
         window.addUnlistedItem = addUnlistedItem;
+
+        async function addServiceNote() {
+            const name = prompt("Enter Service Details (e.g. Screen Repair, Hair Color):");
+            if(name) {
+                const priceStr = prompt(`Enter Charge/Price for "${name}" (LKR):`);
+                if(priceStr === null) return;
+                const price = parseFloat(priceStr);
+                if(!isNaN(price)) {
+                    // For services, cost is 0, making it 100% profit (revenue) for reports.
+                    const cartItem = { name: "*SERVICE: " + name.toUpperCase(), code: 'service', price: price, qty: 1, cost: 0, wholesalePrice: price, total: price, discount: 0, customerWarrantyMonths: 0 };
+                    cart.push(cartItem); 
+                    await db.draftCart.add(cartItem);
+                    renderCart(); 
+                    updateLivePreview();
+                }
+            }
+        }
+        window.addServiceNote = addServiceNote;
 
         function renderCart() {
             const extraDiscount = parseFloat(document.getElementById('bill-extra-discount').value) || 0;
@@ -1900,7 +2030,7 @@
             const subtotal = cart.reduce((sum, i) => sum + (paymentMode === 'credit' ? (i.price * i.qty) : i.total), 0) - extraDiscount;
             const baseSubtotal = cart.reduce((sum, i) => sum + (paymentMode === 'credit' ? (i.price * i.qty) : i.total), 0);
             const customerSaved = (paymentMode === 'credit' ? 0 : cart.reduce((sum, i) => sum + (i.discount || 0), 0)) + extraDiscount;
-            const custName = document.getElementById('bill-customer').value || "General Customer";
+            const custName = document.getElementById('bill-customer').value.trim() || "General Customer";
             document.getElementById('print-items').innerHTML = cart.map(i => {
                 const unitPriceAfterDiscount = i.total / i.qty;
                 const rowTotal = paymentMode === 'credit' ? (i.price * i.qty) : i.total;
@@ -1953,6 +2083,17 @@
                     </div>`;
                 }
             }
+            
+            const billNotePreview = document.getElementById('bill-note') ? document.getElementById('bill-note').value.trim() : "";
+            if (billNotePreview) {
+                totalHtml += `
+                    <div style="text-align: center; margin: 10px 0; clear: both; color: black !important;">
+                        <div style="font-weight: bold; font-size: 15px; color: black !important; border-top: 1px dashed black; padding-top: 5px;">
+                            Note: ${billNotePreview}
+                        </div>
+                    </div>`;
+            }
+
             totalHtml += `
                 <div style="text-align: center; margin-top: 10px; border-top: 0.5px dashed #000; padding-top: 8px; clear: both; color: black !important;">
                     <p class="print-footer-info" style="margin: 0; display:block; color: black !important;">Payment: ${paymentMode.toUpperCase()}</p>
@@ -1973,7 +2114,7 @@
             // Re-evaluate cart item prices
             for(let i=0; i<cart.length; i++) {
                 let item = cart[i];
-                if(item.code && item.code !== 'unlisted') {
+                if(item.code && item.code !== 'unlisted' && item.code !== 'service') {
                     const invItem = await db.inventory.get(item.code);
                     if(invItem) {
                         const unitPrice = mode === 'wholesale' ? (Number(invItem.wholesalePrice) || invItem.price) : invItem.price;
@@ -2064,6 +2205,7 @@
                 wholesale: parseFloat(document.getElementById('add-cost').value) || 0, // Fallback for old code references
                 discount: parseFloat(document.getElementById('add-discount').value) || 0,
                 stock: parseFloat(document.getElementById('add-stock').value) || 0,
+                lowStockAlert: parseFloat(document.getElementById('add-low-stock-alert').value) || 10,
                 stockWarrantyExpiry: document.getElementById('add-stock-warranty').value || ''
             };
             
@@ -2081,6 +2223,7 @@
             document.getElementById('add-discount').value = '';
             document.getElementById('add-stock').value = '';
             document.getElementById('add-stock-warranty').value = '';
+            document.getElementById('add-low-stock-alert').value = '';
         }
         window.saveNewItem = saveNewItem;
 
@@ -2099,7 +2242,8 @@
                 });
             }
             document.getElementById('inventory-list').innerHTML = items.map(i => {
-                const lowStockClass = i.stock < 10 ? 'border-red-500/50 bg-red-900/20 shadow-[0_0_15px_rgba(220,38,38,0.2)]' : 'border-slate-700 bg-slate-800/80 hover:border-slate-500';
+                const alertThreshold = i.lowStockAlert || 10;
+                const lowStockClass = i.stock < alertThreshold ? 'border-red-500/50 bg-red-900/20 shadow-[0_0_15px_rgba(220,38,38,0.2)]' : 'border-slate-700 bg-slate-800/80 hover:border-slate-500';
                 const codeStr = String(i.code);
                 const displayCode = i.rawCode || codeStr.replace((i.shop || currentInvShop) + '_', '');
                 
@@ -2120,7 +2264,7 @@
 
                 return `
                 <div class="p-5 rounded-2xl shadow-lg border-2 ${lowStockClass} transition-all relative overflow-hidden backdrop-blur-sm">
-                    ${i.stock < 10 ? `<div class="absolute top-0 right-0 w-24 h-24 bg-red-500 rounded-full mix-blend-multiply filter blur-2xl opacity-20 pointer-events-none"></div>` : ''}
+                    ${i.stock < alertThreshold ? `<div class="absolute top-0 right-0 w-24 h-24 bg-red-500 rounded-full mix-blend-multiply filter blur-2xl opacity-20 pointer-events-none"></div>` : ''}
                     <div class="flex justify-between items-start mb-4 relative z-10">
                         <div class="flex-1 pr-2">
                             <input type="text" onchange="updateItemName('${codeStr}', this.value)" value="${i.name}" 
@@ -2129,8 +2273,8 @@
                             ${warrantyHtml}
                         </div>
                         <div class="flex flex-col gap-2 items-end">
-                            <div class="px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${i.stock < 10 ? 'bg-red-900/80 text-red-300 border border-red-500/50' : 'bg-emerald-900/40 text-emerald-400 border border-emerald-500/30'}">
-                                ${i.stock < 10 ? 'Low Stock' : 'In Stock'}
+                            <div class="px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${i.stock < alertThreshold ? 'bg-red-900/80 text-red-300 border border-red-500/50' : 'bg-emerald-900/40 text-emerald-400 border border-emerald-500/30'}">
+                                ${i.stock < alertThreshold ? 'Low Stock' : 'In Stock'}
                             </div>
                             <button onclick="deleteItem('${codeStr}')" class="text-[10px] text-red-500 bg-red-900/20 px-2 py-1 rounded border border-red-900/50 font-bold uppercase hover:bg-red-900/50 transition-colors">🗑️ Del</button>
                         </div>
@@ -2161,6 +2305,11 @@
                             <input type="number" inputmode="decimal" onchange="updateDiscount('${codeStr}', this.value)" value="${i.discount || 0}" 
                                 class="w-full p-2 border border-red-500/30 rounded bg-red-900/20 text-sm font-black text-red-400 focus:border-red-500 glow-focus outline-none">
                         </div>
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">⚠️ Alert Qty</label>
+                            <input type="number" inputmode="decimal" onchange="updateLowStockAlert('${codeStr}', this.value)" value="${i.lowStockAlert || 10}" 
+                                class="w-full p-2 border border-yellow-500/30 rounded bg-yellow-900/20 text-sm font-black text-yellow-400 focus:border-yellow-500 glow-focus outline-none" title="Low Stock Reminder: alert when stock falls below this number">
+                        </div>
                     </div>
                 </div>
             `}).join('');
@@ -2180,6 +2329,8 @@
         window.updateWholesalePrice = updateWholesalePrice;
         async function updateDiscount(code, val) { await db.inventory.update(code, {discount: parseFloat(val)}); if(window.broadcastInventoryUpdate) window.broadcastInventoryUpdate(); }
         window.updateDiscount = updateDiscount;
+        async function updateLowStockAlert(code, val) { await db.inventory.update(code, {lowStockAlert: parseFloat(val) || 10}); if(window.broadcastInventoryUpdate) window.broadcastInventoryUpdate(); }
+        window.updateLowStockAlert = updateLowStockAlert;
         
         async function deleteItem(code) {
             if(confirm("Are you sure you want to PERMANENTLY DELETE this product?")) {
@@ -2295,12 +2446,19 @@
 
         // Ensuring we safely preserve selected customer dropdown choice
         async function updateCustomerDropdown() {
-            const select = document.getElementById('bill-customer');
-            const currentVal = select.value;
+            const datalist = document.getElementById('customer-datalist');
+            if (!datalist) return;
             const list = await db.customers.toArray();
-            select.innerHTML = '<option value="General Customer">General Customer</option>' + list.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
-            if (currentVal && select.querySelector(`option[value="${currentVal}"]`)) {
-                select.value = currentVal;
+            datalist.innerHTML = '<option value="General Customer">' + list.map(c => `<option value="${c.name}">`).join('');
+        }
+
+        async function autoSaveCustomerName(name) {
+            if (!name || name.trim() === '' || name.trim() === 'General Customer') return;
+            const trimmed = name.trim();
+            const existing = await db.customers.get(trimmed);
+            if (!existing) {
+                await db.customers.add({ name: trimmed, phone: '', status: 'cash', creditAmount: 0 });
+                updateCustomerDropdown();
             }
         }
         window.updateCustomerDropdown = updateCustomerDropdown;
@@ -2425,7 +2583,7 @@
             // Restore stock and credit
             if (sale.status !== 'Canceled') {
                 for(let i of sale.items) {
-                    if(i.code && i.code !== 'unlisted') {
+                    if(i.code && i.code !== 'unlisted' && i.code !== 'service') {
                         const invItem = await db.inventory.get(i.code);
                         if(invItem) await db.inventory.update(i.code, {stock: Number(invItem.stock) + Number(i.qty)});
                     }
@@ -2457,6 +2615,7 @@
             
             document.getElementById('bill-customer').value = sale.customer || "General Customer";
             document.getElementById('bill-extra-discount').value = sale.extraDiscount || 0;
+            if(document.getElementById('bill-note')) document.getElementById('bill-note').value = sale.note || '';
             setPaymentMode(sale.type || 'cash');
             
             localStorage.setItem('editingInvoiceNo', sale.invoiceNo || '');
