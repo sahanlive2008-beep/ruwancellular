@@ -138,6 +138,30 @@
         </div>
     </div>
 
+    <!-- NEW CUSTOMER QUICK REGISTER MODAL -->
+    <div id="new-customer-modal" class="hidden fixed inset-0 bg-slate-950 bg-opacity-90 z-[200] flex items-center justify-center backdrop-blur-sm transition-opacity">
+        <div class="bg-slate-800 p-6 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.8)] border border-blue-500/50 w-11/12 max-w-sm">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-white font-bold text-lg tracking-wide flex items-center gap-2"><span>🆕</span> New Customer</h3>
+                <button onclick="closeNewCustomerModal()" class="text-slate-400 hover:text-white font-black text-xl">&times;</button>
+            </div>
+            <p id="new-cust-name-display" class="text-blue-300 font-black text-base mb-4 uppercase tracking-wider bg-slate-900 px-3 py-2 rounded-lg border border-slate-700"></p>
+            <div class="mb-4">
+                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Phone Number</label>
+                <input type="tel" id="new-cust-phone-input" inputmode="numeric" maxlength="10" placeholder="Enter phone number (9 or 10 digits)" 
+                    class="w-full p-3 bg-slate-900 border border-slate-600 text-white rounded-lg font-bold focus:border-blue-500 glow-focus outline-none text-lg tracking-widest text-center"
+                    oninput="checkNewCustPhone(this.value)">
+                <p id="new-cust-phone-hint" class="text-xs text-slate-500 mt-1 text-center font-bold">Enter 9 or 10 digits to enable Save</p>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="closeNewCustomerModal()" class="flex-1 py-3 bg-slate-700 hover:bg-slate-600 rounded-xl text-slate-200 font-bold transition-colors border border-slate-600">Skip</button>
+                <button id="new-cust-save-btn" onclick="saveNewCustomerFromBilling()" disabled
+                    class="flex-1 py-3 bg-slate-600 rounded-xl text-slate-400 font-bold border border-slate-600 cursor-not-allowed transition-all"
+                    style="opacity:0.5;">Save Customer</button>
+            </div>
+        </div>
+    </div>
+
     <div id="profit-modal" class="hidden fixed inset-0 bg-slate-950 bg-opacity-90 z-[200] flex items-center justify-center backdrop-blur-sm transition-opacity">
         <div class="bg-slate-800 p-6 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.8)] border border-slate-600 w-11/12 max-w-lg">
             <div class="flex justify-between items-center mb-4">
@@ -415,7 +439,20 @@
                     </div>
                     <div>
                         <label class="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1">Upload Item Photo</label>
-                        <input type="file" id="serial-photo" accept="image/*" class="w-full p-2 bg-slate-900 border border-slate-600 text-slate-300 rounded-lg mt-1 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-slate-700 file:text-white hover:file:bg-slate-600 transition-colors cursor-pointer">
+                        <div class="flex flex-col gap-2 mt-1">
+                            <input type="file" id="serial-photo" accept="image/*" class="w-full p-2 bg-slate-900 border border-slate-600 text-slate-300 rounded-lg file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-slate-700 file:text-white hover:file:bg-slate-600 transition-colors cursor-pointer">
+                            <div class="flex items-center gap-2">
+                                <button type="button" onclick="openSerialCamera()" class="flex items-center gap-2 bg-blue-900/40 hover:bg-blue-700/60 text-blue-300 border border-blue-500/50 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors shadow-sm">📷 Camera Capture</button>
+                                <span id="serial-camera-label" class="text-xs text-emerald-400 font-bold hidden">✅ Photo Captured</span>
+                            </div>
+                            <video id="serial-camera-stream" class="hidden w-full rounded-lg border border-slate-600" autoplay playsinline style="max-height:200px;object-fit:cover;"></video>
+                            <canvas id="serial-camera-canvas" class="hidden"></canvas>
+                            <div id="serial-camera-controls" class="hidden flex gap-2">
+                                <button type="button" onclick="captureSerialPhoto()" class="flex-1 bg-emerald-700 hover:bg-emerald-600 text-white py-2 rounded-lg text-xs font-bold uppercase tracking-wider">📸 Snap</button>
+                                <button type="button" onclick="closeSerialCamera()" class="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-200 py-2 rounded-lg text-xs font-bold uppercase tracking-wider">✕ Cancel</button>
+                            </div>
+                            <img id="serial-camera-preview" class="hidden w-full rounded-lg border border-emerald-500/50 mt-1" style="max-height:160px;object-fit:contain;" alt="Captured Photo">
+                        </div>
                     </div>
                     <div class="pt-6">
                         <button onclick="printSerialRecord()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-xl font-black shadow-[0_0_15px_rgba(37,99,235,0.4)] transition-all uppercase tracking-widest text-lg border border-blue-500">🖨️ Print Repair Slip</button>
@@ -459,7 +496,7 @@
                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-end bg-slate-900/50 p-4 rounded-xl border border-slate-700">
                     <div class="lg:col-span-5">
                         <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1 block mb-1">Customer</label>
-                        <input type="text" id="bill-customer" list="customer-datalist" placeholder="General Customer" autocomplete="off" class="w-full p-3 bg-slate-800 border border-slate-600 text-white rounded-lg text-sm font-bold shadow-inner focus:border-blue-500 glow-focus outline-none" oninput="updateLivePreview()">
+                        <input type="text" id="bill-customer" list="customer-datalist" placeholder="General Customer" autocomplete="off" class="w-full p-3 bg-slate-800 border border-slate-600 text-white rounded-lg text-sm font-bold shadow-inner focus:border-blue-500 glow-focus outline-none" oninput="updateLivePreview(); checkBillCustomerNew(this.value)">
                         <datalist id="customer-datalist"></datalist>
                     </div>
 
@@ -690,6 +727,56 @@
             </div>
 
             <div id="customer-list" class="space-y-3"></div>
+        </div>
+
+        <!-- HIDDEN CUSTOMER PROFILE TAB — accessed only via customer click -->
+        <div id="tab-customer-profile" class="tab-content">
+            <div class="glass-panel flex flex-col md:flex-row justify-between items-start md:items-center p-5 rounded-2xl shadow-xl border-t-4 border-purple-500 mb-6 gap-4">
+                <div>
+                    <h2 class="font-black text-xl md:text-2xl text-white uppercase tracking-wide">👤 Customer Profile</h2>
+                    <p id="cp-customer-name-heading" class="text-purple-300 font-bold text-sm mt-1 uppercase tracking-widest"></p>
+                </div>
+                <button onclick="showTab('customers')" class="bg-slate-700 hover:bg-slate-600 text-white px-5 py-2.5 rounded-lg text-sm font-bold border border-slate-600 uppercase tracking-wider transition-colors">← Back to Customers</button>
+            </div>
+
+            <!-- Service Numbers -->
+            <div class="glass-panel p-5 rounded-2xl shadow-lg mb-6 border border-slate-700">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2"><span>📋</span> Service Account Numbers</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div>
+                        <label class="text-[10px] font-bold text-yellow-400 uppercase tracking-wider block mb-1">⚡ Electricity Bill No.</label>
+                        <input type="text" id="cp-electricity" placeholder="e.g. 1234567890" class="w-full p-3 bg-slate-900 border border-slate-600 text-white rounded-lg font-bold focus:border-yellow-500 glow-focus outline-none" oninput="saveCustomerProfile()">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-blue-400 uppercase tracking-wider block mb-1">📱 Reload Number</label>
+                        <input type="text" id="cp-reload" placeholder="e.g. 077XXXXXXX" class="w-full p-3 bg-slate-900 border border-slate-600 text-white rounded-lg font-bold focus:border-blue-500 glow-focus outline-none" oninput="saveCustomerProfile()">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-cyan-400 uppercase tracking-wider block mb-1">💧 Water Bill No.</label>
+                        <input type="text" id="cp-water" placeholder="e.g. W-12345" class="w-full p-3 bg-slate-900 border border-slate-600 text-white rounded-lg font-bold focus:border-cyan-500 glow-focus outline-none" oninput="saveCustomerProfile()">
+                    </div>
+                </div>
+                <div>
+                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">📝 Notes</label>
+                    <textarea id="cp-notes" rows="3" placeholder="Additional notes about this customer..." class="w-full p-3 bg-slate-900 border border-slate-600 text-white rounded-lg font-bold focus:border-purple-500 glow-focus outline-none resize-none" oninput="saveCustomerProfile()"></textarea>
+                </div>
+                <p class="text-[10px] text-emerald-400 font-bold mt-2 hidden" id="cp-saved-indicator">✅ Saved automatically</p>
+            </div>
+
+            <!-- Profile Photos -->
+            <div class="glass-panel p-5 rounded-2xl shadow-lg mb-6 border border-slate-700">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2"><span>📸</span> Profile Photos (up to 4)</h3>
+                <div class="grid grid-cols-2 gap-4" id="cp-photos-grid">
+                    <!-- 4 photo slots rendered by JS -->
+                </div>
+                <!-- Camera overlay for customer profile -->
+                <video id="cp-camera-stream" class="hidden w-full rounded-lg border border-slate-600 mt-4" autoplay playsinline style="max-height:240px;object-fit:cover;"></video>
+                <canvas id="cp-camera-canvas" class="hidden"></canvas>
+                <div id="cp-camera-controls" class="hidden flex gap-2 mt-2">
+                    <button type="button" onclick="captureCpPhoto()" class="flex-1 bg-emerald-700 hover:bg-emerald-600 text-white py-3 rounded-lg text-sm font-bold uppercase tracking-wider">📸 Snap Photo</button>
+                    <button type="button" onclick="closeCpCamera()" class="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-200 py-3 rounded-lg text-sm font-bold uppercase tracking-wider">✕ Cancel</button>
+                </div>
+            </div>
         </div>
 
         <div id="tab-history" class="tab-content">
@@ -1920,7 +2007,9 @@
             const advance = document.getElementById('serial-advance').value.trim();
             const note = document.getElementById('serial-note').value.trim();
             const time = document.getElementById('serial-time').value.trim();
-            const photoFile = document.getElementById('serial-photo').files[0];
+            const photoFile = document.getElementById('serial-photo').files[0] || null;
+            // Fallback: use camera-captured blob if file input is empty
+            const useCameraBlob = !photoFile && typeof _serialCapturedBlob !== 'undefined' && _serialCapturedBlob;
 
             if(!owner && !item) return alert("Please enter at least Owner Name and Item/Model.");
 
@@ -1967,6 +2056,10 @@
                 const reader = new FileReader();
                 reader.onload = function(e) { buildAndPrint(e.target.result); };
                 reader.readAsDataURL(photoFile);
+            } else if (useCameraBlob) {
+                const reader = new FileReader();
+                reader.onload = function(e) { buildAndPrint(e.target.result); };
+                reader.readAsDataURL(_serialCapturedBlob);
             } else {
                 buildAndPrint(null);
             }
@@ -2677,12 +2770,17 @@
         window.deleteItem = deleteItem;
 
         async function saveCustomer() {
-            const name = document.getElementById('cust-name').value;
+            const name = document.getElementById('cust-name').value.trim();
             if(!name) return alert("Name is required");
-            await db.customers.add({ name, phone: document.getElementById('cust-phone').value, status: 'cash', creditAmount: 0 });
+            const phone = document.getElementById('cust-phone').value.trim();
+            const existing = await db.customers.get(name);
+            if(!existing) {
+                await db.customers.add({ name, phone, status: 'cash', creditAmount: 0 });
+            }
             document.getElementById('cust-name').value = '';
             document.getElementById('cust-phone').value = '';
             renderCustomers();
+            openCustomerProfile(name);
         }
         window.saveCustomer = saveCustomer;
 
@@ -2697,8 +2795,8 @@
             }
             document.getElementById('customer-list').innerHTML = list.map(c => `
                 <div class="glass-panel p-4 rounded-xl flex flex-col sm:flex-row justify-between shadow-lg items-start sm:items-center border border-slate-700 hover:bg-slate-800 transition-colors">
-                    <div class="mb-3 sm:mb-0">
-                        <p class="font-black text-lg text-white uppercase tracking-wider">${c.name} <span class="text-xs text-slate-400 font-mono font-normal ml-2">${c.phone || ''}</span></p>
+                    <div class="mb-3 sm:mb-0 flex-1">
+                        <p class="font-black text-lg text-white uppercase tracking-wider cursor-pointer hover:text-purple-300 transition-colors" onclick="openCustomerProfile('${c.name}')">${c.name} <span class="text-xs text-slate-400 font-mono font-normal ml-2">${c.phone || ''}</span></p>
                         <div class="flex items-center gap-2 mt-2 bg-slate-900/50 p-2 rounded-lg border border-slate-700 inline-flex">
                             <span class="text-[10px] font-black uppercase ${c.status === 'credit' ? 'text-red-400' : 'text-emerald-400'}">${c.status}:</span>
                             <input type="number" step="0.01" inputmode="decimal" onfocus="this.oldValue = this.value" onchange="updateCustomerCredit('${c.name}', this.value, this)" value="${c.creditAmount.toFixed(2)}" 
@@ -2706,7 +2804,8 @@
                             <span class="text-[10px] text-slate-500 font-bold">LKR</span>
                         </div>
                     </div>
-                    <div class="flex gap-3 w-full sm:w-auto">
+                    <div class="flex gap-2 w-full sm:w-auto flex-wrap">
+                        <button onclick="openCustomerProfile('${c.name}')" class="flex-1 sm:flex-none text-sm bg-purple-900/40 hover:bg-purple-700/60 text-purple-300 px-4 py-3 rounded-lg border border-purple-500/50 font-bold shadow-md transition-colors uppercase tracking-wider">👤 Profile</button>
                         ${c.creditAmount > 0 ? `
                             <button onclick="sendIndividualWhatsApp('${c.name}', '${c.phone}', ${c.creditAmount})" class="flex-1 sm:flex-none p-3 bg-emerald-900/30 text-emerald-400 rounded-lg border border-emerald-500/50 hover:bg-emerald-900/50 transition-colors shadow-sm flex justify-center items-center" title="Send Reminder">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
@@ -2797,6 +2896,263 @@
             }
         }
         window.updateCustomerDropdown = updateCustomerDropdown;
+
+        // =====================================================================
+        // NEW CUSTOMER QUICK-REGISTER MODAL (billing tab)
+        // =====================================================================
+        let _newCustPendingName = '';
+
+        async function checkBillCustomerNew(val) {
+            const trimmed = val.trim();
+            if (!trimmed || trimmed === 'General Customer') return;
+            const existing = await db.customers.get(trimmed);
+            if (!existing) {
+                // Check if it looks like a datalist selection (already exists)
+                const datalist = document.getElementById('customer-datalist');
+                const options = datalist ? Array.from(datalist.options).map(o => o.value) : [];
+                if (!options.includes(trimmed)) {
+                    _newCustPendingName = trimmed;
+                    document.getElementById('new-cust-name-display').textContent = trimmed;
+                    document.getElementById('new-cust-phone-input').value = '';
+                    document.getElementById('new-cust-phone-hint').textContent = 'Enter 9 or 10 digits to enable Save';
+                    document.getElementById('new-cust-phone-hint').className = 'text-xs text-slate-500 mt-1 text-center font-bold';
+                    const btn = document.getElementById('new-cust-save-btn');
+                    btn.disabled = true;
+                    btn.className = 'flex-1 py-3 bg-slate-600 rounded-xl text-slate-400 font-bold border border-slate-600 cursor-not-allowed transition-all';
+                    btn.style.opacity = '0.5';
+                    document.getElementById('new-customer-modal').classList.remove('hidden');
+                }
+            }
+        }
+        window.checkBillCustomerNew = checkBillCustomerNew;
+
+        window.checkNewCustPhone = function(val) {
+            const digits = val.replace(/\D/g, '');
+            const hint = document.getElementById('new-cust-phone-hint');
+            const btn = document.getElementById('new-cust-save-btn');
+            if (digits.length === 9 || digits.length === 10) {
+                hint.textContent = '✅ Valid phone number — ready to save';
+                hint.className = 'text-xs text-emerald-400 mt-1 text-center font-bold';
+                btn.disabled = false;
+                btn.className = 'flex-1 py-3 bg-blue-600 hover:bg-blue-500 rounded-xl text-white font-bold border border-blue-500 cursor-pointer transition-all';
+                btn.style.opacity = '1';
+            } else {
+                const remaining = digits.length < 9 ? (9 - digits.length) : '';
+                hint.textContent = remaining ? `${remaining} more digit(s) needed` : 'Enter exactly 9 or 10 digits';
+                hint.className = 'text-xs text-orange-400 mt-1 text-center font-bold';
+                btn.disabled = true;
+                btn.className = 'flex-1 py-3 bg-slate-600 rounded-xl text-slate-400 font-bold border border-slate-600 cursor-not-allowed transition-all';
+                btn.style.opacity = '0.5';
+            }
+        };
+
+        window.closeNewCustomerModal = function() {
+            document.getElementById('new-customer-modal').classList.add('hidden');
+            _newCustPendingName = '';
+        };
+
+        window.saveNewCustomerFromBilling = async function() {
+            if (!_newCustPendingName) return;
+            const phone = document.getElementById('new-cust-phone-input').value.trim();
+            const existing = await db.customers.get(_newCustPendingName);
+            if (!existing) {
+                await db.customers.add({ name: _newCustPendingName, phone, status: 'cash', creditAmount: 0 });
+                updateCustomerDropdown();
+            }
+            document.getElementById('new-customer-modal').classList.add('hidden');
+            _newCustPendingName = '';
+        };
+
+        // =====================================================================
+        // CUSTOMER PROFILE TAB
+        // =====================================================================
+        let _cpCurrentCustomer = '';
+        let _cpCameraStream = null;
+        let _cpActiveCameraSlot = -1;
+
+        window.openCustomerProfile = function(name) {
+            _cpCurrentCustomer = name;
+            document.getElementById('cp-customer-name-heading').textContent = name;
+            // Load saved profile data from localStorage
+            const key = 'cust_profile_' + name;
+            const saved = JSON.parse(localStorage.getItem(key) || '{}');
+            document.getElementById('cp-electricity').value = saved.electricity || '';
+            document.getElementById('cp-reload').value = saved.reload || '';
+            document.getElementById('cp-water').value = saved.water || '';
+            document.getElementById('cp-notes').value = saved.notes || '';
+            document.getElementById('cp-saved-indicator').classList.add('hidden');
+            closeCpCamera();
+            renderCpPhotosGrid(saved.photos || [null, null, null, null]);
+            // Navigate to the hidden profile tab
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            const profileTab = document.getElementById('tab-customer-profile');
+            if (profileTab) profileTab.classList.add('active');
+        };
+        window.openCustomerProfile = window.openCustomerProfile;
+
+        function renderCpPhotosGrid(photos) {
+            const grid = document.getElementById('cp-photos-grid');
+            if (!grid) return;
+            grid.innerHTML = [0,1,2,3].map(i => {
+                const photo = photos[i];
+                return `
+                <div class="bg-slate-900 border-2 border-dashed border-slate-600 rounded-xl flex flex-col items-center justify-center gap-2 p-3 relative" style="min-height:120px;">
+                    ${photo
+                        ? `<img src="${photo}" class="w-full rounded-lg object-cover" style="max-height:100px;" alt="Photo ${i+1}">
+                           <div class="flex gap-1 w-full">
+                               <button onclick="openCpCameraForSlot(${i})" class="flex-1 bg-blue-900/40 text-blue-300 border border-blue-500/40 rounded py-1 text-[10px] font-bold uppercase">📷 Retake</button>
+                               <button onclick="removeCpPhoto(${i})" class="flex-1 bg-red-900/30 text-red-400 border border-red-500/40 rounded py-1 text-[10px] font-bold uppercase">✕ Del</button>
+                           </div>`
+                        : `<span class="text-slate-500 text-2xl">📷</span>
+                           <span class="text-[10px] text-slate-500 font-bold">Photo ${i+1}</span>
+                           <div class="flex gap-1 w-full">
+                               <button onclick="openCpCameraForSlot(${i})" class="flex-1 bg-blue-900/40 text-blue-300 border border-blue-500/40 rounded py-1.5 text-[10px] font-bold uppercase">📷 Camera</button>
+                               <button onclick="pickCpFile(${i})" class="flex-1 bg-slate-700 text-slate-300 border border-slate-600 rounded py-1.5 text-[10px] font-bold uppercase">📁 File</button>
+                           </div>
+                           <input type="file" id="cp-file-input-${i}" accept="image/*" class="hidden" onchange="onCpFileChange(${i}, this)">`
+                    }
+                </div>`;
+            }).join('');
+        }
+
+        window.pickCpFile = function(slot) {
+            const inp = document.getElementById('cp-file-input-' + slot);
+            if (inp) inp.click();
+        };
+
+        window.onCpFileChange = function(slot, input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                saveCpPhoto(slot, e.target.result);
+            };
+            reader.readAsDataURL(file);
+        };
+
+        window.openCpCameraForSlot = async function(slot) {
+            _cpActiveCameraSlot = slot;
+            const video = document.getElementById('cp-camera-stream');
+            const controls = document.getElementById('cp-camera-controls');
+            try {
+                _cpCameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+                video.srcObject = _cpCameraStream;
+                video.classList.remove('hidden');
+                controls.classList.remove('hidden');
+                video.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            } catch(e) {
+                alert('Camera not available: ' + e.message);
+            }
+        };
+
+        window.captureCpPhoto = function() {
+            const video = document.getElementById('cp-camera-stream');
+            const canvas = document.getElementById('cp-camera-canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+            closeCpCamera();
+            saveCpPhoto(_cpActiveCameraSlot, dataUrl);
+        };
+
+        function closeCpCamera() {
+            if (_cpCameraStream) {
+                _cpCameraStream.getTracks().forEach(t => t.stop());
+                _cpCameraStream = null;
+            }
+            const video = document.getElementById('cp-camera-stream');
+            const controls = document.getElementById('cp-camera-controls');
+            if (video) { video.srcObject = null; video.classList.add('hidden'); }
+            if (controls) controls.classList.add('hidden');
+        }
+        window.closeCpCamera = closeCpCamera;
+
+        function saveCpPhoto(slot, dataUrl) {
+            const key = 'cust_profile_' + _cpCurrentCustomer;
+            const saved = JSON.parse(localStorage.getItem(key) || '{}');
+            const photos = saved.photos || [null, null, null, null];
+            photos[slot] = dataUrl;
+            saved.photos = photos;
+            localStorage.setItem(key, JSON.stringify(saved));
+            renderCpPhotosGrid(photos);
+        }
+
+        window.removeCpPhoto = function(slot) {
+            saveCpPhoto(slot, null);
+        };
+
+        window.saveCustomerProfile = function() {
+            if (!_cpCurrentCustomer) return;
+            const key = 'cust_profile_' + _cpCurrentCustomer;
+            const existing = JSON.parse(localStorage.getItem(key) || '{}');
+            existing.electricity = document.getElementById('cp-electricity').value;
+            existing.reload = document.getElementById('cp-reload').value;
+            existing.water = document.getElementById('cp-water').value;
+            existing.notes = document.getElementById('cp-notes').value;
+            localStorage.setItem(key, JSON.stringify(existing));
+            const ind = document.getElementById('cp-saved-indicator');
+            if (ind) {
+                ind.classList.remove('hidden');
+                clearTimeout(ind._hideTimer);
+                ind._hideTimer = setTimeout(() => ind.classList.add('hidden'), 2000);
+            }
+        };
+
+        // =====================================================================
+        // SERIAL TAB — CAMERA CAPTURE
+        // =====================================================================
+        let _serialCameraStream = null;
+        let _serialCapturedBlob = null;
+
+        window.openSerialCamera = async function() {
+            const video = document.getElementById('serial-camera-stream');
+            const controls = document.getElementById('serial-camera-controls');
+            try {
+                _serialCameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+                video.srcObject = _serialCameraStream;
+                video.classList.remove('hidden');
+                controls.classList.remove('hidden');
+                document.getElementById('serial-camera-preview').classList.add('hidden');
+            } catch(e) {
+                alert('Camera not available: ' + e.message);
+            }
+        };
+
+        window.captureSerialPhoto = function() {
+            const video = document.getElementById('serial-camera-stream');
+            const canvas = document.getElementById('serial-camera-canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            canvas.toBlob(function(blob) {
+                _serialCapturedBlob = blob;
+                // Inject into the file input via DataTransfer so printSerialRecord picks it up
+                try {
+                    const dt = new DataTransfer();
+                    const file = new File([blob], 'camera_capture.jpg', { type: 'image/jpeg' });
+                    dt.items.add(file);
+                    document.getElementById('serial-photo').files = dt.files;
+                } catch(e) { /* DataTransfer not supported on older browsers */ }
+                // Show preview
+                const preview = document.getElementById('serial-camera-preview');
+                preview.src = URL.createObjectURL(blob);
+                preview.classList.remove('hidden');
+                document.getElementById('serial-camera-label').classList.remove('hidden');
+            }, 'image/jpeg', 0.80);
+            closeSerialCamera();
+        };
+
+        window.closeSerialCamera = function() {
+            if (_serialCameraStream) {
+                _serialCameraStream.getTracks().forEach(t => t.stop());
+                _serialCameraStream = null;
+            }
+            const video = document.getElementById('serial-camera-stream');
+            const controls = document.getElementById('serial-camera-controls');
+            if (video) { video.srcObject = null; video.classList.add('hidden'); }
+            if (controls) controls.classList.add('hidden');
+        };
 
         window.clearHistoryFilter = function() {
             if(document.getElementById('history-start-date')) document.getElementById('history-start-date').value = '';
@@ -3217,7 +3573,12 @@
                 return `
                 <div class="p-3 rounded-lg text-sm bg-slate-800/80 shadow-sm mb-2 border border-slate-700 transition-colors hover:bg-slate-700 ${s.status === 'Canceled' ? 'opacity-60 bg-red-900/10 border-red-900/50' : ''}">
                     <div class="flex justify-between font-black text-white mb-1"><span class="uppercase tracking-wide">${s.customer} ${statusFlag}</span><span class="${s.status === 'Canceled' ? 'text-red-400' : 'text-blue-400'}">LKR ${Number(s.total).toFixed(2)}</span></div>
-                    <div class="flex justify-between text-[11px] font-mono text-slate-400"><span>${new Date(s.date).toLocaleString()}</span><span class="text-emerald-400 font-bold bg-emerald-900/30 px-2 rounded border border-emerald-500/30">Profit: LKR ${Number(s.profit || 0).toFixed(2)}</span></div>
+                    <div class="flex justify-between text-[11px] font-mono text-slate-400 mb-2"><span>${new Date(s.date).toLocaleString()}</span><span class="text-emerald-400 font-bold bg-emerald-900/30 px-2 rounded border border-emerald-500/30">Profit: LKR ${Number(s.profit || 0).toFixed(2)}</span></div>
+                    <div class="flex gap-2">
+                        <button onclick='reprintSale(${s.id})' class="flex-1 bg-blue-900/30 text-blue-400 border border-blue-500/40 px-2 py-1.5 rounded text-[10px] font-black uppercase hover:bg-blue-600 hover:text-white transition-colors">🖨️ View</button>
+                        <button onclick='editSale(${s.id})' class="flex-1 bg-indigo-900/30 text-indigo-400 border border-indigo-500/40 px-2 py-1.5 rounded text-[10px] font-black uppercase hover:bg-indigo-600 hover:text-white transition-colors">✏️ Edit</button>
+                        <button onclick='deleteSale(${s.id})' class="flex-1 bg-red-900/30 text-red-400 border border-red-500/40 px-2 py-1.5 rounded text-[10px] font-black uppercase hover:bg-red-600 hover:text-white transition-colors">🗑️ Del</button>
+                    </div>
                 </div>
             `}).join('');
             // Auto-upload all sales to cloud silently whenever reports are refreshed
