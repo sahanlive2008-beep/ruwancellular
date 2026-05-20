@@ -235,6 +235,14 @@
                             <p class="text-xs text-slate-500 mb-3">Click any cashier name above, or search all cashiers below:</p>
                             <button onclick="openCashierBillsSearch()" class="w-full bg-yellow-600 hover:bg-yellow-500 text-slate-900 font-black py-3 rounded-xl uppercase tracking-wider border border-yellow-400 shadow transition-all text-sm">📋 Browse All Cashier Bills</button>
                         </div>
+
+                        <div class="mt-6 pt-6 border-t border-slate-700 relative z-10">
+                            <h5 class="font-bold text-sm text-slate-300 mb-3 uppercase tracking-wider">🪪 Cashier Info Verification</h5>
+                            <p class="text-xs text-slate-500 mb-3">Live snapshot of each connected cashier's profile information.</p>
+                            <div id="cashier-info-panel" class="space-y-3">
+                                <p class="text-xs text-slate-600 italic text-center py-3">No cashiers connected.</p>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="bg-slate-800/80 p-6 rounded-xl border border-slate-600 shadow-lg text-left relative overflow-hidden">
@@ -362,7 +370,7 @@
                     </button>
                 </div>
                 <div class="mt-8 text-xs text-slate-400 text-left bg-slate-900/50 p-4 rounded-xl border border-slate-700 shadow-inner">
-                    <strong class="text-yellow-500">⚠️ Warning:</strong> Uploading overrides the cloud with your current local data. Downloading replaces your local data with what's on the cloud. Ensure your connection is stable.
+                    <strong class="text-emerald-400">✅ Safe Merge Mode:</strong> Uploading <em>adds</em> your local data to the cloud without deleting existing cloud records. Downloading <em>adds</em> new cloud records to your local data without deleting anything. Your data is always preserved.
                 </div>
             </div>
         </div>
@@ -766,7 +774,7 @@
                     </div>
                 </div>
 
-                <h3 class="text-sm font-black text-slate-400 uppercase tracking-widest mb-4 border-b border-slate-700 pb-2">Recent Filtered Transactions</h3>
+                <h3 class="text-sm font-black text-slate-400 uppercase tracking-widest mb-4 border-b border-slate-700 pb-2">Bill History — Last 6 Months <span class="text-[10px] font-normal text-slate-500">(stats above show selected filter)</span></h3>
                 <div id="bill-history-list" class="space-y-3 max-h-96 overflow-y-auto pr-2 custom-scrollbar"></div>
             </div>
         </div>
@@ -775,7 +783,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
-        import { getDatabase, ref, set, get, child, onValue } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+        import { getDatabase, ref, set, get, child, onValue, update } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCvbgoJj_-VWHw7y23_OFtt6lQDuknqJ0k",
@@ -891,8 +899,31 @@
                                 + '</div>'
                                 + '</div>';
                         });
+
+                        // Update cashier-info-panel with full profile cards
+                        const _infoPanelEl = document.getElementById('cashier-info-panel');
+                        if (_infoPanelEl) {
+                            _infoPanelEl.innerHTML = _ents.map(([_sid, _c]) => {
+                                const _tm = _c.connectedAt ? new Date(_c.connectedAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : '';
+                                const _safeName = (_c.name || 'Unknown').replace(/'/g, "\\'");
+                                return '<div style="display:flex;gap:14px;align-items:flex-start;background:#0f172a;border:1px solid rgba(99,102,241,0.35);border-radius:14px;padding:13px 14px;margin-bottom:8px;">'
+                                    + (_c.photo ? '<img src="' + _c.photo + '" style="width:54px;height:54px;border-radius:50%;object-fit:cover;border:2.5px solid #6366f1;flex-shrink:0;">'
+                                               : '<div style="width:54px;height:54px;border-radius:50%;background:#1e293b;border:2.5px solid #475569;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">🧑‍💼</div>')
+                                    + '<div style="flex:1;">'
+                                    + '<div style="font-weight:900;font-size:15px;color:#e2e8f0;margin-bottom:2px;">' + (_c.name || 'Unknown') + '</div>'
+                                    + '<div style="font-size:11px;color:#94a3b8;margin-bottom:3px;">📱 Device: ' + (_c.device || '—') + '</div>'
+                                    + (_tm ? '<div style="font-size:10px;color:#64748b;">🕒 Connected at: ' + _tm + '</div>' : '')
+                                    + '<div style="margin-top:6px;display:flex;gap:6px;">'
+                                    + '<span style="font-size:9px;font-weight:700;background:#14532d;color:#4ade80;padding:2px 8px;border-radius:999px;border:1px solid rgba(74,222,128,0.4);">🟢 LIVE</span>'
+                                    + '<button onclick="showCashierBills(\'' + _safeName + '\')" style="font-size:9px;font-weight:700;background:#1e3a5f;color:#93c5fd;padding:2px 8px;border-radius:999px;border:1px solid rgba(147,197,253,0.3);cursor:pointer;">📋 View Bills</button>'
+                                    + '</div>'
+                                    + '</div></div>';
+                            }).join('');
+                        }
                     } else {
                         list.innerHTML = '<p style="font-size:12px;color:#475569;font-style:italic;text-align:center;padding:10px 0;">No cashiers connected yet.</p>';
+                        const _ipEl = document.getElementById('cashier-info-panel');
+                        if (_ipEl) _ipEl.innerHTML = '<p style="font-size:12px;color:#475569;font-style:italic;text-align:center;padding:10px;">No cashiers connected.</p>';
                     }
                 });
             }
@@ -1054,7 +1085,7 @@
                     };
                 });
 
-                const uploadPromise = set(ref(fb_db, 'inventory'), inventoryObject);
+                const uploadPromise = update(ref(fb_db, 'inventory'), inventoryObject);
                 const timeoutPromise = new Promise((_, reject) => {
                     setTimeout(() => reject(new Error("NETWORK_TIMEOUT")), 6000);
                 });
@@ -1094,9 +1125,9 @@
                     const itemsArray = Object.values(data).filter(item => item && item.code);
                     
                     if(itemsArray.length > 0) {
-                        await window.db.inventory.clear();
+                        // Merge: upsert keeps existing local items not in cloud
                         await window.db.inventory.bulkPut(itemsArray);
-                        alert("Inventory successfully downloaded and updated from Cloud!");
+                        alert("Inventory downloaded and merged (existing local items kept)!");
                         if(typeof renderInventory === 'function') {
                             renderInventory();
                         } else if (window.renderInventory) {
@@ -1147,7 +1178,7 @@
                     };
                 });
 
-                const uploadPromise = set(ref(fb_db, 'customers'), customersObject);
+                const uploadPromise = update(ref(fb_db, 'customers'), customersObject);
                 const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("NETWORK_TIMEOUT")), 6000));
 
                 await Promise.race([uploadPromise, timeoutPromise]);
@@ -1183,9 +1214,9 @@
                     const itemsArray = Object.values(data).filter(item => item && item.name);
                     
                     if(itemsArray.length > 0) {
-                        await window.db.customers.clear();
+                        // Merge: upsert keeps existing customers not in cloud
                         await window.db.customers.bulkPut(itemsArray);
-                        alert("Customers successfully downloaded and updated from Cloud!");
+                        alert("Customers downloaded and merged (existing local customers kept)!");
                         if(typeof renderCustomers === 'function') renderCustomers();
                         if(typeof updateCustomerDropdown === 'function') updateCustomerDropdown();
                     } else {
@@ -1209,7 +1240,7 @@
                 const items = await db.sales.toArray();
                 const salesObj = {};
                 items.forEach(item => salesObj[item.id] = item);
-                await set(ref(fb_db, 'sales'), salesObj);
+                await update(ref(fb_db, 'sales'), salesObj);
                 alert("Sales History successfully uploaded to Cloud!");
             } catch (error) {
                 console.error(error);
@@ -1221,10 +1252,13 @@
             try {
                 const snapshot = await get(child(ref(fb_db), 'sales'));
                 if (snapshot.exists()) {
-                    const itemsArray = Object.values(snapshot.val());
-                    await db.sales.clear();
-                    await db.sales.bulkPut(itemsArray);
-                    alert("Sales History downloaded and updated from Cloud!");
+                    const _cloudBills = Object.values(snapshot.val());
+                    // Merge: add bills from cloud that don't exist locally (preserve ALL local bills)
+                    const _localIds = new Set((await db.sales.toArray()).map(s => s.id));
+                    const _newBills = _cloudBills.filter(s => s && s.id && !_localIds.has(s.id));
+                    if (_newBills.length > 0) await db.sales.bulkAdd(_newBills);
+                    const _added = _newBills.length;
+                    alert(`Sales History merged: ${_added} new bill(s) added from Cloud. All local bills preserved.`);
                     if(typeof renderFullHistory === 'function') renderFullHistory();
                     if(typeof calculateReports === 'function') calculateReports();
                 } else {
@@ -1234,6 +1268,35 @@
                 console.error(error);
                 alert("Download failed: " + error.message);
             }
+        };
+
+        // ─── SILENT AUTO-UPLOAD HELPERS (no alerts, no button state changes) ────
+        window._silentUploadInventory = async function() {
+            try {
+                const _items = await window.db.inventory.toArray();
+                if (!_items.length) return;
+                const _obj = {};
+                _items.forEach(it => { _obj[String(it.code).replace(/[.#$\[\]/]/g, '_')] = it; });
+                await update(ref(fb_db, 'inventory'), _obj);
+            } catch(_e) { /* silent — no alert, runs in background */ }
+        };
+
+        window._silentUploadSale = async function(saleData) {
+            try {
+                if (!saleData || saleData.id == null) return;
+                const _obj = {}; _obj[saleData.id] = saleData;
+                await update(ref(fb_db, 'sales'), _obj);
+            } catch(_e) { /* silent */ }
+        };
+
+        window._silentUploadAllSales = async function() {
+            try {
+                const _items = await db.sales.toArray();
+                if (!_items.length) return;
+                const _obj = {};
+                _items.forEach(it => { _obj[it.id] = it; });
+                await update(ref(fb_db, 'sales'), _obj);
+            } catch(_e) { /* silent */ }
         };
 
         // --- MASTER CLOUD SYNC ---
@@ -1260,10 +1323,10 @@
                 draftItems.forEach(item => draftObj[item.id] = item);
 
                 await Promise.all([
-                    set(ref(fb_db, 'inventory'), invObj),
-                    set(ref(fb_db, 'customers'), custObj),
-                    set(ref(fb_db, 'sales'), saleObj),
-                    set(ref(fb_db, 'draftCart'), draftObj)
+                    update(ref(fb_db, 'inventory'), invObj),
+                    update(ref(fb_db, 'customers'), custObj),
+                    update(ref(fb_db, 'sales'), saleObj),
+                    update(ref(fb_db, 'draftCart'), draftObj)
                 ]);
 
                 alert("All system data uploaded successfully!");
@@ -1287,23 +1350,22 @@
                     const data = snapshot.val();
                     
                     if(data.inventory) {
-                        await db.inventory.clear();
                         await db.inventory.bulkPut(Object.values(data.inventory));
                     }
                     if(data.customers) {
-                        await db.customers.clear();
                         await db.customers.bulkPut(Object.values(data.customers));
                     }
                     if(data.sales) {
-                        await db.sales.clear();
-                        await db.sales.bulkPut(Object.values(data.sales));
+                        // Merge bills: only add new ones, never delete local bills
+                        const _mLocalIds = new Set((await db.sales.toArray()).map(s => s.id));
+                        const _mNew = Object.values(data.sales).filter(s => s && s.id && !_mLocalIds.has(s.id));
+                        if (_mNew.length > 0) await db.sales.bulkAdd(_mNew);
                     }
                     if(data.draftCart) {
-                        await db.draftCart.clear();
                         await db.draftCart.bulkPut(Object.values(data.draftCart));
                     }
                     
-                    alert("All system data downloaded and restored successfully!");
+                    alert("All cloud data merged successfully! Existing local data kept intact.");
                     
                     // Re-render current active tab contents
                     if(typeof renderInventory === 'function') renderInventory();
@@ -1605,9 +1667,24 @@
             }
         };
 
-        window.updateCartWarranty = async function(index, months) {
-            cart[index].customerWarrantyMonths = parseInt(months) || 0;
-            if(cart[index].id) await db.draftCart.put(cart[index]);
+        window.updateCartWarranty = async function(index, value, unit) {
+            const rawVal = parseFloat(value) || 0;
+            const unitStr = unit || cart[index].customerWarrantyUnit || 'months';
+            let months = rawVal;
+            if (unitStr === 'days') months = Math.round((rawVal / 30) * 10) / 10;
+            else if (unitStr === 'years') months = rawVal * 12;
+            cart[index].customerWarrantyMonths = months;
+            cart[index].customerWarrantyRaw = rawVal;
+            cart[index].customerWarrantyUnit = unitStr;
+            const _unitLabel = unitStr === 'days' ? 'Day' : unitStr === 'years' ? 'Year' : 'Month';
+            cart[index].customerWarrantyText = rawVal ? `${rawVal} ${_unitLabel}${rawVal !== 1 ? 's' : ''}` : '';
+            const idx = cart[index].id;
+            if (idx) await window.db.draftCart.update(idx, {
+                customerWarrantyMonths: months,
+                customerWarrantyRaw: rawVal,
+                customerWarrantyUnit: unitStr,
+                customerWarrantyText: cart[index].customerWarrantyText
+            });
             renderCart();
             updateLivePreview();
         };
@@ -1676,7 +1753,9 @@
             };
             
             try {
-                await db.sales.add(saleDataToSave);
+                const _newSaleId = await db.sales.add(saleDataToSave);
+                saleDataToSave.id = _newSaleId;
+                if(window._silentUploadSale) window._silentUploadSale(saleDataToSave);
             } catch (err) {
                 console.error("Failed to save sale to history:", err);
                 alert("ERROR: Bill could not be saved to History. Please check console.");
@@ -1757,7 +1836,9 @@
             };
 
             try {
-                await db.sales.add(saleDataToSave);
+                const _closedSaleId = await db.sales.add(saleDataToSave);
+                saleDataToSave.id = _closedSaleId;
+                if(window._silentUploadSale) window._silentUploadSale(saleDataToSave);
             } catch (err) {
                 console.error("Failed to save to history:", err);
                 alert("ERROR: Bill could not be saved to History.");
@@ -1814,7 +1895,9 @@
             };
 
             try {
-                await db.sales.add(saleDataToSave);
+                const _cancelSaleId = await db.sales.add(saleDataToSave);
+                saleDataToSave.id = _cancelSaleId;
+                if(window._silentUploadSale) window._silentUploadSale(saleDataToSave);
             } catch (err) {
                 console.error("Failed to save cancellation to history:", err);
                 alert("ERROR: Cancel record could not be saved to History.");
@@ -1875,70 +1958,7 @@
                 </style></head><body>
                 <button class="print-btn" onclick="window.print()">🖨️ PRINT REPAIR SLIP</button>
                 ${printContent}
-                
-    <!-- ═══ CASHIER BILLS MODAL ═══ -->
-    <div id="cashier-bills-modal" class="hidden fixed inset-0 bg-slate-950 bg-opacity-95 z-[200] flex items-center justify-center backdrop-blur-sm p-3">
-        <div class="bg-slate-800 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.9)] border border-slate-600 w-full max-w-2xl flex flex-col max-h-[92vh]">
-            <div class="flex justify-between items-center p-5 border-b border-slate-700">
-                <h3 id="cashier-bills-modal-title" class="text-white font-black text-xl tracking-wide uppercase">📋 Cashier Bills</h3>
-                <button onclick="document.getElementById('cashier-bills-modal').classList.add('hidden')" class="text-slate-400 hover:text-white font-black text-2xl transition-colors">&times;</button>
-            </div>
-
-            <!-- Search bar for browse mode -->
-            <div id="cashier-bills-search-bar" class="p-4 border-b border-slate-700 bg-slate-900/50 hidden">
-                <input type="text" id="cashier-bills-name-search" placeholder="Type cashier name..." oninput="loadCashierBillsByName(this.value)" class="w-full p-3 bg-slate-800 border-2 border-slate-600 text-white rounded-xl font-bold focus:border-yellow-500 outline-none glow-focus">
-            </div>
-
-            <div class="overflow-y-auto flex-1 p-4 space-y-5">
-                <!-- RUWAN section -->
-                <div>
-                    <div class="flex items-center gap-2 mb-3">
-                        <div class="flex-1 h-px bg-blue-500/30"></div>
-                        <span class="text-blue-400 font-black text-xs uppercase tracking-widest px-2 bg-slate-800 border border-blue-500/30 rounded-full py-1">📱 RUWAN CELLULAR</span>
-                        <div class="flex-1 h-px bg-blue-500/30"></div>
-                    </div>
-                    <div id="cashier-bills-ruwan" class="space-y-2">
-                        <p class="text-slate-500 text-sm text-center py-4 italic">No bills found.</p>
-                    </div>
-                </div>
-                <!-- THARU section -->
-                <div>
-                    <div class="flex items-center gap-2 mb-3">
-                        <div class="flex-1 h-px bg-pink-500/30"></div>
-                        <span class="text-pink-400 font-black text-xs uppercase tracking-widest px-2 bg-slate-800 border border-pink-500/30 rounded-full py-1">💇 SALON THARU</span>
-                        <div class="flex-1 h-px bg-pink-500/30"></div>
-                    </div>
-                    <div id="cashier-bills-tharu" class="space-y-2">
-                        <p class="text-slate-500 text-sm text-center py-4 italic">No bills found.</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="p-4 border-t border-slate-700 text-right">
-                <button onclick="document.getElementById('cashier-bills-modal').classList.add('hidden')" class="bg-slate-700 hover:bg-slate-600 text-white px-6 py-2 rounded-lg font-bold transition-colors">Close</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ═══ BILL ACTION MODAL (Print / Edit) ═══ -->
-    <div id="bill-action-modal" class="hidden fixed inset-0 bg-slate-950 bg-opacity-95 z-[300] flex items-center justify-center backdrop-blur-sm p-4">
-        <div class="bg-slate-800 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.9)] border border-slate-600 w-full max-w-sm">
-            <div class="p-6 border-b border-slate-700">
-                <h3 id="bill-action-title" class="text-white font-black text-lg tracking-wide text-center">📄 Bill Options</h3>
-                <p id="bill-action-subtitle" class="text-slate-400 text-xs text-center mt-1"></p>
-            </div>
-            <div class="p-6 space-y-3">
-                <button onclick="doPrintBillFromModal()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-xl font-black text-lg uppercase tracking-wider border border-blue-500 shadow-[0_0_15px_rgba(37,99,235,0.3)] transition-all">🖨️ Print Bill</button>
-                <button onclick="doEditBillFromModal()" class="w-full bg-yellow-600 hover:bg-yellow-500 text-slate-900 py-4 rounded-xl font-black text-lg uppercase tracking-wider border border-yellow-400 shadow transition-all">✏️ Edit Bill</button>
-            </div>
-            <div class="p-4 border-t border-slate-700 text-center">
-                <button onclick="document.getElementById('bill-action-modal').classList.add('hidden')" class="text-slate-400 hover:text-white font-bold text-sm transition-colors">Cancel</button>
-            </div>
-        </div>
-    </div>
-
-</body>
-</html>`);
+                </body></html>`);
                 printWindow.document.close();
                 printWindow.focus();
             }
@@ -1959,7 +1979,7 @@
                 const total = i.total || 0;
                 const unitPriceAfterDiscount = total / qty;
                 const rowTotal = sale.type === 'credit' ? (price * qty) : total;
-                const wtyText = i.customerWarrantyMonths ? `<br><small style="font-size:13px; font-weight:normal;">(${i.customerWarrantyMonths} Months Wty)</small>` : '';
+                const wtyText = (i.customerWarrantyText || i.customerWarrantyMonths) ? `<br><small style="font-size:13px; font-weight:normal;">(${i.customerWarrantyText || i.customerWarrantyMonths + ' Months'} Wty)</small>` : '';
                 return `
                 <div style="margin-bottom: 8px; padding-bottom: 4px; clear: both;">
                     <div class="print-item-name" style="text-transform: uppercase; color: black !important;">${i.name || 'Item'}${wtyText}</div>
@@ -2060,7 +2080,7 @@
                     </strong>
                 </div>
                 <div class="print-bill-details" style="margin-bottom: 5px; color: black !important;">
-                    <div class="flex justify-between" style="color: black !important;"><span style="color: black !important;">Inv: ${sale.invoiceNo}</span><span style="color: black !important;">Cashier: ${sale.cashierName || 'Owner'}</span></div>
+                    <div class="flex justify-between" style="color: black !important;"><span style="color: black !important;">Inv: ${sale.invoiceNo}</span><span style="color: black !important;">${new Date(sale.date).toLocaleDateString()}</span></div>
                     <div class="flex justify-between" style="color: black !important;"><span style="color: black !important;">Customer: ${sale.customer}</span><span></span></div>
                 </div>
                 <div id="items-square-container" style="color: black !important;">
@@ -2247,7 +2267,10 @@
                     qty: qty, 
                     discount: totalDiscount, 
                     total: (unitPrice * qty) - totalDiscount,
-                    customerWarrantyMonths: 0
+                    customerWarrantyMonths: 0,
+                    customerWarrantyRaw: 0,
+                    customerWarrantyUnit: 'months',
+                    customerWarrantyText: ''
                 };
                 cart.push(cartItem);
                 await db.draftCart.add(cartItem);
@@ -2277,7 +2300,7 @@
             if(!name) return;
             const price = parseFloat(prompt("Price (LKR):"));
             if(!isNaN(price)) {
-                const cartItem = { name: name.toUpperCase(), code: 'unlisted', price, qty: 1, cost: price, wholesalePrice: price, total: price, discount: 0, customerWarrantyMonths: 0 };
+                const cartItem = { name: name.toUpperCase(), code: 'unlisted', price, qty: 1, cost: price, wholesalePrice: price, total: price, discount: 0, customerWarrantyMonths: 0, customerWarrantyRaw: 0, customerWarrantyUnit: 'months', customerWarrantyText: '' };
                 cart.push(cartItem); 
                 await db.draftCart.add(cartItem);
                 renderCart(); 
@@ -2294,7 +2317,7 @@
                 const price = parseFloat(priceStr);
                 if(!isNaN(price)) {
                     // For services, cost is 0, making it 100% profit (revenue) for reports.
-                    const cartItem = { name: "*SERVICE: " + name.toUpperCase(), code: 'service', price: price, qty: 1, cost: 0, wholesalePrice: price, total: price, discount: 0, customerWarrantyMonths: 0 };
+                    const cartItem = { name: "*SERVICE: " + name.toUpperCase(), code: 'service', price: price, qty: 1, cost: 0, wholesalePrice: price, total: price, discount: 0, customerWarrantyMonths: 0, customerWarrantyRaw: 0, customerWarrantyUnit: 'months', customerWarrantyText: '' };
                     cart.push(cartItem); 
                     await db.draftCart.add(cartItem);
                     renderCart(); 
@@ -2309,15 +2332,24 @@
             let total = cart.reduce((sum, i) => sum + (paymentMode === 'credit' ? (i.price * i.qty) : i.total), 0) - extraDiscount;
             document.getElementById('cart-items').innerHTML = cart.map((i, index) => {
                 const rowTotal = paymentMode === 'credit' ? (i.price * i.qty) : i.total;
-                const wtyText = i.customerWarrantyMonths ? ` <span class="text-[10px] text-orange-400 font-bold ml-1 bg-orange-900/30 px-1.5 py-0.5 rounded border border-orange-500/30">(${i.customerWarrantyMonths}M WTY)</span>` : '';
+                const wtyText = i.customerWarrantyText ? ` <span class="text-[10px] text-orange-400 font-bold ml-1 bg-orange-900/30 px-1.5 py-0.5 rounded border border-orange-500/30">(${i.customerWarrantyText} WTY)</span>` : (i.customerWarrantyMonths ? ` <span class="text-[10px] text-orange-400 font-bold ml-1 bg-orange-900/30 px-1.5 py-0.5 rounded border border-orange-500/30">(${i.customerWarrantyMonths}M WTY)</span>` : '');
+                const _wtyRaw = i.customerWarrantyRaw != null ? i.customerWarrantyRaw : (i.customerWarrantyMonths || '');
+                const _wtyUnit = i.customerWarrantyUnit || 'months';
                 return `
                 <div class="flex justify-between border-b border-slate-700 py-3 items-center hover:bg-slate-800/50 transition-colors px-2 rounded">
                     <div class="flex-1">
                         <span class="text-sm font-bold text-white">${i.name} <span class="text-blue-400 opacity-80">x ${i.qty}</span>${wtyText}</span>
                         ${(i.discount > 0 && paymentMode !== 'credit') ? '<br><small class="text-red-400 font-bold">(-LKR '+i.discount.toFixed(2)+')</small>' : ''}
                     </div>
-                    <div class="flex gap-3 items-center">
-                        <input type="number" placeholder="Wty(Mo)" value="${i.customerWarrantyMonths || ''}" onchange="updateCartWarranty(${index}, this.value)" class="w-16 p-1.5 text-xs border rounded-md bg-slate-900 text-orange-300 border-slate-600 focus:border-orange-500 glow-focus outline-none text-center shadow-inner" title="Warranty in Months">
+                    <div class="flex gap-2 items-center">
+                        <div class="flex items-center gap-0">
+                            <input type="number" placeholder="Wty" value="${_wtyRaw}" onchange="updateCartWarranty(${index}, this.value, this.nextElementSibling.value)" class="w-12 p-1.5 text-xs border-y border-l border-slate-600 rounded-l-md bg-slate-900 text-orange-300 focus:border-orange-500 glow-focus outline-none text-center shadow-inner" title="Warranty Duration">
+                            <select onchange="updateCartWarranty(${index}, this.previousElementSibling.value, this.value)" class="p-1.5 text-[10px] border-y border-r border-slate-600 rounded-r-md bg-slate-900 text-orange-300 outline-none focus:border-orange-500 cursor-pointer">
+                                <option value="days" ${_wtyUnit==='days'?'selected':''}>D</option>
+                                <option value="months" ${(!_wtyUnit||_wtyUnit==='months')?'selected':''}>M</option>
+                                <option value="years" ${_wtyUnit==='years'?'selected':''}>Y</option>
+                            </select>
+                        </div>
                         <span class="font-black text-white w-20 text-right">${rowTotal.toFixed(2)}</span>
                         <button onclick="removeFromCart(${index})" class="text-slate-400 hover:text-red-400 font-black p-1 transition-colors">✕</button>
                     </div>
@@ -2336,7 +2368,7 @@
             document.getElementById('print-items').innerHTML = cart.map(i => {
                 const unitPriceAfterDiscount = i.total / i.qty;
                 const rowTotal = paymentMode === 'credit' ? (i.price * i.qty) : i.total;
-                const wtyText = i.customerWarrantyMonths ? `<br><small style="font-size:13px; font-weight:normal;">(${i.customerWarrantyMonths} Months Wty)</small>` : '';
+                const wtyText = (i.customerWarrantyText || i.customerWarrantyMonths) ? `<br><small style="font-size:13px; font-weight:normal;">(${i.customerWarrantyText || i.customerWarrantyMonths + ' Months'} Wty)</small>` : '';
                 return `
                 <div style="margin-bottom: 8px; padding-bottom: 4px; clear: both; color: black !important;">
                     <div class="print-item-name" style="text-transform: uppercase; color: black !important;">${i.name}${wtyText}</div>
@@ -2513,6 +2545,7 @@
             
             await db.inventory.put(item);
             if(window.broadcastInventoryUpdate) window.broadcastInventoryUpdate();
+            if(window._silentUploadInventory) window._silentUploadInventory();
             alert("Saved!");
             showTab('inventory');
             
@@ -3055,8 +3088,15 @@
         let pieChartInstance = null;
 
         window.showProfitModal = async function() {
-            const now = new Date();
-            let startTime = currentFilter === 'day' ? new Date().setHours(0,0,0,0) : (currentFilter === 'week' ? new Date(now.setDate(now.getDate() - 7)).getTime() : new Date(now.setMonth(now.getMonth() - 1)).getTime());
+            const _pnow = new Date();
+            let startTime;
+            if (currentFilter === 'day') {
+                startTime = new Date(_pnow.getFullYear(), _pnow.getMonth(), _pnow.getDate()).getTime();
+            } else if (currentFilter === 'week') {
+                const _dw = new Date(_pnow); _dw.setDate(_dw.getDate() - 7); startTime = _dw.getTime();
+            } else {
+                const _dm = new Date(_pnow); _dm.setMonth(_dm.getMonth() - 1); startTime = _dm.getTime();
+            }
             
             let allDbSales = await db.sales.toArray();
             let shopSales = allDbSales.filter(s => s.shop === currentRepShop || (!s.shop && currentRepShop === 'ruwancell'));
@@ -3102,8 +3142,15 @@
 
         // Bulletproof Reports avoiding problematic indexed queries
         async function calculateReports() {
-            const now = new Date();
-            let startTime = currentFilter === 'day' ? new Date().setHours(0,0,0,0) : (currentFilter === 'week' ? new Date(now.setDate(now.getDate() - 7)).getTime() : new Date(now.setMonth(now.getMonth() - 1)).getTime());
+            const _now = new Date();
+            let startTime;
+            if (currentFilter === 'day') {
+                startTime = new Date(_now.getFullYear(), _now.getMonth(), _now.getDate()).getTime();
+            } else if (currentFilter === 'week') {
+                const _dw = new Date(_now); _dw.setDate(_dw.getDate() - 7); startTime = _dw.getTime();
+            } else {
+                const _dm = new Date(_now); _dm.setMonth(_dm.getMonth() - 1); startTime = _dm.getTime();
+            }
             
             let allDbSales = await db.sales.toArray();
             
@@ -3162,8 +3209,10 @@
                 options: { responsive: true, plugins: { legend: { labels: { color: '#cbd5e1' } } } }
             });
             
-            // Sort reports manually to guarantee ordering
-            document.getElementById('bill-history-list').innerHTML = allSales.sort((a,b) => b.date - a.date).map(s => {
+            // Show up to 6 months of history in the list regardless of filter window
+            const _6mo = new Date(_now); _6mo.setMonth(_6mo.getMonth() - 6);
+            const _histSales = shopSales.filter(s => s.date >= _6mo.getTime()).sort((a,b) => b.date - a.date);
+            document.getElementById('bill-history-list').innerHTML = _histSales.map(s => {
                 const statusFlag = s.status === 'Canceled' ? '<span class="text-red-400 font-bold ml-1 border border-red-500/50 bg-red-900/30 px-1 rounded uppercase tracking-wider text-[10px]">Canceled</span>' : '';
                 return `
                 <div class="p-3 rounded-lg text-sm bg-slate-800/80 shadow-sm mb-2 border border-slate-700 transition-colors hover:bg-slate-700 ${s.status === 'Canceled' ? 'opacity-60 bg-red-900/10 border-red-900/50' : ''}">
@@ -3171,6 +3220,8 @@
                     <div class="flex justify-between text-[11px] font-mono text-slate-400"><span>${new Date(s.date).toLocaleString()}</span><span class="text-emerald-400 font-bold bg-emerald-900/30 px-2 rounded border border-emerald-500/30">Profit: LKR ${Number(s.profit || 0).toFixed(2)}</span></div>
                 </div>
             `}).join('');
+            // Auto-upload all sales to cloud silently whenever reports are refreshed
+            if(window._silentUploadAllSales) window._silentUploadAllSales();
         }
         window.calculateReports = calculateReports;
 
@@ -3504,7 +3555,6 @@
                 <div style="font-size:14px;margin:6px 0;color:black;">
                     <div style="display:flex;justify-content:space-between;"><span>Invoice:</span><span style="font-weight:bold;">#${sale.invoiceNo||sale.id}</span></div>
                     <div style="display:flex;justify-content:space-between;"><span>Customer:</span><span>${sale.customer||'General Customer'}</span></div>
-                    <div style="display:flex;justify-content:space-between;"><span>Cashier:</span><span>${sale.cashierName||''}</span></div>
                     <div style="display:flex;justify-content:space-between;"><span>Date:</span><span>${new Date(sale.date).toLocaleString()}</span></div>
                 </div>
                 <div style="border-top:1.5px solid black;border-bottom:1.5px solid black;padding:8px 0;margin:8px 0;">
@@ -3569,5 +3619,61 @@
         init();
         startCloudAutoDownload();
     </script>
+
+    <!-- ═══ CASHIER BILLS MODAL ═══ -->
+    <div id="cashier-bills-modal" class="hidden fixed inset-0 bg-slate-950 bg-opacity-95 z-[200] flex items-center justify-center backdrop-blur-sm p-3">
+        <div class="bg-slate-800 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.9)] border border-slate-600 w-full max-w-2xl flex flex-col max-h-[92vh]">
+            <div class="flex justify-between items-center p-5 border-b border-slate-700">
+                <h3 id="cashier-bills-modal-title" class="text-white font-black text-xl tracking-wide uppercase">📋 Cashier Bills</h3>
+                <button onclick="document.getElementById('cashier-bills-modal').classList.add('hidden')" class="text-slate-400 hover:text-white font-black text-2xl transition-colors">&times;</button>
+            </div>
+            <div id="cashier-bills-search-bar" class="p-4 border-b border-slate-700 bg-slate-900/50 hidden">
+                <input type="text" id="cashier-bills-name-search" placeholder="Type cashier name..." oninput="loadCashierBillsByName(this.value)" class="w-full p-3 bg-slate-800 border-2 border-slate-600 text-white rounded-xl font-bold focus:border-yellow-500 outline-none glow-focus">
+            </div>
+            <div class="overflow-y-auto flex-1 p-4 space-y-5">
+                <div>
+                    <div class="flex items-center gap-2 mb-3">
+                        <div class="flex-1 h-px bg-blue-500/30"></div>
+                        <span class="text-blue-400 font-black text-xs uppercase tracking-widest px-2 bg-slate-800 border border-blue-500/30 rounded-full py-1">📱 RUWAN CELLULAR</span>
+                        <div class="flex-1 h-px bg-blue-500/30"></div>
+                    </div>
+                    <div id="cashier-bills-ruwan" class="space-y-2">
+                        <p class="text-slate-500 text-sm text-center py-4 italic">No bills found.</p>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2 mb-3">
+                        <div class="flex-1 h-px bg-pink-500/30"></div>
+                        <span class="text-pink-400 font-black text-xs uppercase tracking-widest px-2 bg-slate-800 border border-pink-500/30 rounded-full py-1">💇 SALON THARU</span>
+                        <div class="flex-1 h-px bg-pink-500/30"></div>
+                    </div>
+                    <div id="cashier-bills-tharu" class="space-y-2">
+                        <p class="text-slate-500 text-sm text-center py-4 italic">No bills found.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="p-4 border-t border-slate-700 text-right">
+                <button onclick="document.getElementById('cashier-bills-modal').classList.add('hidden')" class="bg-slate-700 hover:bg-slate-600 text-white px-6 py-2 rounded-lg font-bold transition-colors">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ BILL ACTION MODAL (Print / Edit) ═══ -->
+    <div id="bill-action-modal" class="hidden fixed inset-0 bg-slate-950 bg-opacity-95 z-[300] flex items-center justify-center backdrop-blur-sm p-4">
+        <div class="bg-slate-800 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.9)] border border-slate-600 w-full max-w-sm">
+            <div class="p-6 border-b border-slate-700">
+                <h3 id="bill-action-title" class="text-white font-black text-lg tracking-wide text-center">📄 Bill Options</h3>
+                <p id="bill-action-subtitle" class="text-slate-400 text-xs text-center mt-1"></p>
+            </div>
+            <div class="p-6 space-y-3">
+                <button onclick="doPrintBillFromModal()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-xl font-black text-lg uppercase tracking-wider border border-blue-500 shadow-[0_0_15px_rgba(37,99,235,0.3)] transition-all">🖨️ Print Bill</button>
+                <button onclick="doEditBillFromModal()" class="w-full bg-yellow-600 hover:bg-yellow-500 text-slate-900 py-4 rounded-xl font-black text-lg uppercase tracking-wider border border-yellow-400 shadow transition-all">✏️ Edit Bill</button>
+            </div>
+            <div class="p-4 border-t border-slate-700 text-center">
+                <button onclick="document.getElementById('bill-action-modal').classList.add('hidden')" class="text-slate-400 hover:text-white font-bold text-sm transition-colors">Cancel</button>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>
