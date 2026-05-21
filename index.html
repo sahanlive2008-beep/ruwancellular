@@ -261,6 +261,12 @@
                         </div>
 
                         <div class="mt-6 pt-6 border-t border-slate-700 relative z-10">
+                            <h5 class="font-bold text-sm text-slate-300 mb-3 uppercase tracking-wider">📊 Cashier Sales Reports</h5>
+                            <p class="text-xs text-slate-500 mb-3">Full daily / weekly / monthly profit reports per cashier — split by Ruwan &amp; Tharu.</p>
+                            <button onclick="openCashierReports()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-black py-3 rounded-xl uppercase tracking-wider border border-purple-400 shadow-[0_0_12px_rgba(147,51,234,0.4)] transition-all text-sm">📊 Cashier Reports</button>
+                        </div>
+
+                        <div class="mt-6 pt-6 border-t border-slate-700 relative z-10">
                             <h5 class="font-bold text-sm text-slate-300 mb-3 uppercase tracking-wider">🪪 Cashier Info Verification</h5>
                             <p class="text-xs text-slate-500 mb-3">Live snapshot of each connected cashier's profile information.</p>
                             <div id="cashier-info-panel" class="space-y-3">
@@ -829,10 +835,46 @@
                     <button onclick="setReportShop('tharusalon')" id="rep-shop-tharu" class="flex-1 rounded-xl bg-slate-800 text-slate-400 text-sm font-black py-3 uppercase border border-slate-600 hover:bg-slate-700 hover:text-white transition-all tracking-wider">Salon Tharu</button>
                 </div>
 
-                <div class="bg-slate-900 p-1.5 rounded-xl border border-slate-700 flex gap-2 mb-8">
+                <div class="bg-slate-900 p-1.5 rounded-xl border border-slate-700 flex gap-2 mb-4">
                     <button onclick="setReportFilter('day')" id="filter-day" class="flex-1 bg-blue-600 text-white py-2.5 rounded-lg text-xs font-black uppercase shadow-sm transition-colors tracking-wider">Daily</button>
                     <button onclick="setReportFilter('week')" id="filter-week" class="flex-1 bg-transparent hover:bg-slate-800 text-slate-400 py-2.5 rounded-lg text-xs font-black uppercase transition-colors tracking-wider">Weekly</button>
                     <button onclick="setReportFilter('month')" id="filter-month" class="flex-1 bg-transparent hover:bg-slate-800 text-slate-400 py-2.5 rounded-lg text-xs font-black uppercase transition-colors tracking-wider">Monthly</button>
+                </div>
+
+                <!-- Advanced Weekly Breakdown Panel -->
+                <div id="weekly-days-panel" class="hidden mb-5 bg-slate-900/60 border border-blue-500/30 rounded-xl p-4">
+                    <p class="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-3 flex items-center gap-2">📅 Advanced: Weekly Breakdown by Day</p>
+                    <select id="weekly-day-select" onchange="loadWeeklyDayProfit()" class="w-full p-3 bg-slate-800 border border-slate-600 text-white rounded-xl font-bold focus:border-blue-500 outline-none glow-focus text-sm mb-3">
+                        <option value="">— Select a Day to View Profit —</option>
+                    </select>
+                    <div id="weekly-day-result" class="hidden grid grid-cols-2 gap-3">
+                        <div class="bg-slate-800 rounded-lg p-3 border border-blue-500/30 text-center">
+                            <p class="text-[10px] font-black text-blue-400 uppercase tracking-wider mb-1">Revenue</p>
+                            <p id="wdr-revenue" class="text-lg font-black text-white">LKR 0.00</p>
+                        </div>
+                        <div class="bg-slate-800 rounded-lg p-3 border border-emerald-500/30 text-center">
+                            <p class="text-[10px] font-black text-emerald-400 uppercase tracking-wider mb-1">Profit</p>
+                            <p id="wdr-profit" class="text-lg font-black text-white">LKR 0.00</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Advanced Monthly Breakdown Panel -->
+                <div id="monthly-weeks-panel" class="hidden mb-5 bg-slate-900/60 border border-purple-500/30 rounded-xl p-4">
+                    <p class="text-[10px] font-black text-purple-400 uppercase tracking-widest mb-3 flex items-center gap-2">📆 Advanced: Monthly Breakdown by Week</p>
+                    <select id="monthly-week-select" onchange="loadMonthlyWeekProfit()" class="w-full p-3 bg-slate-800 border border-slate-600 text-white rounded-xl font-bold focus:border-purple-500 outline-none glow-focus text-sm mb-3">
+                        <option value="">— Select a Week to View Profit —</option>
+                    </select>
+                    <div id="monthly-week-result" class="hidden grid grid-cols-2 gap-3">
+                        <div class="bg-slate-800 rounded-lg p-3 border border-blue-500/30 text-center">
+                            <p class="text-[10px] font-black text-blue-400 uppercase tracking-wider mb-1">Revenue</p>
+                            <p id="mwr-revenue" class="text-lg font-black text-white">LKR 0.00</p>
+                        </div>
+                        <div class="bg-slate-800 rounded-lg p-3 border border-emerald-500/30 text-center">
+                            <p class="text-[10px] font-black text-emerald-400 uppercase tracking-wider mb-1">Profit</p>
+                            <p id="mwr-profit" class="text-lg font-black text-white">LKR 0.00</p>
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="grid grid-cols-2 gap-4 mb-8">
@@ -3436,9 +3478,98 @@
                     btn.classList.remove('shadow-sm');
                 }
             });
+            const weeklyPanel = document.getElementById('weekly-days-panel');
+            const monthlyPanel = document.getElementById('monthly-weeks-panel');
+            if (weeklyPanel) weeklyPanel.classList.toggle('hidden', range !== 'week');
+            if (monthlyPanel) monthlyPanel.classList.toggle('hidden', range !== 'month');
+            if (range === 'week') buildWeekDayOptions('weekly-day-select');
+            if (range === 'month') buildMonthWeekOptions('monthly-week-select');
             calculateReports(); 
         }
         window.setReportFilter = setReportFilter;
+
+        async function buildWeekDayOptions(selectId) {
+            const sel = document.getElementById(selectId);
+            if (!sel) return;
+            const now = new Date();
+            const dayOfWeek = now.getDay();
+            const monday = new Date(now);
+            monday.setDate(now.getDate() - ((dayOfWeek + 6) % 7));
+            monday.setHours(0,0,0,0);
+            const dayNames = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+            const allSales = await db.sales.toArray();
+            const shopSales = allSales.filter(s => (s.shop === currentRepShop || (!s.shop && currentRepShop === 'ruwancell')) && s.status !== 'Canceled');
+            sel.innerHTML = '<option value="">— Select a Day to View Profit —</option>';
+            for (let i = 0; i < 7; i++) {
+                const dayStart = new Date(monday); dayStart.setDate(monday.getDate() + i); dayStart.setHours(0,0,0,0);
+                const dayEnd = new Date(dayStart); dayEnd.setHours(23,59,59,999);
+                const daySales = shopSales.filter(s => s.date >= dayStart.getTime() && s.date <= dayEnd.getTime());
+                const rev = daySales.reduce((sum, s) => sum + (Number(s.total)||0), 0);
+                const prof = daySales.reduce((sum, s) => sum + (Number(s.profit)||0), 0);
+                const dateStr = dayStart.toLocaleDateString('en-GB', {day:'2-digit', month:'short'});
+                const isFuture = dayStart > now;
+                sel.innerHTML += `<option value="${dayStart.getTime()}|${dayEnd.getTime()}" ${isFuture ? 'disabled' : ''}>${dayNames[i]} (${dateStr}) — Rev: ${rev.toFixed(0)} | Profit: ${prof.toFixed(0)}</option>`;
+            }
+        }
+        window.buildWeekDayOptions = buildWeekDayOptions;
+
+        async function buildMonthWeekOptions(selectId) {
+            const sel = document.getElementById(selectId);
+            if (!sel) return;
+            const now = new Date();
+            const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+            const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+            const allSales = await db.sales.toArray();
+            const shopSales = allSales.filter(s => (s.shop === currentRepShop || (!s.shop && currentRepShop === 'ruwancell')) && s.status !== 'Canceled');
+            sel.innerHTML = '<option value="">— Select a Week to View Profit —</option>';
+            let weekNum = 1;
+            let cursor = new Date(monthStart);
+            while (cursor <= monthEnd) {
+                const wStart = new Date(cursor);
+                const wEnd = new Date(cursor); wEnd.setDate(wEnd.getDate() + 6); wEnd.setHours(23,59,59,999);
+                if (wEnd > monthEnd) { wEnd.setTime(monthEnd.getTime()); }
+                const wSales = shopSales.filter(s => s.date >= wStart.getTime() && s.date <= wEnd.getTime());
+                const rev = wSales.reduce((sum,s) => sum + (Number(s.total)||0), 0);
+                const prof = wSales.reduce((sum,s) => sum + (Number(s.profit)||0), 0);
+                const s1 = wStart.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
+                const s2 = wEnd.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
+                const isFuture = wStart > now;
+                sel.innerHTML += `<option value="${wStart.getTime()}|${wEnd.getTime()}" ${isFuture ? 'disabled' : ''}>Week ${weekNum} (${s1}–${s2}) — Rev: ${rev.toFixed(0)} | Profit: ${prof.toFixed(0)}</option>`;
+                cursor.setDate(cursor.getDate() + 7);
+                weekNum++;
+            }
+        }
+        window.buildMonthWeekOptions = buildMonthWeekOptions;
+
+        window.loadWeeklyDayProfit = async function() {
+            const sel = document.getElementById('weekly-day-select');
+            const resDiv = document.getElementById('weekly-day-result');
+            if (!sel || !sel.value) { if(resDiv) resDiv.classList.add('hidden'); return; }
+            const [startTs, endTs] = sel.value.split('|').map(Number);
+            const allSales = await db.sales.toArray();
+            const shopSales = allSales.filter(s => (s.shop === currentRepShop || (!s.shop && currentRepShop === 'ruwancell')) && s.status !== 'Canceled');
+            const daySales = shopSales.filter(s => s.date >= startTs && s.date <= endTs);
+            const rev = daySales.reduce((sum,s) => sum + (Number(s.total)||0), 0);
+            const prof = daySales.reduce((sum,s) => sum + (Number(s.profit)||0), 0);
+            document.getElementById('wdr-revenue').textContent = 'LKR ' + rev.toFixed(2);
+            document.getElementById('wdr-profit').textContent = 'LKR ' + prof.toFixed(2);
+            if (resDiv) resDiv.classList.remove('hidden');
+        };
+
+        window.loadMonthlyWeekProfit = async function() {
+            const sel = document.getElementById('monthly-week-select');
+            const resDiv = document.getElementById('monthly-week-result');
+            if (!sel || !sel.value) { if(resDiv) resDiv.classList.add('hidden'); return; }
+            const [startTs, endTs] = sel.value.split('|').map(Number);
+            const allSales = await db.sales.toArray();
+            const shopSales = allSales.filter(s => (s.shop === currentRepShop || (!s.shop && currentRepShop === 'ruwancell')) && s.status !== 'Canceled');
+            const wSales = shopSales.filter(s => s.date >= startTs && s.date <= endTs);
+            const rev = wSales.reduce((sum,s) => sum + (Number(s.total)||0), 0);
+            const prof = wSales.reduce((sum,s) => sum + (Number(s.profit)||0), 0);
+            document.getElementById('mwr-revenue').textContent = 'LKR ' + rev.toFixed(2);
+            document.getElementById('mwr-profit').textContent = 'LKR ' + prof.toFixed(2);
+            if (resDiv) resDiv.classList.remove('hidden');
+        };
 
         let barChartInstance = null;
         let pieChartInstance = null;
@@ -3977,6 +4108,196 @@
             window.doEditBillFromModal();
         };
 
+        // ─── CASHIER REPORTS ────────────────────────────────────────────────────
+        let _crFilter = 'day';
+        let _crCashier = '';
+
+        window.openCashierReports = async function() {
+            const modal = document.getElementById('cashier-reports-modal');
+            if (!modal) return;
+            // Populate cashier list
+            const allSales = await db.sales.toArray();
+            const cashierNames = [...new Set(allSales.map(s => s.cashierName).filter(Boolean))].sort();
+            const sel = document.getElementById('cr-cashier-select');
+            if (sel) {
+                sel.innerHTML = '<option value="">— All Cashiers —</option>';
+                cashierNames.forEach(n => { sel.innerHTML += `<option value="${n}">${n}</option>`; });
+            }
+            _crFilter = 'day';
+            _crCashier = '';
+            setCashierReportFilter('day');
+            modal.classList.remove('hidden');
+        };
+
+        window.setCashierReportFilter = async function(range) {
+            _crFilter = range;
+            ['day','week','month'].forEach(f => {
+                const btn = document.getElementById('cr-filter-' + f);
+                if (!btn) return;
+                if (f === range) {
+                    btn.className = 'flex-1 bg-purple-600 text-white py-2.5 rounded-lg text-xs font-black uppercase shadow-sm transition-colors tracking-wider';
+                } else {
+                    btn.className = 'flex-1 bg-transparent hover:bg-slate-800 text-slate-400 py-2.5 rounded-lg text-xs font-black uppercase transition-colors tracking-wider';
+                }
+            });
+            const wPanel = document.getElementById('cr-weekly-days-panel');
+            const mPanel = document.getElementById('cr-monthly-weeks-panel');
+            if (wPanel) wPanel.classList.toggle('hidden', range !== 'week');
+            if (mPanel) mPanel.classList.toggle('hidden', range !== 'month');
+            if (range === 'week') await buildCrWeekDayOptions();
+            if (range === 'month') await buildCrMonthWeekOptions();
+            await renderCashierReportData();
+        };
+
+        window.onCrCashierChange = function() {
+            const sel = document.getElementById('cr-cashier-select');
+            _crCashier = sel ? sel.value : '';
+            renderCashierReportData();
+            if (_crFilter === 'week') buildCrWeekDayOptions();
+            if (_crFilter === 'month') buildCrMonthWeekOptions();
+        };
+
+        async function getCrTimeRange() {
+            const now = new Date();
+            if (_crFilter === 'day') {
+                return { start: new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime(), end: now.getTime() };
+            } else if (_crFilter === 'week') {
+                const dw = new Date(now); dw.setDate(dw.getDate() - 7); return { start: dw.getTime(), end: now.getTime() };
+            } else {
+                const dm = new Date(now); dm.setMonth(dm.getMonth() - 1); return { start: dm.getTime(), end: now.getTime() };
+            }
+        }
+
+        async function filterCrSales() {
+            const { start, end } = await getCrTimeRange();
+            const allSales = await db.sales.toArray();
+            return allSales.filter(s =>
+                s.status !== 'Canceled' &&
+                s.date >= start && s.date <= end &&
+                (!_crCashier || (s.cashierName && s.cashierName.toLowerCase().includes(_crCashier.toLowerCase())))
+            );
+        }
+
+        async function renderCashierReportData() {
+            const sales = await filterCrSales();
+            const ruwanSales = sales.filter(s => s.shop === 'ruwancell' || !s.shop);
+            const tharuSales = sales.filter(s => s.shop === 'tharusalon');
+
+            function calcStats(arr) {
+                return {
+                    rev: arr.reduce((s, a) => s + (Number(a.total)||0), 0),
+                    prof: arr.reduce((s, a) => s + (Number(a.profit)||0), 0),
+                    count: arr.length
+                };
+            }
+
+            const rs = calcStats(ruwanSales);
+            const ts = calcStats(tharuSales);
+
+            const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+            setEl('cr-ruwan-rev', 'LKR ' + rs.rev.toFixed(2));
+            setEl('cr-ruwan-prof', 'LKR ' + rs.prof.toFixed(2));
+            setEl('cr-ruwan-count', rs.count + ' bills');
+            setEl('cr-tharu-rev', 'LKR ' + ts.rev.toFixed(2));
+            setEl('cr-tharu-prof', 'LKR ' + ts.prof.toFixed(2));
+            setEl('cr-tharu-count', ts.count + ' bills');
+
+            // Bill history sections
+            function buildMiniList(arr) {
+                if (!arr.length) return '<p style="font-size:12px;color:#475569;text-align:center;padding:12px;font-style:italic;">No bills in this period.</p>';
+                return arr.slice(0, 20).map(s => {
+                    const d = new Date(s.date).toLocaleDateString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+                    return `<div style="background:#0f172a;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:8px 10px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;font-size:12px;">
+                        <div><span style="color:#e2e8f0;font-weight:700;">#${s.invoiceNo||s.id}</span><span style="color:#64748b;margin-left:8px;">${s.cashierName||'—'}</span></div>
+                        <div style="text-align:right;"><span style="color:#60a5fa;font-weight:900;">LKR ${Number(s.total||0).toFixed(2)}</span><br><span style="color:#94a3b8;font-size:10px;">${d}</span></div>
+                    </div>`;
+                }).join('');
+            }
+
+            const rEl = document.getElementById('cr-ruwan-bills');
+            const tEl = document.getElementById('cr-tharu-bills');
+            if (rEl) rEl.innerHTML = buildMiniList(ruwanSales);
+            if (tEl) tEl.innerHTML = buildMiniList(tharuSales);
+        }
+
+        async function buildCrWeekDayOptions() {
+            const sel = document.getElementById('cr-weekly-day-select');
+            if (!sel) return;
+            const now = new Date();
+            const dow = now.getDay();
+            const monday = new Date(now); monday.setDate(now.getDate() - ((dow + 6) % 7)); monday.setHours(0,0,0,0);
+            const dayNames = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+            const allSales = await db.sales.toArray();
+            const filtered = allSales.filter(s => s.status !== 'Canceled' && (!_crCashier || (s.cashierName && s.cashierName.toLowerCase().includes(_crCashier.toLowerCase()))));
+            sel.innerHTML = '<option value="">— Select a Day —</option>';
+            for (let i = 0; i < 7; i++) {
+                const ds = new Date(monday); ds.setDate(monday.getDate() + i); ds.setHours(0,0,0,0);
+                const de = new Date(ds); de.setHours(23,59,59,999);
+                const daySales = filtered.filter(s => s.date >= ds.getTime() && s.date <= de.getTime());
+                const rev = daySales.reduce((s, a) => s + (Number(a.total)||0), 0);
+                const prof = daySales.reduce((s, a) => s + (Number(a.profit)||0), 0);
+                const dateStr = ds.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
+                const isFuture = ds > now;
+                sel.innerHTML += `<option value="${ds.getTime()}|${de.getTime()}" ${isFuture?'disabled':''}>${dayNames[i]} (${dateStr}) — Rev: ${rev.toFixed(0)} | Profit: ${prof.toFixed(0)}</option>`;
+            }
+        }
+
+        async function buildCrMonthWeekOptions() {
+            const sel = document.getElementById('cr-monthly-week-select');
+            if (!sel) return;
+            const now = new Date();
+            const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+            const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+            const allSales = await db.sales.toArray();
+            const filtered = allSales.filter(s => s.status !== 'Canceled' && (!_crCashier || (s.cashierName && s.cashierName.toLowerCase().includes(_crCashier.toLowerCase()))));
+            sel.innerHTML = '<option value="">— Select a Week —</option>';
+            let wNum = 1; let cursor = new Date(monthStart);
+            while (cursor <= monthEnd) {
+                const ws = new Date(cursor);
+                const we = new Date(cursor); we.setDate(we.getDate() + 6); we.setHours(23,59,59,999);
+                if (we > monthEnd) we.setTime(monthEnd.getTime());
+                const wSales = filtered.filter(s => s.date >= ws.getTime() && s.date <= we.getTime());
+                const rev = wSales.reduce((s,a) => s + (Number(a.total)||0), 0);
+                const prof = wSales.reduce((s,a) => s + (Number(a.profit)||0), 0);
+                const s1 = ws.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
+                const s2 = we.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
+                sel.innerHTML += `<option value="${ws.getTime()}|${we.getTime()}" ${ws > now ? 'disabled' : ''}>Week ${wNum} (${s1}–${s2}) — Rev: ${rev.toFixed(0)} | Profit: ${prof.toFixed(0)}</option>`;
+                cursor.setDate(cursor.getDate() + 7); wNum++;
+            }
+        }
+
+        window.loadCrWeeklyDayProfit = async function() {
+            const sel = document.getElementById('cr-weekly-day-select');
+            const res = document.getElementById('cr-weekly-day-result');
+            if (!sel || !sel.value) { if (res) res.classList.add('hidden'); return; }
+            const [s, e] = sel.value.split('|').map(Number);
+            const allSales = await db.sales.toArray();
+            const sales = allSales.filter(a => a.status !== 'Canceled' && a.date >= s && a.date <= e && (!_crCashier || (a.cashierName && a.cashierName.toLowerCase().includes(_crCashier.toLowerCase()))));
+            const ruwan = sales.filter(a => a.shop === 'ruwancell' || !a.shop);
+            const tharu = sales.filter(a => a.shop === 'tharusalon');
+            document.getElementById('cr-wdr-ruwan-rev').textContent = 'LKR ' + ruwan.reduce((x,a) => x + (Number(a.total)||0), 0).toFixed(2);
+            document.getElementById('cr-wdr-ruwan-prof').textContent = 'LKR ' + ruwan.reduce((x,a) => x + (Number(a.profit)||0), 0).toFixed(2);
+            document.getElementById('cr-wdr-tharu-rev').textContent = 'LKR ' + tharu.reduce((x,a) => x + (Number(a.total)||0), 0).toFixed(2);
+            document.getElementById('cr-wdr-tharu-prof').textContent = 'LKR ' + tharu.reduce((x,a) => x + (Number(a.profit)||0), 0).toFixed(2);
+            if (res) res.classList.remove('hidden');
+        };
+
+        window.loadCrMonthlyWeekProfit = async function() {
+            const sel = document.getElementById('cr-monthly-week-select');
+            const res = document.getElementById('cr-monthly-week-result');
+            if (!sel || !sel.value) { if (res) res.classList.add('hidden'); return; }
+            const [s, e] = sel.value.split('|').map(Number);
+            const allSales = await db.sales.toArray();
+            const sales = allSales.filter(a => a.status !== 'Canceled' && a.date >= s && a.date <= e && (!_crCashier || (a.cashierName && a.cashierName.toLowerCase().includes(_crCashier.toLowerCase()))));
+            const ruwan = sales.filter(a => a.shop === 'ruwancell' || !a.shop);
+            const tharu = sales.filter(a => a.shop === 'tharusalon');
+            document.getElementById('cr-mwr-ruwan-rev').textContent = 'LKR ' + ruwan.reduce((x,a) => x + (Number(a.total)||0), 0).toFixed(2);
+            document.getElementById('cr-mwr-ruwan-prof').textContent = 'LKR ' + ruwan.reduce((x,a) => x + (Number(a.profit)||0), 0).toFixed(2);
+            document.getElementById('cr-mwr-tharu-rev').textContent = 'LKR ' + tharu.reduce((x,a) => x + (Number(a.total)||0), 0).toFixed(2);
+            document.getElementById('cr-mwr-tharu-prof').textContent = 'LKR ' + tharu.reduce((x,a) => x + (Number(a.profit)||0), 0).toFixed(2);
+            if (res) res.classList.remove('hidden');
+        };
+
         init();
         startCloudAutoDownload();
     </script>
@@ -4032,6 +4353,138 @@
             </div>
             <div class="p-4 border-t border-slate-700 text-center">
                 <button onclick="document.getElementById('bill-action-modal').classList.add('hidden')" class="text-slate-400 hover:text-white font-bold text-sm transition-colors">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ CASHIER REPORTS MODAL ═══ -->
+    <div id="cashier-reports-modal" class="hidden fixed inset-0 bg-slate-950 bg-opacity-95 z-[250] flex items-center justify-center backdrop-blur-sm p-3">
+        <div class="bg-slate-900 rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.9)] border border-purple-500/40 w-full max-w-2xl flex flex-col max-h-[94vh]">
+
+            <!-- Header -->
+            <div class="flex justify-between items-center p-5 border-b border-slate-700 bg-slate-800 rounded-t-2xl">
+                <h3 class="text-white font-black text-xl tracking-wide uppercase flex items-center gap-2">
+                    <span class="text-purple-400">📊</span> Cashier Reports
+                </h3>
+                <button onclick="document.getElementById('cashier-reports-modal').classList.add('hidden')" class="text-slate-400 hover:text-white font-black text-2xl transition-colors">&times;</button>
+            </div>
+
+            <!-- Cashier Selector -->
+            <div class="px-5 pt-4 pb-3 bg-slate-800/60 border-b border-slate-700">
+                <label class="text-[10px] font-black text-purple-400 uppercase tracking-widest block mb-2">🧑‍💼 Select Cashier</label>
+                <select id="cr-cashier-select" onchange="onCrCashierChange()" class="w-full p-3 bg-slate-900 border-2 border-purple-500/50 text-white rounded-xl font-bold focus:border-purple-400 outline-none text-sm glow-focus">
+                    <option value="">— All Cashiers —</option>
+                </select>
+            </div>
+
+            <!-- Period Filters -->
+            <div class="px-5 pt-4 pb-3 bg-slate-800/40 border-b border-slate-700">
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">📅 Report Period</label>
+                <div class="bg-slate-900 p-1.5 rounded-xl border border-slate-700 flex gap-2">
+                    <button onclick="setCashierReportFilter('day')" id="cr-filter-day" class="flex-1 bg-purple-600 text-white py-2.5 rounded-lg text-xs font-black uppercase shadow-sm transition-colors tracking-wider">Daily</button>
+                    <button onclick="setCashierReportFilter('week')" id="cr-filter-week" class="flex-1 bg-transparent hover:bg-slate-800 text-slate-400 py-2.5 rounded-lg text-xs font-black uppercase transition-colors tracking-wider">Weekly</button>
+                    <button onclick="setCashierReportFilter('month')" id="cr-filter-month" class="flex-1 bg-transparent hover:bg-slate-800 text-slate-400 py-2.5 rounded-lg text-xs font-black uppercase transition-colors tracking-wider">Monthly</button>
+                </div>
+
+                <!-- Weekly Days Advanced Panel -->
+                <div id="cr-weekly-days-panel" class="hidden mt-3 bg-slate-900/80 border border-blue-500/30 rounded-xl p-3">
+                    <p class="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2">📅 Select Day of This Week</p>
+                    <select id="cr-weekly-day-select" onchange="loadCrWeeklyDayProfit()" class="w-full p-2.5 bg-slate-800 border border-slate-600 text-white rounded-lg font-bold focus:border-blue-500 outline-none text-xs mb-2">
+                        <option value="">— Select a Day —</option>
+                    </select>
+                    <div id="cr-weekly-day-result" class="hidden grid grid-cols-2 gap-2 mt-2">
+                        <div class="bg-slate-800 rounded-lg p-2.5 border border-blue-500/20 text-center">
+                            <p class="text-[9px] font-black text-blue-400 uppercase tracking-wider mb-1">📱 Ruwan Rev</p>
+                            <p id="cr-wdr-ruwan-rev" class="text-sm font-black text-white">LKR 0.00</p>
+                            <p id="cr-wdr-ruwan-prof" class="text-[10px] text-emerald-400 font-bold mt-0.5">Profit: LKR 0.00</p>
+                        </div>
+                        <div class="bg-slate-800 rounded-lg p-2.5 border border-pink-500/20 text-center">
+                            <p class="text-[9px] font-black text-pink-400 uppercase tracking-wider mb-1">💇 Tharu Rev</p>
+                            <p id="cr-wdr-tharu-rev" class="text-sm font-black text-white">LKR 0.00</p>
+                            <p id="cr-wdr-tharu-prof" class="text-[10px] text-emerald-400 font-bold mt-0.5">Profit: LKR 0.00</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Monthly Weeks Advanced Panel -->
+                <div id="cr-monthly-weeks-panel" class="hidden mt-3 bg-slate-900/80 border border-purple-500/30 rounded-xl p-3">
+                    <p class="text-[10px] font-black text-purple-400 uppercase tracking-widest mb-2">📆 Select Week of This Month</p>
+                    <select id="cr-monthly-week-select" onchange="loadCrMonthlyWeekProfit()" class="w-full p-2.5 bg-slate-800 border border-slate-600 text-white rounded-lg font-bold focus:border-purple-500 outline-none text-xs mb-2">
+                        <option value="">— Select a Week —</option>
+                    </select>
+                    <div id="cr-monthly-week-result" class="hidden grid grid-cols-2 gap-2 mt-2">
+                        <div class="bg-slate-800 rounded-lg p-2.5 border border-blue-500/20 text-center">
+                            <p class="text-[9px] font-black text-blue-400 uppercase tracking-wider mb-1">📱 Ruwan Rev</p>
+                            <p id="cr-mwr-ruwan-rev" class="text-sm font-black text-white">LKR 0.00</p>
+                            <p id="cr-mwr-ruwan-prof" class="text-[10px] text-emerald-400 font-bold mt-0.5">Profit: LKR 0.00</p>
+                        </div>
+                        <div class="bg-slate-800 rounded-lg p-2.5 border border-pink-500/20 text-center">
+                            <p class="text-[9px] font-black text-pink-400 uppercase tracking-wider mb-1">💇 Tharu Rev</p>
+                            <p id="cr-mwr-tharu-rev" class="text-sm font-black text-white">LKR 0.00</p>
+                            <p id="cr-mwr-tharu-prof" class="text-[10px] text-emerald-400 font-bold mt-0.5">Profit: LKR 0.00</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats: Ruwan & Tharu -->
+            <div class="overflow-y-auto flex-1 p-5 space-y-5">
+                <!-- Ruwan Cellular Section -->
+                <div>
+                    <div class="flex items-center gap-2 mb-3">
+                        <div class="flex-1 h-px bg-blue-500/40"></div>
+                        <span class="text-blue-400 font-black text-xs uppercase tracking-widest px-3 bg-slate-800 border border-blue-500/40 rounded-full py-1.5 shadow">📱 RUWAN CELLULAR</span>
+                        <div class="flex-1 h-px bg-blue-500/40"></div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-3 mb-3">
+                        <div class="bg-slate-800 rounded-xl p-3 border border-blue-500/25 text-center">
+                            <p class="text-[9px] font-black text-blue-400 uppercase tracking-wider mb-1">Revenue</p>
+                            <p id="cr-ruwan-rev" class="text-base font-black text-white">LKR 0.00</p>
+                        </div>
+                        <div class="bg-slate-800 rounded-xl p-3 border border-emerald-500/25 text-center">
+                            <p class="text-[9px] font-black text-emerald-400 uppercase tracking-wider mb-1">Profit</p>
+                            <p id="cr-ruwan-prof" class="text-base font-black text-white">LKR 0.00</p>
+                        </div>
+                        <div class="bg-slate-800 rounded-xl p-3 border border-slate-600 text-center">
+                            <p class="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-1">Bills</p>
+                            <p id="cr-ruwan-count" class="text-base font-black text-white">0</p>
+                        </div>
+                    </div>
+                    <div id="cr-ruwan-bills" class="space-y-1 max-h-52 overflow-y-auto pr-1">
+                        <p style="font-size:12px;color:#475569;text-align:center;padding:12px;font-style:italic;">No bills found.</p>
+                    </div>
+                </div>
+
+                <!-- Tharu Salon Section -->
+                <div>
+                    <div class="flex items-center gap-2 mb-3">
+                        <div class="flex-1 h-px bg-pink-500/40"></div>
+                        <span class="text-pink-400 font-black text-xs uppercase tracking-widest px-3 bg-slate-800 border border-pink-500/40 rounded-full py-1.5 shadow">💇 SALON THARU</span>
+                        <div class="flex-1 h-px bg-pink-500/40"></div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-3 mb-3">
+                        <div class="bg-slate-800 rounded-xl p-3 border border-pink-500/25 text-center">
+                            <p class="text-[9px] font-black text-pink-400 uppercase tracking-wider mb-1">Revenue</p>
+                            <p id="cr-tharu-rev" class="text-base font-black text-white">LKR 0.00</p>
+                        </div>
+                        <div class="bg-slate-800 rounded-xl p-3 border border-emerald-500/25 text-center">
+                            <p class="text-[9px] font-black text-emerald-400 uppercase tracking-wider mb-1">Profit</p>
+                            <p id="cr-tharu-prof" class="text-base font-black text-white">LKR 0.00</p>
+                        </div>
+                        <div class="bg-slate-800 rounded-xl p-3 border border-slate-600 text-center">
+                            <p class="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-1">Bills</p>
+                            <p id="cr-tharu-count" class="text-base font-black text-white">0</p>
+                        </div>
+                    </div>
+                    <div id="cr-tharu-bills" class="space-y-1 max-h-52 overflow-y-auto pr-1">
+                        <p style="font-size:12px;color:#475569;text-align:center;padding:12px;font-style:italic;">No bills found.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="p-4 border-t border-slate-700 text-right bg-slate-800 rounded-b-2xl">
+                <button onclick="document.getElementById('cashier-reports-modal').classList.add('hidden')" class="bg-slate-700 hover:bg-slate-600 text-white px-6 py-2.5 rounded-lg font-bold transition-colors border border-slate-500">Close</button>
             </div>
         </div>
     </div>
