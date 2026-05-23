@@ -104,11 +104,21 @@
         /* Smart Glowing Inputs & Buttons */
         .glass-panel { background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
         .glow-focus:focus { box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); border-color: #3b82f6; outline: none; }
+
+        /* Add-Item barcode scanner overlay */
+        #add-item-scanner-container { display:none; position:fixed; inset:0; background:#000; z-index:110; flex-direction:column; }
+        #add-item-scanner-container.active { display:flex; }
     </style>
 </head>
 <body class="bg-slate-900 text-gray-200 pb-24 font-sans selection:bg-blue-500 selection:text-white">
 
     <div id="temp-print-wrap"></div>
+
+    <!-- Add-Item Barcode Scanner Overlay -->
+    <div id="add-item-scanner-container">
+        <div id="add-item-reader" style="flex:1;background:#000;"></div>
+        <button onclick="stopAddItemScanner()" class="bg-red-600 text-white w-full py-6 font-bold text-lg tracking-widest uppercase">Close Scanner</button>
+    </div>
 
     <div id="password-modal" class="hidden fixed inset-0 bg-slate-950 bg-opacity-90 z-[200] flex items-center justify-center backdrop-blur-sm transition-opacity">
         <div class="bg-slate-800 p-8 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.8)] border border-slate-600 w-80 transform transition-all scale-100">
@@ -122,19 +132,88 @@
     </div>
 
     <div id="item-select-modal" class="hidden fixed inset-0 bg-slate-950 bg-opacity-90 z-[200] flex items-center justify-center backdrop-blur-sm transition-opacity p-4">
-        <div class="bg-slate-800 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.8)] border border-slate-600 w-full max-w-3xl flex flex-col max-h-[85vh]">
-            <div class="flex justify-between items-center p-5 border-b border-slate-700">
+        <div class="bg-slate-800 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.8)] border border-slate-600 w-full max-w-3xl flex flex-col max-h-[90vh]">
+            <div class="flex justify-between items-center p-5 border-b border-slate-700 flex-shrink-0">
                 <h3 class="text-white font-black text-xl tracking-wide uppercase flex items-center gap-2"><span>📋</span> Select Item / Service</h3>
                 <button onclick="closeItemSelectModal()" class="text-slate-400 hover:text-white font-black text-2xl transition-colors">&times;</button>
             </div>
-            <div class="p-4 border-b border-slate-700 bg-slate-900/50">
+            <div class="p-4 border-b border-slate-700 bg-slate-900/50 flex-shrink-0">
                 <div class="relative group">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><span class="text-slate-500">🔍</span></div>
-                    <input type="text" id="modal-item-search" oninput="filterModalItems(this.value)" placeholder="Search by name or code..." class="w-full pl-10 p-3 bg-slate-800 border-2 border-slate-600 text-white rounded-xl shadow-inner focus:border-blue-500 glow-focus outline-none font-bold transition-colors">
+                    <input type="text" id="modal-item-search" oninput="filterModalItems(this.value)" placeholder="Search items... (type new name to add)" class="w-full pl-10 p-3 bg-slate-800 border-2 border-slate-600 text-white rounded-xl shadow-inner focus:border-blue-500 glow-focus outline-none font-bold transition-colors">
                 </div>
             </div>
-            <div id="modal-item-list" class="p-4 overflow-y-auto flex-1 custom-scrollbar grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            <div id="modal-item-list" class="p-4 overflow-y-auto custom-scrollbar grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3" style="flex:1;min-height:0;">
+            </div>
+
+            <!-- QUICK ADD NEW ITEM PANEL: shown when typed name not found in stock -->
+            <div id="quick-add-item-panel" class="hidden border-t-2 border-yellow-500/40 bg-slate-900/80 overflow-y-auto flex-shrink-0" style="max-height:56vh;">
+                <div class="p-4">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="text-yellow-400 text-base">✨</span>
+                        <h4 class="text-yellow-300 font-black text-sm uppercase tracking-wider">Item Not in Stock — Add New Product</h4>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Assign to Shop</label>
+                                <select id="qi-shop" class="w-full p-2.5 bg-slate-800 border border-slate-600 text-white rounded-lg font-bold shadow-inner focus:border-blue-500 outline-none mt-1 text-sm">
+                                    <option value="ruwancell">📱 Ruwan Cellular</option>
+                                    <option value="tharusalon">💇‍♀️ Salon Tharu</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Product Code</label>
+                                <div class="flex gap-2 mt-1">
+                                    <input type="text" id="qi-code" placeholder="e.g. RC-001 (auto if blank)" class="flex-1 p-2.5 bg-slate-800 border border-slate-600 text-white rounded-lg font-bold shadow-inner focus:border-blue-500 glow-focus outline-none font-mono text-sm">
+                                    <button type="button" onclick="startQiCodeScanner()" title="Scan Barcode" class="bg-cyan-700 hover:bg-cyan-600 text-white px-3 rounded-lg border border-cyan-500 font-bold text-lg transition-colors shadow flex items-center justify-center">📷</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Product Name</label>
+                            <input type="text" id="qi-name" placeholder="Product name" class="w-full p-2.5 bg-slate-800 border border-yellow-500/50 text-white rounded-lg font-bold shadow-inner focus:border-yellow-400 glow-focus outline-none mt-1 uppercase text-sm">
+                        </div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div>
+                                <label class="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Cost Price</label>
+                                <input type="number" id="qi-cost" inputmode="decimal" placeholder="0.00" class="w-full p-2.5 bg-slate-800 border border-slate-600 text-emerald-400 font-black rounded-lg shadow-inner focus:border-emerald-500 glow-focus outline-none mt-1 text-sm">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-blue-400 uppercase tracking-wider">Retail Price</label>
+                                <input type="number" id="qi-price" inputmode="decimal" placeholder="0.00" class="w-full p-2.5 bg-slate-800 border border-blue-500/50 text-blue-300 font-black rounded-lg shadow-inner focus:border-blue-400 glow-focus outline-none mt-1 text-sm">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-purple-400 uppercase tracking-wider">Wholesale</label>
+                                <input type="number" id="qi-wholesale" inputmode="decimal" placeholder="0.00" class="w-full p-2.5 bg-slate-800 border border-slate-600 text-purple-400 font-black rounded-lg shadow-inner focus:border-purple-500 glow-focus outline-none mt-1 text-sm">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div>
+                                <label class="text-[10px] font-bold text-red-400 uppercase tracking-wider">Discount/Unit</label>
+                                <input type="number" id="qi-discount" inputmode="decimal" placeholder="0.00" class="w-full p-2.5 bg-slate-800 border border-slate-600 text-red-400 font-bold rounded-lg shadow-inner focus:border-red-500 glow-focus outline-none mt-1 text-sm">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-slate-300 uppercase tracking-wider">Stock Qty</label>
+                                <input type="number" id="qi-stock" inputmode="decimal" placeholder="0" class="w-full p-2.5 bg-slate-800 border border-slate-600 text-white font-bold rounded-lg shadow-inner focus:border-blue-500 glow-focus outline-none mt-1 text-sm">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-yellow-400 uppercase tracking-wider">Low Alert Qty</label>
+                                <input type="number" id="qi-low-stock" inputmode="decimal" placeholder="5" class="w-full p-2.5 bg-slate-800 border border-slate-600 text-yellow-400 font-bold rounded-lg shadow-inner focus:border-yellow-500 glow-focus outline-none mt-1 text-sm">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold text-orange-400 uppercase tracking-wider">🛡️ Supplier Warranty Expiry (Optional)</label>
+                            <input type="date" id="qi-warranty" class="w-full p-2.5 bg-slate-800 border border-slate-600 text-orange-300 font-mono rounded-lg shadow-inner focus:border-orange-500 glow-focus outline-none mt-1 text-sm">
+                        </div>
+                        <div class="flex gap-2 pt-1">
+                            <button onclick="saveQuickNewItemToStock(false)" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white py-3 rounded-xl font-black text-xs uppercase tracking-wider border border-slate-500 shadow transition-all">💾 Save to Stock Only</button>
+                            <button onclick="saveQuickNewItemToStock(true)" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl font-black text-xs uppercase tracking-wider shadow-[0_0_15px_rgba(37,99,235,0.4)] border border-blue-500 transition-all">💾 Save &amp; Add to Bill</button>
+                        </div>
+                    </div>
                 </div>
+            </div>
+
         </div>
     </div>
 
@@ -194,6 +273,7 @@
             <button onclick="showTab('printer'); toggleSidebar()" id="nav-printer" class="text-left py-3 px-4 rounded-lg hover:bg-slate-800 text-slate-200 transition-colors">🖨️ PRINTER SETUP</button>
             <button onclick="showTab('cloud'); toggleSidebar()" id="nav-cloud" class="text-left py-3 px-4 rounded-lg hover:bg-slate-800 text-emerald-400 transition-colors">☁️ CLOUD SERVICE</button>
             <button onclick="showTab('warranty'); toggleSidebar()" id="nav-warranty" class="text-left py-3 px-4 rounded-lg hover:bg-slate-800 text-orange-400 transition-colors">🛡️ WARRANTY CHECK</button>
+            <button onclick="showTab('barcode-gen'); toggleSidebar()" id="nav-barcode-gen" class="text-left py-3 px-4 rounded-lg hover:bg-slate-800 text-cyan-400 transition-colors">🏷️ BARCODE GEN</button>
         </div>
     </nav>
 
@@ -258,12 +338,6 @@
                             <h5 class="font-bold text-sm text-slate-300 mb-3 uppercase tracking-wider">📊 View Bills by Cashier</h5>
                             <p class="text-xs text-slate-500 mb-3">Click any cashier name above, or search all cashiers below:</p>
                             <button onclick="openCashierBillsSearch()" class="w-full bg-yellow-600 hover:bg-yellow-500 text-slate-900 font-black py-3 rounded-xl uppercase tracking-wider border border-yellow-400 shadow transition-all text-sm">📋 Browse All Cashier Bills</button>
-                        </div>
-
-                        <div class="mt-6 pt-6 border-t border-slate-700 relative z-10">
-                            <h5 class="font-bold text-sm text-slate-300 mb-3 uppercase tracking-wider">📊 Cashier Sales Reports</h5>
-                            <p class="text-xs text-slate-500 mb-3">Full daily / weekly / monthly profit reports per cashier — split by Ruwan &amp; Tharu.</p>
-                            <button onclick="openCashierReports()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-black py-3 rounded-xl uppercase tracking-wider border border-purple-400 shadow-[0_0_12px_rgba(147,51,234,0.4)] transition-all text-sm">📊 Cashier Reports</button>
                         </div>
 
                         <div class="mt-6 pt-6 border-t border-slate-700 relative z-10">
@@ -415,6 +489,71 @@
             </div>
         </div>
 
+        <!-- ===================== BARCODE GENERATOR TAB ===================== -->
+        <div id="tab-barcode-gen" class="tab-content">
+            <div class="glass-panel p-6 rounded-2xl shadow-2xl border border-slate-700">
+                <h2 class="font-black text-2xl text-cyan-400 mb-6 border-b border-slate-700 pb-4 tracking-wide uppercase">🏷️ Barcode Generator</h2>
+                <div class="space-y-5">
+                    <!-- Item name display -->
+                    <div>
+                        <label class="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1">Item Name</label>
+                        <input type="text" id="barcode-item-name" placeholder="Select a merch item or type label..." class="w-full p-3 bg-slate-900 border border-slate-600 text-white rounded-lg font-bold shadow-inner focus:border-cyan-500 glow-focus outline-none mt-1 uppercase">
+                    </div>
+                    <!-- Barcode number field + pick from inventory -->
+                    <div>
+                        <label class="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1">Barcode Number</label>
+                        <div class="flex gap-2 mt-1">
+                            <input type="text" id="barcode-number-input" placeholder="e.g. RC-001 or scan code" class="flex-1 p-3 bg-slate-900 border border-slate-600 text-white rounded-lg font-bold shadow-inner focus:border-cyan-500 glow-focus outline-none font-mono">
+                            <button type="button" onclick="openBarcodeItemPicker()" class="bg-cyan-700 hover:bg-cyan-600 text-white px-4 py-3 rounded-lg border border-cyan-500 font-bold text-sm transition-colors shadow uppercase tracking-wide whitespace-nowrap">📦 Add Merch Item</button>
+                        </div>
+                    </div>
+                    <!-- Pricing fields for saving to inventory -->
+                    <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-700 space-y-3">
+                        <p class="text-[10px] font-bold text-cyan-400 uppercase tracking-widest">Optional: Save New Item to Inventory</p>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div>
+                                <label class="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block mb-1">Cost Price</label>
+                                <input type="number" id="barcode-cost" inputmode="decimal" placeholder="0.00" class="w-full p-2.5 bg-slate-800 border border-slate-600 text-emerald-400 font-bold rounded-lg shadow-inner focus:border-emerald-500 glow-focus outline-none text-sm">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-blue-400 uppercase tracking-wider block mb-1">Retail Price</label>
+                                <input type="number" id="barcode-retail" inputmode="decimal" placeholder="0.00" class="w-full p-2.5 bg-slate-800 border border-slate-600 text-blue-400 font-bold rounded-lg shadow-inner focus:border-blue-500 glow-focus outline-none text-sm">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-purple-400 uppercase tracking-wider block mb-1">Wholesale Price</label>
+                                <input type="number" id="barcode-wholesale" inputmode="decimal" placeholder="0.00" class="w-full p-2.5 bg-slate-800 border border-slate-600 text-purple-400 font-bold rounded-lg shadow-inner focus:border-purple-500 glow-focus outline-none text-sm">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="text-[10px] font-bold text-red-400 uppercase tracking-wider block mb-1">Discount/Unit</label>
+                                <input type="number" id="barcode-discount" inputmode="decimal" placeholder="0.00" class="w-full p-2.5 bg-slate-800 border border-slate-600 text-red-400 font-bold rounded-lg shadow-inner focus:border-red-500 glow-focus outline-none text-sm">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold text-white uppercase tracking-wider block mb-1">Initial Stock</label>
+                                <input type="number" id="barcode-stock" inputmode="decimal" placeholder="0" class="w-full p-2.5 bg-slate-800 border border-slate-600 text-white font-bold rounded-lg shadow-inner focus:border-blue-500 glow-focus outline-none text-sm">
+                            </div>
+                        </div>
+                        <button onclick="saveBarcodeItemToInventory()" class="w-full bg-emerald-700 hover:bg-emerald-600 text-white py-3 rounded-lg font-black text-sm uppercase tracking-widest border border-emerald-500 shadow transition-all">💾 Save New Item to Inventory</button>
+                    </div>
+                    <!-- Quantity -->
+                    <div>
+                        <label class="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1">Quantity (copies to print)</label>
+                        <input type="number" id="barcode-qty" value="1" min="1" max="100" class="w-full p-3 bg-slate-900 border border-slate-600 text-white rounded-lg font-bold shadow-inner focus:border-cyan-500 glow-focus outline-none mt-1">
+                    </div>
+                    <!-- Generate preview -->
+                    <button onclick="renderBarcodePreview()" class="w-full bg-cyan-700 hover:bg-cyan-600 text-white py-4 rounded-xl font-black shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all uppercase tracking-widest text-base border border-cyan-500">🔄 Generate Preview</button>
+                    <!-- Preview area -->
+                    <div id="barcode-preview-area" class="flex flex-wrap gap-3 justify-center mt-4 p-4 bg-slate-900/50 rounded-xl border border-slate-700 min-h-[80px]">
+                        <p class="text-slate-500 text-sm font-bold tracking-wider self-center">Enter a barcode number and click Generate Preview.</p>
+                    </div>
+                    <!-- Print button -->
+                    <button onclick="printBarcodeLabels()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-xl font-black shadow-[0_0_15px_rgba(37,99,235,0.4)] transition-all uppercase tracking-widest text-base border border-blue-500 mt-2">🖨️ Print Barcode Labels</button>
+                </div>
+            </div>
+        </div>
+        <!-- ================================================================ -->
+
         <div id="tab-serial" class="tab-content">
             <div class="glass-panel p-6 rounded-2xl shadow-2xl border border-slate-700">
                 <h2 class="font-black mb-6 text-white text-2xl tracking-wide uppercase border-b border-slate-700 pb-4">📱 Repair / Serial Record</h2>
@@ -460,9 +599,20 @@
                             <img id="serial-camera-preview" class="hidden w-full rounded-lg border border-emerald-500/50 mt-1" style="max-height:160px;object-fit:contain;" alt="Captured Photo">
                         </div>
                     </div>
-                    <div class="pt-6">
-                        <button onclick="printSerialRecord()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-xl font-black shadow-[0_0_15px_rgba(37,99,235,0.4)] transition-all uppercase tracking-widest text-lg border border-blue-500">🖨️ Print Repair Slip</button>
+                    <div class="pt-6 flex flex-col gap-3">
+                        <button onclick="printSerialRecord()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-xl font-black shadow-[0_0_15px_rgba(37,99,235,0.4)] transition-all uppercase tracking-widest text-lg border border-blue-500">🖨️ Print & Save Repair Slip</button>
                     </div>
+                </div>
+            </div>
+
+            <!-- Serial Bills History Search -->
+            <div class="glass-panel p-5 rounded-2xl shadow-2xl border border-slate-700 mt-6">
+                <h3 class="text-sm font-black text-slate-400 uppercase tracking-widest mb-4 border-b border-slate-700 pb-2 flex items-center gap-2">📋 Past Repair Slips <span class="text-[10px] font-normal text-slate-500">(saved locally)</span></h3>
+                <div class="relative mb-4">
+                    <input type="text" id="serial-history-search" oninput="renderSerialHistory()" placeholder="Search by name, phone, or item..." class="w-full pl-4 p-3 bg-slate-800 border border-slate-600 text-white rounded-xl shadow-inner outline-none focus:border-blue-500 glow-focus placeholder-slate-500 font-bold">
+                </div>
+                <div id="serial-history-list" class="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                    <p class="text-slate-500 text-sm text-center italic py-4">No saved repair slips yet.</p>
                 </div>
             </div>
         </div>
@@ -541,11 +691,25 @@
                     </div>
                 
                 <div class="border-t-2 border-slate-600 pt-4 mt-2 relative z-10">
-                    <div class="flex justify-between items-end mb-6">
+                    <div class="flex justify-between items-end mb-4">
                         <span class="text-sm font-black text-slate-400 uppercase tracking-widest">Net Total</span>
                         <div class="text-right">
                             <span class="text-xs font-bold text-slate-500 mr-1">LKR</span>
                             <span id="cart-total" class="text-4xl md:text-5xl font-black text-white drop-shadow-md">0.00</span>
+                        </div>
+                    </div>
+                    <!-- Inline gave price input (replaces prompt dialog) -->
+                    <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-600 mb-4">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Amount Paid (Gave Price)</label>
+                        <div class="flex gap-3 items-center">
+                            <div class="relative flex-1">
+                                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-emerald-400 font-bold text-sm pointer-events-none">Rs</span>
+                                <input type="number" id="bill-gave-price" inputmode="decimal" placeholder="Enter amount received..." oninput="updateBillBalance()" class="w-full pl-10 p-3 bg-slate-800 border border-emerald-500/50 text-emerald-300 rounded-lg font-black shadow-inner focus:border-emerald-400 glow-focus outline-none text-lg">
+                            </div>
+                            <div id="bill-balance-display" class="hidden text-right min-w-[110px]">
+                                <span class="text-[10px] text-slate-400 font-bold uppercase block">Balance</span>
+                                <span id="bill-balance-amount" class="text-xl font-black text-yellow-300">0.00</span>
+                            </div>
                         </div>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -619,11 +783,17 @@
                 <button onclick="setInventoryShop('tharusalon')" id="inv-shop-tharu" class="flex-1 rounded-xl bg-slate-800 text-slate-400 text-sm font-black py-3 uppercase border border-slate-600 hover:bg-slate-700 hover:text-white transition-all tracking-wider">Salon Tharu</button>
             </div>
 
-            <div class="relative mb-6 group">
+            <div class="relative mb-4 group">
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <span class="text-slate-500">🔍</span>
                 </div>
                 <input type="text" id="inventory-search-input" oninput="renderInventory()" placeholder="Search Inventory by Name or Code..." class="w-full pl-10 p-4 bg-slate-800 border-2 border-slate-600 text-white rounded-xl shadow-inner outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 glow-focus transition-colors placeholder-slate-500 font-bold">
+            </div>
+
+            <div class="flex gap-2 mb-6">
+                <button onclick="setInvStockFilter('all')" id="inv-filter-all" class="flex-1 bg-slate-600 text-white py-2 rounded-lg text-xs font-black uppercase border border-slate-500 transition-colors">All Items</button>
+                <button onclick="setInvStockFilter('low')" id="inv-filter-low" class="flex-1 bg-transparent text-red-400 py-2 rounded-lg text-xs font-black uppercase border border-red-500/50 hover:bg-red-900/30 transition-colors">⚠️ Low Stock</button>
+                <button onclick="setInvStockFilter('in')" id="inv-filter-in" class="flex-1 bg-transparent text-emerald-400 py-2 rounded-lg text-xs font-black uppercase border border-emerald-500/50 hover:bg-emerald-900/30 transition-colors">✅ In Stock</button>
             </div>
 
             <div id="inventory-list" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5"></div>
@@ -645,7 +815,10 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1">Product Code</label>
-                            <input type="text" id="add-code" placeholder="e.g. RC-001" class="w-full p-3 bg-slate-900 border border-slate-600 text-white rounded-lg font-bold shadow-inner focus:border-blue-500 glow-focus outline-none mt-1 font-mono">
+                            <div class="flex gap-2 mt-1">
+                                <input type="text" id="add-code" placeholder="e.g. RC-001" class="flex-1 p-3 bg-slate-900 border border-slate-600 text-white rounded-lg font-bold shadow-inner focus:border-blue-500 glow-focus outline-none font-mono">
+                                <button type="button" onclick="startAddItemScanner()" title="Scan Barcode" class="bg-cyan-700 hover:bg-cyan-600 text-white px-3 rounded-lg border border-cyan-500 font-bold text-lg transition-colors shadow flex items-center justify-center">📷</button>
+                            </div>
                         </div>
                         <div>
                             <label class="text-xs font-bold text-slate-400 uppercase tracking-wider pl-1">Product Name</label>
@@ -783,6 +956,14 @@
                     <button type="button" onclick="closeCpCamera()" class="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-200 py-3 rounded-lg text-sm font-bold uppercase tracking-wider">✕ Cancel</button>
                 </div>
             </div>
+
+            <!-- Customer Bill History -->
+            <div class="glass-panel p-5 rounded-2xl shadow-lg mb-6 border border-slate-700">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2"><span>📄</span> Bill History</h3>
+                <div id="cp-bill-history" class="space-y-3 max-h-[400px] overflow-y-auto pr-1 custom-scrollbar">
+                    <p class="text-slate-500 text-sm text-center italic py-4">No bills found for this customer.</p>
+                </div>
+            </div>
         </div>
 
         <div id="tab-history" class="tab-content">
@@ -815,11 +996,18 @@
                 </div>
             </div>
 
-            <div class="relative mb-6 group">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <span class="text-slate-500">🔍</span>
+            <div class="flex gap-2 mb-6">
+                <div class="relative flex-1 group">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <span class="text-slate-500">🔍</span>
+                    </div>
+                    <input type="text" id="history-search-input" oninput="renderFullHistory()" placeholder="Search Invoice No or Customer Name..." class="w-full pl-10 p-4 bg-slate-800 border-2 border-slate-600 text-white rounded-xl shadow-inner outline-none focus:border-blue-500 glow-focus transition-colors placeholder-slate-500 font-bold text-lg">
                 </div>
-                <input type="text" id="history-search-input" oninput="renderFullHistory()" placeholder="Search Invoice No or Customer Name..." class="w-full pl-10 p-4 bg-slate-800 border-2 border-slate-600 text-white rounded-xl shadow-inner outline-none focus:border-blue-500 glow-focus transition-colors placeholder-slate-500 font-bold text-lg">
+                <button onclick="startHistoryScanner()" title="Scan barcode to search" class="bg-cyan-700 hover:bg-cyan-600 text-white px-4 rounded-xl border border-cyan-500 font-bold text-xl transition-colors shadow flex items-center justify-center">📷</button>
+            </div>
+            <div id="history-scanner-container" class="hidden mb-4 p-3 bg-slate-900 border border-cyan-500/50 rounded-xl">
+                <div id="history-scanner-reader" style="width:100%;max-height:220px;overflow:hidden;border-radius:8px;"></div>
+                <button onclick="stopHistoryScanner()" class="mt-2 w-full bg-red-700 hover:bg-red-600 text-white py-2 rounded-lg text-xs font-bold uppercase">✕ Close Scanner</button>
             </div>
 
             <div id="full-history-list" class="space-y-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
@@ -835,47 +1023,26 @@
                     <button onclick="setReportShop('tharusalon')" id="rep-shop-tharu" class="flex-1 rounded-xl bg-slate-800 text-slate-400 text-sm font-black py-3 uppercase border border-slate-600 hover:bg-slate-700 hover:text-white transition-all tracking-wider">Salon Tharu</button>
                 </div>
 
-                <div class="bg-slate-900 p-1.5 rounded-xl border border-slate-700 flex gap-2 mb-4">
+                <div class="bg-slate-900 p-1.5 rounded-xl border border-slate-700 flex gap-2 mb-3">
                     <button onclick="setReportFilter('day')" id="filter-day" class="flex-1 bg-blue-600 text-white py-2.5 rounded-lg text-xs font-black uppercase shadow-sm transition-colors tracking-wider">Daily</button>
                     <button onclick="setReportFilter('week')" id="filter-week" class="flex-1 bg-transparent hover:bg-slate-800 text-slate-400 py-2.5 rounded-lg text-xs font-black uppercase transition-colors tracking-wider">Weekly</button>
                     <button onclick="setReportFilter('month')" id="filter-month" class="flex-1 bg-transparent hover:bg-slate-800 text-slate-400 py-2.5 rounded-lg text-xs font-black uppercase transition-colors tracking-wider">Monthly</button>
+                    <button onclick="setReportFilter('custom')" id="filter-custom" class="flex-1 bg-transparent hover:bg-slate-800 text-slate-400 py-2.5 rounded-lg text-xs font-black uppercase transition-colors tracking-wider">Custom</button>
                 </div>
-
-                <!-- Advanced Weekly Breakdown Panel -->
-                <div id="weekly-days-panel" class="hidden mb-5 bg-slate-900/60 border border-blue-500/30 rounded-xl p-4">
-                    <p class="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-3 flex items-center gap-2">📅 Advanced: Weekly Breakdown by Day</p>
-                    <select id="weekly-day-select" onchange="loadWeeklyDayProfit()" class="w-full p-3 bg-slate-800 border border-slate-600 text-white rounded-xl font-bold focus:border-blue-500 outline-none glow-focus text-sm mb-3">
-                        <option value="">— Select a Day to View Profit —</option>
-                    </select>
-                    <div id="weekly-day-result" class="hidden grid grid-cols-2 gap-3">
-                        <div class="bg-slate-800 rounded-lg p-3 border border-blue-500/30 text-center">
-                            <p class="text-[10px] font-black text-blue-400 uppercase tracking-wider mb-1">Revenue</p>
-                            <p id="wdr-revenue" class="text-lg font-black text-white">LKR 0.00</p>
-                        </div>
-                        <div class="bg-slate-800 rounded-lg p-3 border border-emerald-500/30 text-center">
-                            <p class="text-[10px] font-black text-emerald-400 uppercase tracking-wider mb-1">Profit</p>
-                            <p id="wdr-profit" class="text-lg font-black text-white">LKR 0.00</p>
-                        </div>
+                <div id="report-custom-range" class="hidden flex-col md:flex-row gap-3 mb-6 bg-slate-900/50 p-3 rounded-xl border border-slate-700">
+                    <div class="flex-1">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">From Date</label>
+                        <input type="date" id="report-custom-start" class="w-full p-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm outline-none focus:border-blue-500">
+                    </div>
+                    <div class="flex-1">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">To Date</label>
+                        <input type="date" id="report-custom-end" class="w-full p-2 bg-slate-800 border border-slate-600 rounded-lg text-white text-sm outline-none focus:border-blue-500">
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="calculateReports()" class="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded-lg font-bold shadow transition-colors h-[38px] text-sm">Apply</button>
                     </div>
                 </div>
-
-                <!-- Advanced Monthly Breakdown Panel -->
-                <div id="monthly-weeks-panel" class="hidden mb-5 bg-slate-900/60 border border-purple-500/30 rounded-xl p-4">
-                    <p class="text-[10px] font-black text-purple-400 uppercase tracking-widest mb-3 flex items-center gap-2">📆 Advanced: Monthly Breakdown by Week</p>
-                    <select id="monthly-week-select" onchange="loadMonthlyWeekProfit()" class="w-full p-3 bg-slate-800 border border-slate-600 text-white rounded-xl font-bold focus:border-purple-500 outline-none glow-focus text-sm mb-3">
-                        <option value="">— Select a Week to View Profit —</option>
-                    </select>
-                    <div id="monthly-week-result" class="hidden grid grid-cols-2 gap-3">
-                        <div class="bg-slate-800 rounded-lg p-3 border border-blue-500/30 text-center">
-                            <p class="text-[10px] font-black text-blue-400 uppercase tracking-wider mb-1">Revenue</p>
-                            <p id="mwr-revenue" class="text-lg font-black text-white">LKR 0.00</p>
-                        </div>
-                        <div class="bg-slate-800 rounded-lg p-3 border border-emerald-500/30 text-center">
-                            <p class="text-[10px] font-black text-emerald-400 uppercase tracking-wider mb-1">Profit</p>
-                            <p id="mwr-profit" class="text-lg font-black text-white">LKR 0.00</p>
-                        </div>
-                    </div>
-                </div>
+                <div class="mb-5"></div>
                 
                 <div class="grid grid-cols-2 gap-4 mb-8">
                     <div onclick="showProfitModal()" class="cursor-pointer bg-gradient-to-br from-emerald-900/50 to-green-900/20 p-5 rounded-xl border border-emerald-500/30 shadow-lg relative overflow-hidden transition-transform hover:scale-105">
@@ -1622,7 +1789,7 @@
             const hasFullAccess = Date.now() < parseInt(localStorage.getItem('cashier_full_access_expiry') || '0');
             const isEffectivelyOwner = role === 'owner' || (role === 'cashier' && hasFullAccess);
 
-            const restrictedTabs = ['nav-inventory', 'nav-add-items', 'nav-customers', 'nav-history', 'nav-reports', 'nav-printer', 'nav-cloud', 'nav-warranty'];
+            const restrictedTabs = ['nav-inventory', 'nav-add-items', 'nav-reports', 'nav-printer', 'nav-cloud', 'nav-warranty'];
             restrictedTabs.forEach(id => {
                 const el = document.getElementById(id);
                 if(el) el.style.display = isEffectivelyOwner ? 'block' : 'none';
@@ -1631,7 +1798,7 @@
             // Restrict views
             if (role === 'cashier') {
                 const activeTab = document.querySelector('.tab-content.active')?.id;
-                const allowed = ['tab-billing', 'tab-serial', 'tab-profile', 'tab-warranty']; 
+                const allowed = ['tab-billing', 'tab-serial', 'tab-profile', 'tab-warranty', 'tab-customers', 'tab-history', 'tab-barcode-gen']; 
                 if (!isEffectivelyOwner && !allowed.includes(activeTab)) {
                     showTab('billing');
                 }
@@ -1830,10 +1997,9 @@
             const actualProfit = paymentMode === 'credit' ? 0 : (subtotal - totalCost);
             const customerSaved = (paymentMode === 'credit' ? 0 : cart.reduce((sum, i) => sum + (i.discount || 0), 0)) + extraDiscount;
             
-            // Native prompt for amount paid is safe to keep
-            const gavePriceInput = prompt("Amount Paid (Gave Price):", paymentMode === 'credit' ? 0 : subtotal);
-            if(gavePriceInput === null) return;
-            const gavePrice = parseFloat(gavePriceInput) || 0;
+            // Read gave price from inline input field (replaces prompt dialog)
+            const gavePriceInput = document.getElementById('bill-gave-price');
+            const gavePrice = gavePriceInput ? (parseFloat(gavePriceInput.value) || 0) : (paymentMode === 'credit' ? 0 : subtotal);
             const balance = gavePrice - subtotal;
             
             const salesData = await db.sales.toArray();
@@ -2094,16 +2260,50 @@
                 printWindow.focus();
             }
 
+            // Save this repair record to db.sales with type 'repair'
+            async function saveSerialToHistory(photoDataUrl) {
+                try {
+                    const now = new Date().getTime();
+                    const allSales = await db.sales.toArray();
+                    const lastSale = allSales.length > 0 ? allSales[allSales.length - 1] : null;
+                    const nextId = lastSale ? (lastSale.id + 1) : 1;
+                    const repairRecord = {
+                        invoiceNo: 'R-' + String(nextId).padStart(3, '0'),
+                        customer: owner || 'Unknown',
+                        total: parseFloat(advance) || 0,
+                        profit: 0,
+                        customerSaved: 0,
+                        gavePrice: parseFloat(advance) || 0,
+                        balance: 0,
+                        date: now,
+                        items: [{ name: item || 'Repair Item', qty: 1, price: parseFloat(advance) || 0, cost: 0, total: parseFloat(advance) || 0 }],
+                        type: 'repair',
+                        status: 'Completed',
+                        shop: currentBillShop || 'ruwancell',
+                        cashierName: currentRole === 'owner' ? 'Owner' : (localStorage.getItem('cashier_name') || 'Cashier'),
+                        note: note || '',
+                        serialPhone: phone || '',
+                        serialItem: item || '',
+                        serialTime: time || '',
+                        serialPhoto: photoDataUrl || null
+                    };
+                    await db.sales.add(repairRecord);
+                    if (window._silentUploadAllSales) window._silentUploadAllSales();
+                    setTimeout(() => renderSerialHistory(), 300);
+                } catch(_e) { /* silent */ }
+            }
+
             if (photoFile) {
                 const reader = new FileReader();
-                reader.onload = function(e) { buildAndPrint(e.target.result); };
+                reader.onload = function(e) { buildAndPrint(e.target.result); saveSerialToHistory(e.target.result); };
                 reader.readAsDataURL(photoFile);
             } else if (useCameraBlob) {
                 const reader = new FileReader();
-                reader.onload = function(e) { buildAndPrint(e.target.result); };
+                reader.onload = function(e) { buildAndPrint(e.target.result); saveSerialToHistory(e.target.result); };
                 reader.readAsDataURL(_serialCapturedBlob);
             } else {
                 buildAndPrint(null);
+                saveSerialToHistory(null);
             }
         };
 
@@ -2270,6 +2470,10 @@
             await db.draftCart.clear(); 
             document.getElementById('bill-extra-discount').value = 0;
             if(document.getElementById('bill-note')) document.getElementById('bill-note').value = '';
+            const _gpEl = document.getElementById('bill-gave-price');
+            if (_gpEl) _gpEl.value = '';
+            const _bdEl = document.getElementById('bill-balance-display');
+            if (_bdEl) _bdEl.classList.add('hidden');
             renderCart(); 
             updateLivePreview();
         }
@@ -2283,6 +2487,54 @@
         
         window.closeItemSelectModal = function() {
             document.getElementById('item-select-modal').classList.add('hidden');
+            const _qp = document.getElementById('quick-add-item-panel');
+            if(_qp) _qp.classList.add('hidden');
+            ['qi-code','qi-name','qi-cost','qi-price','qi-wholesale','qi-discount','qi-stock','qi-low-stock','qi-warranty'].forEach(id => {
+                const el = document.getElementById(id); if(el) el.value = '';
+            });
+        };
+
+        window.saveQuickNewItemToStock = async function(addToBill) {
+            const shop = document.getElementById('qi-shop').value;
+            let rawCode = String(document.getElementById('qi-code').value).trim();
+            const name = document.getElementById('qi-name').value.trim();
+            if(!name) { alert('Product name is required.'); return; }
+            const price = parseFloat(document.getElementById('qi-price').value);
+            if(!price || isNaN(price) || price <= 0) { alert('Retail price is required.'); return; }
+            if(!rawCode) rawCode = 'ITEM-' + Date.now().toString().slice(-6);
+            const code = rawCode.startsWith(shop + '_') ? rawCode : shop + '_' + rawCode;
+            const costVal = parseFloat(document.getElementById('qi-cost').value) || 0;
+            const item = {
+                shop: shop,
+                code: code,
+                rawCode: rawCode.startsWith(shop + '_') ? rawCode.replace(shop + '_', '') : rawCode,
+                name: name.toUpperCase(),
+                price: price,
+                wholesalePrice: parseFloat(document.getElementById('qi-wholesale').value) || price,
+                cost: costVal,
+                wholesale: costVal,
+                discount: parseFloat(document.getElementById('qi-discount').value) || 0,
+                stock: parseFloat(document.getElementById('qi-stock').value) || 0,
+                lowStockAlert: parseFloat(document.getElementById('qi-low-stock').value) || 5,
+                stockWarrantyExpiry: document.getElementById('qi-warranty').value || ''
+            };
+            await db.inventory.put(item);
+            if(window.broadcastInventoryUpdate) window.broadcastInventoryUpdate();
+            if(window._silentUploadInventory) window._silentUploadInventory();
+            if(addToBill) {
+                const qtyStr = prompt('Quantity for ' + item.name + ':', '1');
+                if(qtyStr === null) { alert('✅ "' + item.name + '" saved to stock.'); closeItemSelectModal(); return; }
+                const qty = parseFloat(qtyStr);
+                if(isNaN(qty) || qty <= 0) { alert('Invalid quantity. Item saved to stock.'); closeItemSelectModal(); return; }
+                document.getElementById('bill-code').value = code;
+                document.getElementById('bill-name').value = item.name;
+                document.getElementById('bill-qty').value = qty;
+                await addToCart();
+                alert('✅ "' + item.name + '" saved to stock & added to bill!');
+            } else {
+                alert('✅ "' + item.name + '" saved to stock successfully!');
+            }
+            closeItemSelectModal();
         };
         
         window.filterModalItems = async function(query) {
@@ -2291,6 +2543,7 @@
         
         window.renderModalItems = async function(query) {
             const listDiv = document.getElementById('modal-item-list');
+            const quickPanel = document.getElementById('quick-add-item-panel');
             let allItems = await db.inventory.toArray();
             let shopItems = allItems.filter(i => i.shop === currentBillShop || !i.shop);
             if(query) {
@@ -2301,14 +2554,25 @@
                 });
             }
             if(shopItems.length === 0) {
-                listDiv.innerHTML = `<p class="col-span-full text-center text-slate-500 font-bold py-10">No items found.</p>`;
+                if(query && query.trim().length > 0) {
+                    listDiv.innerHTML = `<p class="col-span-full text-center text-slate-500 font-bold py-6 text-sm">No match found — fill the form below to add this item to stock.</p>`;
+                    const qiName = document.getElementById('qi-name');
+                    if(qiName) qiName.value = query.toUpperCase();
+                    const qiShop = document.getElementById('qi-shop');
+                    if(qiShop) qiShop.value = currentBillShop || 'ruwancell';
+                    if(quickPanel) quickPanel.classList.remove('hidden');
+                } else {
+                    listDiv.innerHTML = `<p class="col-span-full text-center text-slate-500 font-bold py-10">No items found.</p>`;
+                    if(quickPanel) quickPanel.classList.add('hidden');
+                }
                 return;
             }
+            if(quickPanel) quickPanel.classList.add('hidden');
             listDiv.innerHTML = shopItems.map(i => {
                 const codeStr = String(i.code);
                 const displayCode = i.rawCode || codeStr.replace((i.shop || currentBillShop) + '_', '');
                 const currentPrice = pricingMode === 'wholesale' ? (i.wholesalePrice || i.price) : i.price;
-                const safeName = i.name.replace(/'/g, "\\'");
+                const safeName = i.name.replace(/'/g, "\\\\\\'" );
                 return `<div onclick="selectItemFromModal('${codeStr}', '${safeName}')" class="bg-slate-900 p-3 rounded-xl border border-slate-700 cursor-pointer hover:bg-slate-700 hover:border-blue-500 transition-all flex flex-col justify-between">
                     <p class="font-bold text-white text-sm truncate" title="${i.name}">${i.name}</p>
                     <div class="flex justify-between items-center mt-2">
@@ -2420,6 +2684,25 @@
             document.getElementById('bill-name').value = '';
             document.getElementById('bill-qty').value = '1';
         }
+
+        function updateBillBalance() {
+            const extraDiscount = parseFloat(document.getElementById('bill-extra-discount')?.value) || 0;
+            const subtotal = cart.reduce((sum, i) => sum + (paymentMode === 'credit' ? (i.price * i.qty) : i.total), 0) - extraDiscount;
+            const gavePriceEl = document.getElementById('bill-gave-price');
+            const balanceDisplay = document.getElementById('bill-balance-display');
+            const balanceAmount = document.getElementById('bill-balance-amount');
+            if (!gavePriceEl || !balanceDisplay || !balanceAmount) return;
+            const gavePrice = parseFloat(gavePriceEl.value) || 0;
+            if (gavePriceEl.value.trim() !== '') {
+                const balance = gavePrice - subtotal;
+                balanceAmount.textContent = balance.toFixed(2);
+                balanceAmount.className = 'text-xl font-black ' + (balance >= 0 ? 'text-yellow-300' : 'text-red-400');
+                balanceDisplay.classList.remove('hidden');
+            } else {
+                balanceDisplay.classList.add('hidden');
+            }
+        }
+        window.updateBillBalance = updateBillBalance;
 
         async function removeFromCart(index) {
             const itemToRemove = cart[index];
@@ -2636,7 +2919,7 @@
 
         function showTab(id) {
             const hasFullAccess = Date.now() < parseInt(localStorage.getItem('cashier_full_access_expiry') || '0');
-            if (currentRole === 'cashier' && !hasFullAccess && !['billing', 'serial', 'profile', 'warranty'].includes(id)) {
+            if (currentRole === 'cashier' && !hasFullAccess && !['billing', 'serial', 'profile', 'warranty', 'customers', 'history', 'barcode-gen'].includes(id)) {
                 alert("Access Denied for Cashier Profile!");
                 return;
             }
@@ -2651,7 +2934,8 @@
             if(id === 'billing') updateCustomerDropdown();
             if(id === 'reports') calculateReports();
             if(id === 'history') renderFullHistory();
-            if(id === 'serial') document.getElementById('serial-time').value = new Date().toLocaleString();
+            if(id === 'serial') { document.getElementById('serial-time').value = new Date().toLocaleString(); if(window.renderSerialHistory) renderSerialHistory(); }
+            if(id === 'barcode-gen') renderBarcodePreview();
         }
         window.showTab = showTab;
 
@@ -2697,6 +2981,26 @@
         }
         window.saveNewItem = saveNewItem;
 
+        let _invStockFilter = 'all';
+        function setInvStockFilter(filter) {
+            _invStockFilter = filter;
+            ['all','low','in'].forEach(f => {
+                const btn = document.getElementById('inv-filter-' + f);
+                if (!btn) return;
+                if (f === filter) {
+                    btn.classList.remove('bg-transparent');
+                    if (f === 'all') { btn.classList.add('bg-slate-600'); btn.classList.remove('text-red-400','text-emerald-400'); btn.classList.add('text-white'); }
+                    else if (f === 'low') { btn.classList.add('bg-red-900/40'); }
+                    else { btn.classList.add('bg-emerald-900/40'); }
+                } else {
+                    btn.classList.remove('bg-slate-600','bg-red-900/40','bg-emerald-900/40');
+                    btn.classList.add('bg-transparent');
+                }
+            });
+            renderInventory();
+        }
+        window.setInvStockFilter = setInvStockFilter;
+
         async function renderInventory() {
             const hasFullAccess = Date.now() < parseInt(localStorage.getItem('cashier_full_access_expiry') || '0');
             if (currentRole === 'cashier' && !hasFullAccess) return; // Double protection
@@ -2710,6 +3014,12 @@
                     const rawCode = i.rawCode || codeStr.replace((i.shop || currentInvShop) + '_', '');
                     return i.name.toLowerCase().includes(searchTerm) || rawCode.toLowerCase().includes(searchTerm);
                 });
+            }
+            // Stock filter
+            if (_invStockFilter === 'low') {
+                items = items.filter(i => i.stock < (i.lowStockAlert || 10));
+            } else if (_invStockFilter === 'in') {
+                items = items.filter(i => i.stock >= (i.lowStockAlert || 10));
             }
             document.getElementById('inventory-list').innerHTML = items.map(i => {
                 const alertThreshold = i.lowStockAlert || 10;
@@ -3012,7 +3322,7 @@
         let _cpCameraStream = null;
         let _cpActiveCameraSlot = -1;
 
-        window.openCustomerProfile = function(name) {
+        window.openCustomerProfile = async function(name) {
             _cpCurrentCustomer = name;
             document.getElementById('cp-customer-name-heading').textContent = name;
             // Load saved profile data from localStorage
@@ -3029,6 +3339,32 @@
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
             const profileTab = document.getElementById('tab-customer-profile');
             if (profileTab) profileTab.classList.add('active');
+            // Load bill history for this customer
+            const histDiv = document.getElementById('cp-bill-history');
+            if (histDiv) {
+                try {
+                    const allSales = await db.sales.toArray();
+                    const custBills = allSales.filter(s => (s.customer || '').toLowerCase() === name.toLowerCase() && s.status !== 'Canceled').sort((a, b) => b.date - a.date);
+                    if (!custBills.length) {
+                        histDiv.innerHTML = '<p class="text-slate-500 text-sm text-center italic py-4">No bills found for this customer.</p>';
+                    } else {
+                        histDiv.innerHTML = custBills.map(s => {
+                            const typeColor = s.type === 'credit' ? 'text-red-400' : (s.type === 'settlement' ? 'text-blue-400' : 'text-emerald-400');
+                            return `<div class="bg-slate-900/70 rounded-xl border border-slate-700 p-4 mb-2">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="font-black text-white text-sm">INV: ${s.invoiceNo || s.id}</span>
+                                    <span class="font-black ${typeColor} text-sm">LKR ${Number(s.total).toFixed(2)}</span>
+                                </div>
+                                <p class="text-xs text-slate-500 font-mono mb-3">🕒 ${new Date(s.date).toLocaleString()}</p>
+                                <div class="flex gap-2">
+                                    <button onclick="reprintSale(${s.id})" class="flex-1 bg-blue-900/30 text-blue-400 border border-blue-500/40 px-3 py-2 rounded-lg text-xs font-black uppercase hover:bg-blue-600 hover:text-white transition-colors">🖨️ Print</button>
+                                    <button onclick="editSale(${s.id})" class="flex-1 bg-indigo-900/30 text-indigo-400 border border-indigo-500/40 px-3 py-2 rounded-lg text-xs font-black uppercase hover:bg-indigo-600 hover:text-white transition-colors">✏️ Edit</button>
+                                </div>
+                            </div>`;
+                        }).join('');
+                    }
+                } catch(_e) { /* silent */ }
+            }
         };
         window.openCustomerProfile = window.openCustomerProfile;
 
@@ -3243,24 +3579,37 @@
                                       
                     const typeColor = s.type === 'credit' ? 'text-red-400' : (s.type === 'settlement' ? 'text-blue-400' : 'text-emerald-400');
                     const cashierDisplay = s.cashierName ? `<span class="text-[10px] ml-3 text-blue-300 bg-blue-900/30 px-2 py-0.5 rounded border border-blue-500/30 uppercase tracking-wider">🧑‍💼 ${s.cashierName}</span>` : '';
+                    const itemsHtml = Array.isArray(s.items) && s.items.length ? s.items.map(it => `
+                        <div class="flex justify-between items-center py-1.5 border-b border-slate-700/60 last:border-0">
+                            <span class="text-sm text-slate-300 font-bold uppercase flex-1 pr-2">${it.name || 'Item'}</span>
+                            <span class="text-xs text-slate-400 w-12 text-center">x${it.qty || 1}</span>
+                            <span class="text-sm font-black text-white w-24 text-right">LKR ${Number(it.total || 0).toFixed(2)}</span>
+                        </div>`).join('') : '<p class="text-slate-500 text-xs italic py-2">No item details available.</p>';
 
                     return `
-                    <div class="p-5 rounded-2xl bg-slate-800/80 shadow-lg border border-slate-600 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 transition-all hover:bg-slate-700 hover:border-slate-500 ${s.status === 'Canceled' ? 'opacity-60' : ''}">
-                        <div class="flex-1">
-                            <div class="flex items-center gap-3 mb-2">
-                                <span class="font-black text-xl text-white tracking-widest">INV: ${s.invoiceNo || 'N/A'}</span>
-                                <span class="text-[10px] font-black px-3 py-1 rounded-full border ${statusColor} uppercase tracking-wider shadow-sm">${s.status || 'Done'}</span>
+                    <div class="rounded-2xl bg-slate-800/80 shadow-lg border border-slate-600 transition-all hover:border-slate-500 ${s.status === 'Canceled' ? 'opacity-60' : ''}">
+                        <div class="p-5 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <span class="font-black text-xl text-white tracking-widest">INV: ${s.invoiceNo || 'N/A'}</span>
+                                    <span class="text-[10px] font-black px-3 py-1 rounded-full border ${statusColor} uppercase tracking-wider shadow-sm">${s.status || 'Done'}</span>
+                                </div>
+                                <p class="font-bold text-slate-300 text-lg uppercase tracking-wide">👤 ${s.customer} ${cashierDisplay}</p>
+                                <p class="text-xs text-slate-500 font-mono mt-1 flex items-center gap-1">🕒 ${new Date(s.date).toLocaleString()}</p>
                             </div>
-                            <p class="font-bold text-slate-300 text-lg uppercase tracking-wide">👤 ${s.customer} ${cashierDisplay}</p>
-                            <p class="text-xs text-slate-500 font-mono mt-1 flex items-center gap-1">🕒 ${new Date(s.date).toLocaleString()}</p>
+                            <div class="flex flex-col items-end gap-3 w-full lg:w-auto">
+                                <p class="text-2xl font-black ${typeColor} tracking-wide bg-slate-900/50 px-4 py-2 rounded-lg border border-slate-700 shadow-inner w-full text-right">LKR ${Number(s.total).toFixed(2)} <span class="text-[10px] font-bold uppercase ml-1 opacity-70">(${s.type})</span></p>
+                                <div class="flex flex-wrap gap-2 justify-end w-full">
+                                    <button onclick='toggleHistoryItems(${s.id})' class="flex-1 lg:flex-none bg-slate-700/60 text-slate-300 border border-slate-500/50 px-4 py-2.5 rounded-lg text-xs font-black uppercase hover:bg-slate-600 hover:text-white transition-colors shadow-sm">📋 Items</button>
+                                    <button onclick='reprintSale(${s.id})' class="flex-1 lg:flex-none bg-blue-900/30 text-blue-400 border border-blue-500/50 px-4 py-2.5 rounded-lg text-xs font-black uppercase hover:bg-blue-600 hover:text-white transition-colors shadow-sm">🖨️ View</button>
+                                    <button onclick='editSale(${s.id})' class="flex-1 lg:flex-none bg-indigo-900/30 text-indigo-400 border border-indigo-500/50 px-4 py-2.5 rounded-lg text-xs font-black uppercase hover:bg-indigo-600 hover:text-white transition-colors shadow-sm">✏️ Edit</button>
+                                    <button onclick='deleteSale(${s.id})' class="flex-1 lg:flex-none bg-red-900/30 text-red-400 border border-red-500/50 px-4 py-2.5 rounded-lg text-xs font-black uppercase hover:bg-red-600 hover:text-white transition-colors shadow-sm">🗑️ Del</button>
+                                </div>
+                            </div>
                         </div>
-                        <div class="flex flex-col items-end gap-3 w-full lg:w-auto">
-                            <p class="text-2xl font-black ${typeColor} tracking-wide bg-slate-900/50 px-4 py-2 rounded-lg border border-slate-700 shadow-inner w-full text-right">LKR ${Number(s.total).toFixed(2)} <span class="text-[10px] font-bold uppercase ml-1 opacity-70">(${s.type})</span></p>
-                            <div class="flex flex-wrap gap-2 justify-end w-full">
-                                <button onclick='reprintSale(${s.id})' class="flex-1 lg:flex-none bg-blue-900/30 text-blue-400 border border-blue-500/50 px-4 py-2.5 rounded-lg text-xs font-black uppercase hover:bg-blue-600 hover:text-white transition-colors shadow-sm">🖨️ View</button>
-                                <button onclick='editSale(${s.id})' class="flex-1 lg:flex-none bg-indigo-900/30 text-indigo-400 border border-indigo-500/50 px-4 py-2.5 rounded-lg text-xs font-black uppercase hover:bg-indigo-600 hover:text-white transition-colors shadow-sm">✏️ Edit</button>
-                                <button onclick='deleteSale(${s.id})' class="flex-1 lg:flex-none bg-red-900/30 text-red-400 border border-red-500/50 px-4 py-2.5 rounded-lg text-xs font-black uppercase hover:bg-red-600 hover:text-white transition-colors shadow-sm">🗑️ Del</button>
-                            </div>
+                        <div id="hist-items-${s.id}" class="hidden border-t border-slate-700 px-5 pb-4 pt-3 bg-slate-900/40">
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Bill Items</p>
+                            ${itemsHtml}
                         </div>
                     </div>
                 `}).join('');
@@ -3270,6 +3619,81 @@
             }
         }
         window.renderFullHistory = renderFullHistory;
+
+        window.toggleHistoryItems = function(id) {
+            const el = document.getElementById('hist-items-' + id);
+            if (el) el.classList.toggle('hidden');
+        };
+
+        // ─── SERIAL HISTORY RENDERER ─────────────────────────────────────────
+        window.renderSerialHistory = async function() {
+            const listEl = document.getElementById('serial-history-list');
+            if (!listEl) return;
+            const searchTerm = (document.getElementById('serial-history-search')?.value || '').toLowerCase();
+            const allSales = await db.sales.toArray();
+            let repairs = allSales.filter(s => s.type === 'repair').sort((a, b) => b.date - a.date);
+            if (searchTerm) {
+                repairs = repairs.filter(s =>
+                    (s.customer || '').toLowerCase().includes(searchTerm) ||
+                    (s.serialPhone || '').toLowerCase().includes(searchTerm) ||
+                    (s.serialItem || '').toLowerCase().includes(searchTerm) ||
+                    (s.invoiceNo || '').toLowerCase().includes(searchTerm)
+                );
+            }
+            if (!repairs.length) {
+                listEl.innerHTML = '<p class="text-slate-500 text-sm text-center italic py-4">No saved repair slips found.</p>';
+                return;
+            }
+            listEl.innerHTML = repairs.map(s => `
+                <div class="bg-slate-900/70 rounded-xl border border-slate-700 p-4">
+                    <div class="flex justify-between items-start mb-1">
+                        <span class="font-black text-cyan-400 text-sm">${s.invoiceNo || 'REPAIR'}</span>
+                        <span class="text-xs text-slate-500 font-mono">${new Date(s.date).toLocaleDateString()}</span>
+                    </div>
+                    <p class="font-bold text-white text-sm uppercase">${s.customer || 'Unknown'} ${s.serialPhone ? '<span class="text-slate-400 font-normal">— ' + s.serialPhone + '</span>' : ''}</p>
+                    <p class="text-xs text-slate-400 mt-1">📱 ${s.serialItem || '—'}</p>
+                    ${s.total > 0 ? '<p class="text-xs text-emerald-400 font-bold mt-1">Advance: LKR ' + Number(s.total).toFixed(2) + '</p>' : ''}
+                    ${s.note ? '<p class="text-xs text-slate-500 mt-1 italic">' + s.note + '</p>' : ''}
+                    <div class="flex gap-2 mt-3">
+                        <button onclick="reprintSale(${s.id})" class="flex-1 bg-blue-900/30 text-blue-400 border border-blue-500/40 px-3 py-2 rounded-lg text-xs font-black uppercase hover:bg-blue-600 hover:text-white transition-colors">🖨️ Print</button>
+                        <button onclick="deleteSale(${s.id})" class="flex-1 bg-red-900/30 text-red-400 border border-red-500/40 px-3 py-2 rounded-lg text-xs font-black uppercase hover:bg-red-600 hover:text-white transition-colors">🗑️ Del</button>
+                    </div>
+                </div>
+            `).join('');
+        };
+
+        // ─── HISTORY TAB BARCODE SCANNER ─────────────────────────────────────
+        let _historyScannerInstance = null;
+        window.startHistoryScanner = function() {
+            const container = document.getElementById('history-scanner-container');
+            if (!container) return;
+            container.classList.remove('hidden');
+            if (_historyScannerInstance) {
+                try { _historyScannerInstance.stop(); } catch(_e) {}
+                _historyScannerInstance = null;
+            }
+            try {
+                _historyScannerInstance = new Html5Qrcode('history-scanner-reader');
+                _historyScannerInstance.start(
+                    { facingMode: 'environment' },
+                    { fps: 10, qrbox: { width: 250, height: 100 } },
+                    (decodedText) => {
+                        document.getElementById('history-search-input').value = decodedText.trim();
+                        renderFullHistory();
+                        window.stopHistoryScanner();
+                    },
+                    () => {}
+                ).catch(() => { container.classList.add('hidden'); });
+            } catch(_e) { container.classList.add('hidden'); }
+        };
+        window.stopHistoryScanner = function() {
+            const container = document.getElementById('history-scanner-container');
+            if (container) container.classList.add('hidden');
+            if (_historyScannerInstance) {
+                try { _historyScannerInstance.stop().catch(() => {}); } catch(_e) {}
+                _historyScannerInstance = null;
+            }
+        };
 
         window.reprintSale = async function(id) {
             id = Number(id); // Ensure correct primary key type
@@ -3462,114 +3886,318 @@
         function stopScanner() { if(html5QrCode) html5QrCode.stop().then(() => document.getElementById('scanner-container').classList.add('hidden')); }
         window.stopScanner = stopScanner;
 
-        function setReportFilter(range) { 
-            currentFilter = range; 
-            ['day', 'week', 'month'].forEach(f => {
-                const btn = document.getElementById('filter-' + f);
-                if(f === range) {
-                    btn.classList.replace('bg-transparent', 'bg-blue-600');
-                    btn.classList.replace('hover:bg-slate-800', 'hover:bg-blue-500');
-                    btn.classList.replace('text-slate-400', 'text-white');
-                    btn.classList.add('shadow-sm');
-                } else {
-                    btn.classList.replace('bg-blue-600', 'bg-transparent');
-                    btn.classList.replace('hover:bg-blue-500', 'hover:bg-slate-800');
-                    btn.classList.replace('text-white', 'text-slate-400');
-                    btn.classList.remove('shadow-sm');
+        // =====================================================================
+        // ADD-ITEM BARCODE SCANNER
+        // =====================================================================
+        let _addItemQrCode = null;
+
+        window.startAddItemScanner = async function() {
+            const container = document.getElementById('add-item-scanner-container');
+            container.classList.add('active');
+            _addItemQrCode = new Html5Qrcode("add-item-reader");
+            try {
+                await _addItemQrCode.start(
+                    { facingMode: "environment" },
+                    { fps: 10, qrbox: 250 },
+                    function(decodedText) {
+                        stopAddItemScanner();
+                        document.getElementById('add-code').value = decodedText;
+                    }
+                );
+            } catch(err) {
+                stopAddItemScanner();
+                alert("Camera error: " + err);
+            }
+        };
+
+        window.stopAddItemScanner = function() {
+            if(_addItemQrCode) {
+                _addItemQrCode.stop().catch(() => {}).finally(() => {
+                    _addItemQrCode = null;
+                    document.getElementById('add-item-scanner-container').classList.remove('active');
+                });
+            } else {
+                document.getElementById('add-item-scanner-container').classList.remove('active');
+            }
+        };
+
+        // Scanner for the Browse-modal quick-add Product Code field
+        window.startQiCodeScanner = async function() {
+            const container = document.getElementById('add-item-scanner-container');
+            container.classList.add('active');
+            _addItemQrCode = new Html5Qrcode("add-item-reader");
+            try {
+                await _addItemQrCode.start(
+                    { facingMode: "environment" },
+                    { fps: 10, qrbox: 250 },
+                    function(decodedText) {
+                        stopAddItemScanner();
+                        const qiCode = document.getElementById('qi-code');
+                        if(qiCode) qiCode.value = decodedText;
+                    }
+                );
+            } catch(err) {
+                stopAddItemScanner();
+                alert("Camera error: " + err);
+            }
+        };
+
+        // =====================================================================
+        // BARCODE GENERATOR TAB
+        // =====================================================================
+
+        // Open the existing item-select modal but in 'barcode' mode
+        window.openBarcodeItemPicker = async function() {
+            const items = await db.inventory.toArray();
+            const modal = document.getElementById('item-select-modal');
+            if (!modal) {
+                // Fallback: build our own picker
+                _openBarcodePicker(items);
+                return;
+            }
+            // Re-use existing modal; tag it so selectItemFromModal knows the mode
+            window._itemModalMode = 'barcode';
+            // Trigger same as existing openItemSelectModal
+            openItemSelectModal();
+        };
+
+        // Build a standalone picker if the modal is unavailable
+        function _openBarcodePicker(items) {
+            let overlay = document.getElementById('_barcode-picker-overlay');
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.id = '_barcode-picker-overlay';
+                overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:200;display:flex;align-items:center;justify-content:center;';
+                document.body.appendChild(overlay);
+            }
+            overlay.innerHTML = `
+                <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:24px;width:90%;max-width:460px;max-height:80vh;overflow-y:auto;">
+                    <h3 style="color:#22d3ee;font-weight:900;font-size:1.1rem;margin-bottom:16px;text-transform:uppercase;letter-spacing:0.1em;">📦 Select Merch Item</h3>
+                    <input type="text" oninput="filterBarcodePickerList(this.value)" placeholder="Search..." style="width:100%;padding:10px;background:#0f172a;border:1px solid #475569;border-radius:8px;color:#fff;font-size:14px;margin-bottom:12px;outline:none;box-sizing:border-box;">
+                    <div id="_barcode-picker-list" style="display:flex;flex-direction:column;gap:6px;">
+                        ${items.map(i => {
+                            const disp = i.rawCode || String(i.code).replace((i.shop||'') + '_', '');
+                            return `<button onclick="_selectBarcodePickerItem('${i.code}','${i.name.replace(/'/g,"\\'")}','${disp}')"
+                                style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px 14px;color:#fff;text-align:left;font-size:13px;font-weight:700;cursor:pointer;">
+                                <span style="color:#22d3ee;font-family:monospace;">${disp}</span> — ${i.name}
+                            </button>`;
+                        }).join('')}
+                    </div>
+                    <button onclick="document.getElementById('_barcode-picker-overlay').style.display='none'" style="margin-top:16px;width:100%;padding:10px;background:#dc2626;border:none;border-radius:8px;color:#fff;font-weight:900;cursor:pointer;text-transform:uppercase;letter-spacing:0.1em;">✕ Close</button>
+                </div>`;
+            overlay.style.display = 'flex';
+            // Store items for filtering
+            overlay._items = items;
+        }
+
+        window.filterBarcodePickerList = function(q) {
+            const overlay = document.getElementById('_barcode-picker-overlay');
+            if (!overlay || !overlay._items) return;
+            const filtered = overlay._items.filter(i => {
+                const disp = i.rawCode || String(i.code).replace((i.shop||'') + '_', '');
+                return i.name.toLowerCase().includes(q.toLowerCase()) || disp.toLowerCase().includes(q.toLowerCase());
+            });
+            document.getElementById('_barcode-picker-list').innerHTML = filtered.map(i => {
+                const disp = i.rawCode || String(i.code).replace((i.shop||'') + '_', '');
+                return `<button onclick="_selectBarcodePickerItem('${i.code}','${i.name.replace(/'/g,"\\'")}','${disp}')"
+                    style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px 14px;color:#fff;text-align:left;font-size:13px;font-weight:700;cursor:pointer;">
+                    <span style="color:#22d3ee;font-family:monospace;">${disp}</span> — ${i.name}
+                </button>`;
+            }).join('');
+        };
+
+        window._selectBarcodePickerItem = function(code, name, dispCode) {
+            document.getElementById('barcode-number-input').value = dispCode;
+            document.getElementById('barcode-item-name').value = name;
+            const overlay = document.getElementById('_barcode-picker-overlay');
+            if (overlay) overlay.style.display = 'none';
+            renderBarcodePreview();
+        };
+
+        // Intercept existing selectItemFromModal when in barcode mode
+        const _origSelectItemFromModal = window.selectItemFromModal;
+        window.selectItemFromModal = async function(code, name) {
+            if (window._itemModalMode === 'barcode') {
+                window._itemModalMode = 'billing';
+                const item = await db.inventory.get(code);
+                const disp = item ? (item.rawCode || String(item.code).replace((item.shop||'') + '_', '')) : code;
+                document.getElementById('barcode-number-input').value = disp;
+                document.getElementById('barcode-item-name').value = name;
+                // Close existing modal
+                const modal = document.getElementById('item-select-modal');
+                if (modal) modal.classList.add('hidden');
+                showTab('barcode-gen');
+                renderBarcodePreview();
+                return;
+            }
+            if (_origSelectItemFromModal) _origSelectItemFromModal(code, name);
+        };
+
+        // Render barcode preview (30mm × 20mm labels)
+        function renderBarcodePreview() {
+            const barcodeVal = (document.getElementById('barcode-number-input')?.value || '').trim();
+            const labelName  = (document.getElementById('barcode-item-name')?.value || '').trim();
+            const qty        = Math.min(100, Math.max(1, parseInt(document.getElementById('barcode-qty')?.value) || 1));
+            const area       = document.getElementById('barcode-preview-area');
+            if (!area) return;
+
+            if (!barcodeVal) {
+                area.innerHTML = '<p class="text-slate-500 text-sm font-bold tracking-wider self-center">Enter a barcode number and click Generate Preview.</p>';
+                return;
+            }
+
+            // Build qty copies
+            let html = '';
+            for (let i = 0; i < qty; i++) {
+                html += `
+                <div class="barcode-label-card" style="
+                    width:113px; height:75px;
+                    background:#fff; border:1px solid #ccc; border-radius:4px;
+                    display:flex; flex-direction:column; align-items:center; justify-content:center;
+                    padding:4px; box-sizing:border-box; overflow:hidden;
+                ">
+                    ${labelName ? `<p style="font-size:7px;font-weight:900;color:#111;margin:0 0 2px 0;text-align:center;text-transform:uppercase;letter-spacing:0.05em;max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${labelName}</p>` : ''}
+                    <svg class="barcode-svg" data-val="${barcodeVal}" style="max-width:100%;height:auto;"></svg>
+                    <p style="font-size:7px;font-family:monospace;color:#333;margin:2px 0 0 0;text-align:center;">${barcodeVal}</p>
+                </div>`;
+            }
+            area.innerHTML = html;
+
+            // Render each barcode via JsBarcode
+            area.querySelectorAll('.barcode-svg').forEach(svg => {
+                try {
+                    JsBarcode(svg, svg.dataset.val, {
+                        format: 'CODE128',
+                        width: 1.2,
+                        height: 28,
+                        displayValue: false,
+                        margin: 0
+                    });
+                } catch(e) {
+                    svg.parentElement.innerHTML += `<p style="color:red;font-size:8px;">Invalid barcode value</p>`;
                 }
             });
-            const weeklyPanel = document.getElementById('weekly-days-panel');
-            const monthlyPanel = document.getElementById('monthly-weeks-panel');
-            if (weeklyPanel) weeklyPanel.classList.toggle('hidden', range !== 'week');
-            if (monthlyPanel) monthlyPanel.classList.toggle('hidden', range !== 'month');
-            if (range === 'week') buildWeekDayOptions('weekly-day-select');
-            if (range === 'month') buildMonthWeekOptions('monthly-week-select');
+        }
+        window.renderBarcodePreview = renderBarcodePreview;
+
+        // Print barcode labels in a 30mm × 20mm popup
+        window.saveBarcodeItemToInventory = async function() {
+            const barcodeVal = (document.getElementById('barcode-number-input')?.value || '').trim();
+            const labelName  = (document.getElementById('barcode-item-name')?.value || '').trim().toUpperCase();
+            const costPrice  = parseFloat(document.getElementById('barcode-cost')?.value) || 0;
+            const retailPrice = parseFloat(document.getElementById('barcode-retail')?.value) || 0;
+            const wholesalePrice = parseFloat(document.getElementById('barcode-wholesale')?.value) || 0;
+            const discount   = parseFloat(document.getElementById('barcode-discount')?.value) || 0;
+            const stockQty   = parseFloat(document.getElementById('barcode-stock')?.value) || 0;
+            if (!barcodeVal || !labelName) {
+                alert('Please fill in the Barcode Number and Item Name before saving.');
+                return;
+            }
+            const shop = typeof currentInvShop !== 'undefined' ? currentInvShop : 'ruwancell';
+            const code = shop + '_' + barcodeVal;
+            const existing = await db.inventory.get(code);
+            const itemData = {
+                code, rawCode: barcodeVal, name: labelName,
+                cost: costPrice, price: retailPrice || costPrice,
+                wholesalePrice: wholesalePrice || retailPrice || costPrice,
+                discount, stock: stockQty, lowStockAlert: 10, shop
+            };
+            if (existing) {
+                await db.inventory.update(code, itemData);
+                alert(`✅ "${labelName}" updated in inventory!`);
+            } else {
+                await db.inventory.put(itemData);
+                alert(`✅ "${labelName}" saved to inventory!`);
+            }
+            if (window._silentUploadInventory) window._silentUploadInventory();
+        };
+
+        window.printBarcodeLabels = function() {
+            const barcodeVal = (document.getElementById('barcode-number-input')?.value || '').trim();
+            const labelName  = (document.getElementById('barcode-item-name')?.value || '').trim();
+            const qty        = Math.min(100, Math.max(1, parseInt(document.getElementById('barcode-qty')?.value) || 1));
+
+            if (!barcodeVal) { alert("Please enter a barcode number first."); return; }
+
+            const pw = window.open('', '_blank', 'width=400,height=300');
+            if (!pw) { alert("⚠️ Popup blocked! Please allow popups to print barcodes."); return; }
+
+            let labelsHtml = '';
+            for (let i = 0; i < qty; i++) {
+                labelsHtml += `
+                <div class="label">
+                    ${labelName ? `<p class="lname">${labelName}</p>` : ''}
+                    <svg class="bsvg" data-val="${barcodeVal}"></svg>
+                    <p class="lcode">${barcodeVal}</p>
+                </div>`;
+            }
+
+            pw.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+            <title>Barcode Print</title>
+            <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"><\/script>
+            <style>
+                @page { size: 30mm 20mm; margin: 0; }
+                * { box-sizing: border-box; }
+                body { margin: 0; padding: 0; background: #fff; }
+                .label {
+                    width: 30mm; height: 20mm;
+                    display: flex; flex-direction: column;
+                    align-items: center; justify-content: center;
+                    padding: 1mm; page-break-after: always;
+                    overflow: hidden;
+                }
+                .label:last-child { page-break-after: auto; }
+                .lname {
+                    font-size: 6pt; font-weight: 900; color: #000;
+                    text-transform: uppercase; letter-spacing: 0.05em;
+                    margin: 0 0 0.5mm 0; text-align: center;
+                    max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+                }
+                .bsvg { max-width: 28mm; height: auto; }
+                .lcode { font-size: 6pt; font-family: monospace; color: #333; margin: 0.5mm 0 0 0; text-align: center; }
+            </style>
+            </head><body>
+            ${labelsHtml}
+            <script>
+                document.querySelectorAll('.bsvg').forEach(function(svg) {
+                    JsBarcode(svg, svg.getAttribute('data-val'), {
+                        format:'CODE128', width:1, height:20,
+                        displayValue: false, margin: 0
+                    });
+                });
+                setTimeout(function(){ window.print(); window.close(); }, 600);
+            <\/script>
+            </body></html>`);
+            pw.document.close();
+        };
+
+        function setReportFilter(range) { 
+            currentFilter = range; 
+            ['day', 'week', 'month', 'custom'].forEach(f => {
+                const btn = document.getElementById('filter-' + f);
+                if (!btn) return;
+                if(f === range) {
+                    btn.classList.remove('bg-transparent', 'hover:bg-slate-800', 'text-slate-400');
+                    btn.classList.add('bg-blue-600', 'hover:bg-blue-500', 'text-white', 'shadow-sm');
+                } else {
+                    btn.classList.remove('bg-blue-600', 'hover:bg-blue-500', 'text-white', 'shadow-sm');
+                    btn.classList.add('bg-transparent', 'hover:bg-slate-800', 'text-slate-400');
+                }
+            });
+            // Show/hide custom date range picker
+            const customRange = document.getElementById('report-custom-range');
+            if (customRange) {
+                if (range === 'custom') {
+                    customRange.classList.remove('hidden');
+                    customRange.classList.add('flex');
+                } else {
+                    customRange.classList.add('hidden');
+                    customRange.classList.remove('flex');
+                }
+            }
             calculateReports(); 
         }
         window.setReportFilter = setReportFilter;
-
-        async function buildWeekDayOptions(selectId) {
-            const sel = document.getElementById(selectId);
-            if (!sel) return;
-            const now = new Date();
-            const dayOfWeek = now.getDay();
-            const monday = new Date(now);
-            monday.setDate(now.getDate() - ((dayOfWeek + 6) % 7));
-            monday.setHours(0,0,0,0);
-            const dayNames = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
-            const allSales = await db.sales.toArray();
-            const shopSales = allSales.filter(s => (s.shop === currentRepShop || (!s.shop && currentRepShop === 'ruwancell')) && s.status !== 'Canceled');
-            sel.innerHTML = '<option value="">— Select a Day to View Profit —</option>';
-            for (let i = 0; i < 7; i++) {
-                const dayStart = new Date(monday); dayStart.setDate(monday.getDate() + i); dayStart.setHours(0,0,0,0);
-                const dayEnd = new Date(dayStart); dayEnd.setHours(23,59,59,999);
-                const daySales = shopSales.filter(s => s.date >= dayStart.getTime() && s.date <= dayEnd.getTime());
-                const rev = daySales.reduce((sum, s) => sum + (Number(s.total)||0), 0);
-                const prof = daySales.reduce((sum, s) => sum + (Number(s.profit)||0), 0);
-                const dateStr = dayStart.toLocaleDateString('en-GB', {day:'2-digit', month:'short'});
-                const isFuture = dayStart > now;
-                sel.innerHTML += `<option value="${dayStart.getTime()}|${dayEnd.getTime()}" ${isFuture ? 'disabled' : ''}>${dayNames[i]} (${dateStr}) — Rev: ${rev.toFixed(0)} | Profit: ${prof.toFixed(0)}</option>`;
-            }
-        }
-        window.buildWeekDayOptions = buildWeekDayOptions;
-
-        async function buildMonthWeekOptions(selectId) {
-            const sel = document.getElementById(selectId);
-            if (!sel) return;
-            const now = new Date();
-            const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-            const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-            const allSales = await db.sales.toArray();
-            const shopSales = allSales.filter(s => (s.shop === currentRepShop || (!s.shop && currentRepShop === 'ruwancell')) && s.status !== 'Canceled');
-            sel.innerHTML = '<option value="">— Select a Week to View Profit —</option>';
-            let weekNum = 1;
-            let cursor = new Date(monthStart);
-            while (cursor <= monthEnd) {
-                const wStart = new Date(cursor);
-                const wEnd = new Date(cursor); wEnd.setDate(wEnd.getDate() + 6); wEnd.setHours(23,59,59,999);
-                if (wEnd > monthEnd) { wEnd.setTime(monthEnd.getTime()); }
-                const wSales = shopSales.filter(s => s.date >= wStart.getTime() && s.date <= wEnd.getTime());
-                const rev = wSales.reduce((sum,s) => sum + (Number(s.total)||0), 0);
-                const prof = wSales.reduce((sum,s) => sum + (Number(s.profit)||0), 0);
-                const s1 = wStart.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
-                const s2 = wEnd.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
-                const isFuture = wStart > now;
-                sel.innerHTML += `<option value="${wStart.getTime()}|${wEnd.getTime()}" ${isFuture ? 'disabled' : ''}>Week ${weekNum} (${s1}–${s2}) — Rev: ${rev.toFixed(0)} | Profit: ${prof.toFixed(0)}</option>`;
-                cursor.setDate(cursor.getDate() + 7);
-                weekNum++;
-            }
-        }
-        window.buildMonthWeekOptions = buildMonthWeekOptions;
-
-        window.loadWeeklyDayProfit = async function() {
-            const sel = document.getElementById('weekly-day-select');
-            const resDiv = document.getElementById('weekly-day-result');
-            if (!sel || !sel.value) { if(resDiv) resDiv.classList.add('hidden'); return; }
-            const [startTs, endTs] = sel.value.split('|').map(Number);
-            const allSales = await db.sales.toArray();
-            const shopSales = allSales.filter(s => (s.shop === currentRepShop || (!s.shop && currentRepShop === 'ruwancell')) && s.status !== 'Canceled');
-            const daySales = shopSales.filter(s => s.date >= startTs && s.date <= endTs);
-            const rev = daySales.reduce((sum,s) => sum + (Number(s.total)||0), 0);
-            const prof = daySales.reduce((sum,s) => sum + (Number(s.profit)||0), 0);
-            document.getElementById('wdr-revenue').textContent = 'LKR ' + rev.toFixed(2);
-            document.getElementById('wdr-profit').textContent = 'LKR ' + prof.toFixed(2);
-            if (resDiv) resDiv.classList.remove('hidden');
-        };
-
-        window.loadMonthlyWeekProfit = async function() {
-            const sel = document.getElementById('monthly-week-select');
-            const resDiv = document.getElementById('monthly-week-result');
-            if (!sel || !sel.value) { if(resDiv) resDiv.classList.add('hidden'); return; }
-            const [startTs, endTs] = sel.value.split('|').map(Number);
-            const allSales = await db.sales.toArray();
-            const shopSales = allSales.filter(s => (s.shop === currentRepShop || (!s.shop && currentRepShop === 'ruwancell')) && s.status !== 'Canceled');
-            const wSales = shopSales.filter(s => s.date >= startTs && s.date <= endTs);
-            const rev = wSales.reduce((sum,s) => sum + (Number(s.total)||0), 0);
-            const prof = wSales.reduce((sum,s) => sum + (Number(s.profit)||0), 0);
-            document.getElementById('mwr-revenue').textContent = 'LKR ' + rev.toFixed(2);
-            document.getElementById('mwr-profit').textContent = 'LKR ' + prof.toFixed(2);
-            if (resDiv) resDiv.classList.remove('hidden');
-        };
 
         let barChartInstance = null;
         let pieChartInstance = null;
@@ -3630,13 +4258,21 @@
         // Bulletproof Reports avoiding problematic indexed queries
         async function calculateReports() {
             const _now = new Date();
-            let startTime;
+            let startTime, endTime;
             if (currentFilter === 'day') {
                 startTime = new Date(_now.getFullYear(), _now.getMonth(), _now.getDate()).getTime();
+                endTime = Date.now() + 1;
             } else if (currentFilter === 'week') {
                 const _dw = new Date(_now); _dw.setDate(_dw.getDate() - 7); startTime = _dw.getTime();
+                endTime = Date.now() + 1;
+            } else if (currentFilter === 'custom') {
+                const s = document.getElementById('report-custom-start')?.value;
+                const e = document.getElementById('report-custom-end')?.value;
+                startTime = s ? new Date(s).getTime() : 0;
+                endTime = e ? new Date(e).getTime() + 86400000 : Date.now() + 1;
             } else {
                 const _dm = new Date(_now); _dm.setMonth(_dm.getMonth() - 1); startTime = _dm.getTime();
+                endTime = Date.now() + 1;
             }
             
             let allDbSales = await db.sales.toArray();
@@ -3644,7 +4280,7 @@
             // Filter by the currently selected shop
             let shopSales = allDbSales.filter(s => s.shop === currentRepShop || (!s.shop && currentRepShop === 'ruwancell'));
 
-            const allSales = shopSales.filter(s => s.date >= startTime);
+            const allSales = shopSales.filter(s => s.date >= startTime && s.date < endTime);
             const validSales = allSales.filter(s => s.status !== 'Canceled');
 
             document.getElementById('rep-profit').innerText = `LKR ${validSales.reduce((s, a) => s + (a.profit || 0), 0).toFixed(2)}`;
@@ -3799,49 +4435,11 @@
 
             if (!enabled) return;
             const ms = minutes * 60 * 1000;
-            _autoSyncInterval = setInterval(() => showAutoSyncCountdown(minutes), ms);
-        }
-
-        function showAutoSyncCountdown(minutes) {
-            const existing = document.getElementById('auto-sync-popup');
-            if (existing) existing.remove();
-
-            let secondsLeft = 10;
-            const popup = document.createElement('div');
-            popup.id = 'auto-sync-popup';
-            popup.style.cssText = `
-                position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
-                background:#0f172a;border:2px solid #22c55e;border-radius:16px;
-                padding:28px 36px;z-index:99999;text-align:center;min-width:280px;
-                box-shadow:0 0 40px rgba(34,197,94,0.4);font-family:inherit;`;
-            popup.innerHTML = `
-                <p style="color:#22c55e;font-size:11px;font-weight:900;letter-spacing:2px;text-transform:uppercase;margin:0 0 6px;">☁️ Cloud Auto-Sync</p>
-                <p style="color:#fff;font-size:14px;margin:0 0 12px;">Every ${minutes} min backup starting in:</p>
-                <div id="auto-sync-countdown" style="font-size:56px;font-weight:900;color:#22c55e;font-family:monospace;line-height:1;">00:10</div>
-                <p style="color:#94a3b8;font-size:12px;margin:10px 0 16px;">Uploading all data to cloud...</p>
-                <button onclick="document.getElementById('auto-sync-popup').remove();window.uploadAllToCloud();" 
-                    style="background:#22c55e;color:#000;border:none;border-radius:8px;padding:10px 24px;font-weight:900;cursor:pointer;font-size:14px;margin-right:8px;">
-                    Sync Now
-                </button>
-                <button onclick="document.getElementById('auto-sync-popup').remove();" 
-                    style="background:#334155;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-weight:700;cursor:pointer;font-size:14px;">
-                    Cancel
-                </button>`;
-            document.body.appendChild(popup);
-
-            const countdownEl = document.getElementById('auto-sync-countdown');
-            const tick = setInterval(() => {
-                secondsLeft--;
-                const m = String(Math.floor(secondsLeft / 60)).padStart(2, '0');
-                const s = String(secondsLeft % 60).padStart(2, '0');
-                if (countdownEl) countdownEl.textContent = `${m}:${s}`;
-                if (secondsLeft <= 0) {
-                    clearInterval(tick);
-                    const p = document.getElementById('auto-sync-popup');
-                    if (p) p.remove();
-                    window.uploadAllToCloud();
-                }
-            }, 1000);
+            // Silent auto-sync — no popup, just upload silently
+            _autoSyncInterval = setInterval(() => {
+                if (window._silentUploadAllSales) window._silentUploadAllSales();
+                if (window._silentUploadInventory) window._silentUploadInventory();
+            }, ms);
         }
 
         window.saveAutoSyncSettings = function() {
@@ -3875,49 +4473,23 @@
 
             if (!enabled) return;
             const ms = minutes * 60 * 1000;
-            _autoDownloadInterval = setInterval(() => showAutoDownloadCountdown(minutes), ms);
-        }
-
-        function showAutoDownloadCountdown(minutes) {
-            const existing = document.getElementById('auto-download-popup');
-            if (existing) existing.remove();
-
-            let secondsLeft = 10;
-            const popup = document.createElement('div');
-            popup.id = 'auto-download-popup';
-            popup.style.cssText = `
-                position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
-                background:#0f172a;border:2px solid #3b82f6;border-radius:16px;
-                padding:28px 36px;z-index:99999;text-align:center;min-width:280px;
-                box-shadow:0 0 40px rgba(59,130,246,0.4);font-family:inherit;`;
-            popup.innerHTML = `
-                <p style="color:#3b82f6;font-size:11px;font-weight:900;letter-spacing:2px;text-transform:uppercase;margin:0 0 6px;">⬇️ Cloud Auto-Download</p>
-                <p style="color:#fff;font-size:14px;margin:0 0 12px;">Every ${minutes} min data refresh in:</p>
-                <div id="auto-download-countdown" style="font-size:56px;font-weight:900;color:#3b82f6;font-family:monospace;line-height:1;">00:10</div>
-                <p style="color:#94a3b8;font-size:12px;margin:10px 0 16px;">Downloading latest cloud data...</p>
-                <button onclick="document.getElementById('auto-download-popup').remove();window.downloadAllFromCloud();"
-                    style="background:#3b82f6;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-weight:900;cursor:pointer;font-size:14px;margin-right:8px;">
-                    Download Now
-                </button>
-                <button onclick="document.getElementById('auto-download-popup').remove();"
-                    style="background:#334155;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-weight:700;cursor:pointer;font-size:14px;">
-                    Cancel
-                </button>`;
-            document.body.appendChild(popup);
-
-            const countdownEl = document.getElementById('auto-download-countdown');
-            const tick = setInterval(() => {
-                secondsLeft--;
-                const m = String(Math.floor(secondsLeft / 60)).padStart(2, '0');
-                const s = String(secondsLeft % 60).padStart(2, '0');
-                if (countdownEl) countdownEl.textContent = `${m}:${s}`;
-                if (secondsLeft <= 0) {
-                    clearInterval(tick);
-                    const p = document.getElementById('auto-download-popup');
-                    if (p) p.remove();
-                    window.downloadAllFromCloud();
-                }
-            }, 1000);
+            // Silent auto-download — no popup, runs in background
+            _autoDownloadInterval = setInterval(async () => {
+                try {
+                    const snapshot = await get(ref(fb_db));
+                    if (!snapshot.exists()) return;
+                    const data = snapshot.val();
+                    if (data.inventory) await db.inventory.bulkPut(Object.values(data.inventory));
+                    if (data.customers) await db.customers.bulkPut(Object.values(data.customers));
+                    if (data.sales) {
+                        const localIds = new Set((await db.sales.toArray()).map(s => s.id));
+                        const newSales = Object.values(data.sales).filter(s => s && s.id && !localIds.has(s.id));
+                        if (newSales.length > 0) await db.sales.bulkAdd(newSales);
+                    }
+                    if (typeof renderInventory === 'function') renderInventory();
+                    if (typeof renderFullHistory === 'function') renderFullHistory();
+                } catch(_e) { /* silent */ }
+            }, ms);
         }
 
         window.saveAutoDownloadSettings = function() {
@@ -4108,196 +4680,6 @@
             window.doEditBillFromModal();
         };
 
-        // ─── CASHIER REPORTS ────────────────────────────────────────────────────
-        let _crFilter = 'day';
-        let _crCashier = '';
-
-        window.openCashierReports = async function() {
-            const modal = document.getElementById('cashier-reports-modal');
-            if (!modal) return;
-            // Populate cashier list
-            const allSales = await db.sales.toArray();
-            const cashierNames = [...new Set(allSales.map(s => s.cashierName).filter(Boolean))].sort();
-            const sel = document.getElementById('cr-cashier-select');
-            if (sel) {
-                sel.innerHTML = '<option value="">— All Cashiers —</option>';
-                cashierNames.forEach(n => { sel.innerHTML += `<option value="${n}">${n}</option>`; });
-            }
-            _crFilter = 'day';
-            _crCashier = '';
-            setCashierReportFilter('day');
-            modal.classList.remove('hidden');
-        };
-
-        window.setCashierReportFilter = async function(range) {
-            _crFilter = range;
-            ['day','week','month'].forEach(f => {
-                const btn = document.getElementById('cr-filter-' + f);
-                if (!btn) return;
-                if (f === range) {
-                    btn.className = 'flex-1 bg-purple-600 text-white py-2.5 rounded-lg text-xs font-black uppercase shadow-sm transition-colors tracking-wider';
-                } else {
-                    btn.className = 'flex-1 bg-transparent hover:bg-slate-800 text-slate-400 py-2.5 rounded-lg text-xs font-black uppercase transition-colors tracking-wider';
-                }
-            });
-            const wPanel = document.getElementById('cr-weekly-days-panel');
-            const mPanel = document.getElementById('cr-monthly-weeks-panel');
-            if (wPanel) wPanel.classList.toggle('hidden', range !== 'week');
-            if (mPanel) mPanel.classList.toggle('hidden', range !== 'month');
-            if (range === 'week') await buildCrWeekDayOptions();
-            if (range === 'month') await buildCrMonthWeekOptions();
-            await renderCashierReportData();
-        };
-
-        window.onCrCashierChange = function() {
-            const sel = document.getElementById('cr-cashier-select');
-            _crCashier = sel ? sel.value : '';
-            renderCashierReportData();
-            if (_crFilter === 'week') buildCrWeekDayOptions();
-            if (_crFilter === 'month') buildCrMonthWeekOptions();
-        };
-
-        async function getCrTimeRange() {
-            const now = new Date();
-            if (_crFilter === 'day') {
-                return { start: new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime(), end: now.getTime() };
-            } else if (_crFilter === 'week') {
-                const dw = new Date(now); dw.setDate(dw.getDate() - 7); return { start: dw.getTime(), end: now.getTime() };
-            } else {
-                const dm = new Date(now); dm.setMonth(dm.getMonth() - 1); return { start: dm.getTime(), end: now.getTime() };
-            }
-        }
-
-        async function filterCrSales() {
-            const { start, end } = await getCrTimeRange();
-            const allSales = await db.sales.toArray();
-            return allSales.filter(s =>
-                s.status !== 'Canceled' &&
-                s.date >= start && s.date <= end &&
-                (!_crCashier || (s.cashierName && s.cashierName.toLowerCase().includes(_crCashier.toLowerCase())))
-            );
-        }
-
-        async function renderCashierReportData() {
-            const sales = await filterCrSales();
-            const ruwanSales = sales.filter(s => s.shop === 'ruwancell' || !s.shop);
-            const tharuSales = sales.filter(s => s.shop === 'tharusalon');
-
-            function calcStats(arr) {
-                return {
-                    rev: arr.reduce((s, a) => s + (Number(a.total)||0), 0),
-                    prof: arr.reduce((s, a) => s + (Number(a.profit)||0), 0),
-                    count: arr.length
-                };
-            }
-
-            const rs = calcStats(ruwanSales);
-            const ts = calcStats(tharuSales);
-
-            const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
-            setEl('cr-ruwan-rev', 'LKR ' + rs.rev.toFixed(2));
-            setEl('cr-ruwan-prof', 'LKR ' + rs.prof.toFixed(2));
-            setEl('cr-ruwan-count', rs.count + ' bills');
-            setEl('cr-tharu-rev', 'LKR ' + ts.rev.toFixed(2));
-            setEl('cr-tharu-prof', 'LKR ' + ts.prof.toFixed(2));
-            setEl('cr-tharu-count', ts.count + ' bills');
-
-            // Bill history sections
-            function buildMiniList(arr) {
-                if (!arr.length) return '<p style="font-size:12px;color:#475569;text-align:center;padding:12px;font-style:italic;">No bills in this period.</p>';
-                return arr.slice(0, 20).map(s => {
-                    const d = new Date(s.date).toLocaleDateString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
-                    return `<div style="background:#0f172a;border:1px solid rgba(255,255,255,0.07);border-radius:8px;padding:8px 10px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;font-size:12px;">
-                        <div><span style="color:#e2e8f0;font-weight:700;">#${s.invoiceNo||s.id}</span><span style="color:#64748b;margin-left:8px;">${s.cashierName||'—'}</span></div>
-                        <div style="text-align:right;"><span style="color:#60a5fa;font-weight:900;">LKR ${Number(s.total||0).toFixed(2)}</span><br><span style="color:#94a3b8;font-size:10px;">${d}</span></div>
-                    </div>`;
-                }).join('');
-            }
-
-            const rEl = document.getElementById('cr-ruwan-bills');
-            const tEl = document.getElementById('cr-tharu-bills');
-            if (rEl) rEl.innerHTML = buildMiniList(ruwanSales);
-            if (tEl) tEl.innerHTML = buildMiniList(tharuSales);
-        }
-
-        async function buildCrWeekDayOptions() {
-            const sel = document.getElementById('cr-weekly-day-select');
-            if (!sel) return;
-            const now = new Date();
-            const dow = now.getDay();
-            const monday = new Date(now); monday.setDate(now.getDate() - ((dow + 6) % 7)); monday.setHours(0,0,0,0);
-            const dayNames = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
-            const allSales = await db.sales.toArray();
-            const filtered = allSales.filter(s => s.status !== 'Canceled' && (!_crCashier || (s.cashierName && s.cashierName.toLowerCase().includes(_crCashier.toLowerCase()))));
-            sel.innerHTML = '<option value="">— Select a Day —</option>';
-            for (let i = 0; i < 7; i++) {
-                const ds = new Date(monday); ds.setDate(monday.getDate() + i); ds.setHours(0,0,0,0);
-                const de = new Date(ds); de.setHours(23,59,59,999);
-                const daySales = filtered.filter(s => s.date >= ds.getTime() && s.date <= de.getTime());
-                const rev = daySales.reduce((s, a) => s + (Number(a.total)||0), 0);
-                const prof = daySales.reduce((s, a) => s + (Number(a.profit)||0), 0);
-                const dateStr = ds.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
-                const isFuture = ds > now;
-                sel.innerHTML += `<option value="${ds.getTime()}|${de.getTime()}" ${isFuture?'disabled':''}>${dayNames[i]} (${dateStr}) — Rev: ${rev.toFixed(0)} | Profit: ${prof.toFixed(0)}</option>`;
-            }
-        }
-
-        async function buildCrMonthWeekOptions() {
-            const sel = document.getElementById('cr-monthly-week-select');
-            if (!sel) return;
-            const now = new Date();
-            const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-            const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-            const allSales = await db.sales.toArray();
-            const filtered = allSales.filter(s => s.status !== 'Canceled' && (!_crCashier || (s.cashierName && s.cashierName.toLowerCase().includes(_crCashier.toLowerCase()))));
-            sel.innerHTML = '<option value="">— Select a Week —</option>';
-            let wNum = 1; let cursor = new Date(monthStart);
-            while (cursor <= monthEnd) {
-                const ws = new Date(cursor);
-                const we = new Date(cursor); we.setDate(we.getDate() + 6); we.setHours(23,59,59,999);
-                if (we > monthEnd) we.setTime(monthEnd.getTime());
-                const wSales = filtered.filter(s => s.date >= ws.getTime() && s.date <= we.getTime());
-                const rev = wSales.reduce((s,a) => s + (Number(a.total)||0), 0);
-                const prof = wSales.reduce((s,a) => s + (Number(a.profit)||0), 0);
-                const s1 = ws.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
-                const s2 = we.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
-                sel.innerHTML += `<option value="${ws.getTime()}|${we.getTime()}" ${ws > now ? 'disabled' : ''}>Week ${wNum} (${s1}–${s2}) — Rev: ${rev.toFixed(0)} | Profit: ${prof.toFixed(0)}</option>`;
-                cursor.setDate(cursor.getDate() + 7); wNum++;
-            }
-        }
-
-        window.loadCrWeeklyDayProfit = async function() {
-            const sel = document.getElementById('cr-weekly-day-select');
-            const res = document.getElementById('cr-weekly-day-result');
-            if (!sel || !sel.value) { if (res) res.classList.add('hidden'); return; }
-            const [s, e] = sel.value.split('|').map(Number);
-            const allSales = await db.sales.toArray();
-            const sales = allSales.filter(a => a.status !== 'Canceled' && a.date >= s && a.date <= e && (!_crCashier || (a.cashierName && a.cashierName.toLowerCase().includes(_crCashier.toLowerCase()))));
-            const ruwan = sales.filter(a => a.shop === 'ruwancell' || !a.shop);
-            const tharu = sales.filter(a => a.shop === 'tharusalon');
-            document.getElementById('cr-wdr-ruwan-rev').textContent = 'LKR ' + ruwan.reduce((x,a) => x + (Number(a.total)||0), 0).toFixed(2);
-            document.getElementById('cr-wdr-ruwan-prof').textContent = 'LKR ' + ruwan.reduce((x,a) => x + (Number(a.profit)||0), 0).toFixed(2);
-            document.getElementById('cr-wdr-tharu-rev').textContent = 'LKR ' + tharu.reduce((x,a) => x + (Number(a.total)||0), 0).toFixed(2);
-            document.getElementById('cr-wdr-tharu-prof').textContent = 'LKR ' + tharu.reduce((x,a) => x + (Number(a.profit)||0), 0).toFixed(2);
-            if (res) res.classList.remove('hidden');
-        };
-
-        window.loadCrMonthlyWeekProfit = async function() {
-            const sel = document.getElementById('cr-monthly-week-select');
-            const res = document.getElementById('cr-monthly-week-result');
-            if (!sel || !sel.value) { if (res) res.classList.add('hidden'); return; }
-            const [s, e] = sel.value.split('|').map(Number);
-            const allSales = await db.sales.toArray();
-            const sales = allSales.filter(a => a.status !== 'Canceled' && a.date >= s && a.date <= e && (!_crCashier || (a.cashierName && a.cashierName.toLowerCase().includes(_crCashier.toLowerCase()))));
-            const ruwan = sales.filter(a => a.shop === 'ruwancell' || !a.shop);
-            const tharu = sales.filter(a => a.shop === 'tharusalon');
-            document.getElementById('cr-mwr-ruwan-rev').textContent = 'LKR ' + ruwan.reduce((x,a) => x + (Number(a.total)||0), 0).toFixed(2);
-            document.getElementById('cr-mwr-ruwan-prof').textContent = 'LKR ' + ruwan.reduce((x,a) => x + (Number(a.profit)||0), 0).toFixed(2);
-            document.getElementById('cr-mwr-tharu-rev').textContent = 'LKR ' + tharu.reduce((x,a) => x + (Number(a.total)||0), 0).toFixed(2);
-            document.getElementById('cr-mwr-tharu-prof').textContent = 'LKR ' + tharu.reduce((x,a) => x + (Number(a.profit)||0), 0).toFixed(2);
-            if (res) res.classList.remove('hidden');
-        };
-
         init();
         startCloudAutoDownload();
     </script>
@@ -4353,138 +4735,6 @@
             </div>
             <div class="p-4 border-t border-slate-700 text-center">
                 <button onclick="document.getElementById('bill-action-modal').classList.add('hidden')" class="text-slate-400 hover:text-white font-bold text-sm transition-colors">Cancel</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ═══ CASHIER REPORTS MODAL ═══ -->
-    <div id="cashier-reports-modal" class="hidden fixed inset-0 bg-slate-950 bg-opacity-95 z-[250] flex items-center justify-center backdrop-blur-sm p-3">
-        <div class="bg-slate-900 rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.9)] border border-purple-500/40 w-full max-w-2xl flex flex-col max-h-[94vh]">
-
-            <!-- Header -->
-            <div class="flex justify-between items-center p-5 border-b border-slate-700 bg-slate-800 rounded-t-2xl">
-                <h3 class="text-white font-black text-xl tracking-wide uppercase flex items-center gap-2">
-                    <span class="text-purple-400">📊</span> Cashier Reports
-                </h3>
-                <button onclick="document.getElementById('cashier-reports-modal').classList.add('hidden')" class="text-slate-400 hover:text-white font-black text-2xl transition-colors">&times;</button>
-            </div>
-
-            <!-- Cashier Selector -->
-            <div class="px-5 pt-4 pb-3 bg-slate-800/60 border-b border-slate-700">
-                <label class="text-[10px] font-black text-purple-400 uppercase tracking-widest block mb-2">🧑‍💼 Select Cashier</label>
-                <select id="cr-cashier-select" onchange="onCrCashierChange()" class="w-full p-3 bg-slate-900 border-2 border-purple-500/50 text-white rounded-xl font-bold focus:border-purple-400 outline-none text-sm glow-focus">
-                    <option value="">— All Cashiers —</option>
-                </select>
-            </div>
-
-            <!-- Period Filters -->
-            <div class="px-5 pt-4 pb-3 bg-slate-800/40 border-b border-slate-700">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">📅 Report Period</label>
-                <div class="bg-slate-900 p-1.5 rounded-xl border border-slate-700 flex gap-2">
-                    <button onclick="setCashierReportFilter('day')" id="cr-filter-day" class="flex-1 bg-purple-600 text-white py-2.5 rounded-lg text-xs font-black uppercase shadow-sm transition-colors tracking-wider">Daily</button>
-                    <button onclick="setCashierReportFilter('week')" id="cr-filter-week" class="flex-1 bg-transparent hover:bg-slate-800 text-slate-400 py-2.5 rounded-lg text-xs font-black uppercase transition-colors tracking-wider">Weekly</button>
-                    <button onclick="setCashierReportFilter('month')" id="cr-filter-month" class="flex-1 bg-transparent hover:bg-slate-800 text-slate-400 py-2.5 rounded-lg text-xs font-black uppercase transition-colors tracking-wider">Monthly</button>
-                </div>
-
-                <!-- Weekly Days Advanced Panel -->
-                <div id="cr-weekly-days-panel" class="hidden mt-3 bg-slate-900/80 border border-blue-500/30 rounded-xl p-3">
-                    <p class="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2">📅 Select Day of This Week</p>
-                    <select id="cr-weekly-day-select" onchange="loadCrWeeklyDayProfit()" class="w-full p-2.5 bg-slate-800 border border-slate-600 text-white rounded-lg font-bold focus:border-blue-500 outline-none text-xs mb-2">
-                        <option value="">— Select a Day —</option>
-                    </select>
-                    <div id="cr-weekly-day-result" class="hidden grid grid-cols-2 gap-2 mt-2">
-                        <div class="bg-slate-800 rounded-lg p-2.5 border border-blue-500/20 text-center">
-                            <p class="text-[9px] font-black text-blue-400 uppercase tracking-wider mb-1">📱 Ruwan Rev</p>
-                            <p id="cr-wdr-ruwan-rev" class="text-sm font-black text-white">LKR 0.00</p>
-                            <p id="cr-wdr-ruwan-prof" class="text-[10px] text-emerald-400 font-bold mt-0.5">Profit: LKR 0.00</p>
-                        </div>
-                        <div class="bg-slate-800 rounded-lg p-2.5 border border-pink-500/20 text-center">
-                            <p class="text-[9px] font-black text-pink-400 uppercase tracking-wider mb-1">💇 Tharu Rev</p>
-                            <p id="cr-wdr-tharu-rev" class="text-sm font-black text-white">LKR 0.00</p>
-                            <p id="cr-wdr-tharu-prof" class="text-[10px] text-emerald-400 font-bold mt-0.5">Profit: LKR 0.00</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Monthly Weeks Advanced Panel -->
-                <div id="cr-monthly-weeks-panel" class="hidden mt-3 bg-slate-900/80 border border-purple-500/30 rounded-xl p-3">
-                    <p class="text-[10px] font-black text-purple-400 uppercase tracking-widest mb-2">📆 Select Week of This Month</p>
-                    <select id="cr-monthly-week-select" onchange="loadCrMonthlyWeekProfit()" class="w-full p-2.5 bg-slate-800 border border-slate-600 text-white rounded-lg font-bold focus:border-purple-500 outline-none text-xs mb-2">
-                        <option value="">— Select a Week —</option>
-                    </select>
-                    <div id="cr-monthly-week-result" class="hidden grid grid-cols-2 gap-2 mt-2">
-                        <div class="bg-slate-800 rounded-lg p-2.5 border border-blue-500/20 text-center">
-                            <p class="text-[9px] font-black text-blue-400 uppercase tracking-wider mb-1">📱 Ruwan Rev</p>
-                            <p id="cr-mwr-ruwan-rev" class="text-sm font-black text-white">LKR 0.00</p>
-                            <p id="cr-mwr-ruwan-prof" class="text-[10px] text-emerald-400 font-bold mt-0.5">Profit: LKR 0.00</p>
-                        </div>
-                        <div class="bg-slate-800 rounded-lg p-2.5 border border-pink-500/20 text-center">
-                            <p class="text-[9px] font-black text-pink-400 uppercase tracking-wider mb-1">💇 Tharu Rev</p>
-                            <p id="cr-mwr-tharu-rev" class="text-sm font-black text-white">LKR 0.00</p>
-                            <p id="cr-mwr-tharu-prof" class="text-[10px] text-emerald-400 font-bold mt-0.5">Profit: LKR 0.00</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Stats: Ruwan & Tharu -->
-            <div class="overflow-y-auto flex-1 p-5 space-y-5">
-                <!-- Ruwan Cellular Section -->
-                <div>
-                    <div class="flex items-center gap-2 mb-3">
-                        <div class="flex-1 h-px bg-blue-500/40"></div>
-                        <span class="text-blue-400 font-black text-xs uppercase tracking-widest px-3 bg-slate-800 border border-blue-500/40 rounded-full py-1.5 shadow">📱 RUWAN CELLULAR</span>
-                        <div class="flex-1 h-px bg-blue-500/40"></div>
-                    </div>
-                    <div class="grid grid-cols-3 gap-3 mb-3">
-                        <div class="bg-slate-800 rounded-xl p-3 border border-blue-500/25 text-center">
-                            <p class="text-[9px] font-black text-blue-400 uppercase tracking-wider mb-1">Revenue</p>
-                            <p id="cr-ruwan-rev" class="text-base font-black text-white">LKR 0.00</p>
-                        </div>
-                        <div class="bg-slate-800 rounded-xl p-3 border border-emerald-500/25 text-center">
-                            <p class="text-[9px] font-black text-emerald-400 uppercase tracking-wider mb-1">Profit</p>
-                            <p id="cr-ruwan-prof" class="text-base font-black text-white">LKR 0.00</p>
-                        </div>
-                        <div class="bg-slate-800 rounded-xl p-3 border border-slate-600 text-center">
-                            <p class="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-1">Bills</p>
-                            <p id="cr-ruwan-count" class="text-base font-black text-white">0</p>
-                        </div>
-                    </div>
-                    <div id="cr-ruwan-bills" class="space-y-1 max-h-52 overflow-y-auto pr-1">
-                        <p style="font-size:12px;color:#475569;text-align:center;padding:12px;font-style:italic;">No bills found.</p>
-                    </div>
-                </div>
-
-                <!-- Tharu Salon Section -->
-                <div>
-                    <div class="flex items-center gap-2 mb-3">
-                        <div class="flex-1 h-px bg-pink-500/40"></div>
-                        <span class="text-pink-400 font-black text-xs uppercase tracking-widest px-3 bg-slate-800 border border-pink-500/40 rounded-full py-1.5 shadow">💇 SALON THARU</span>
-                        <div class="flex-1 h-px bg-pink-500/40"></div>
-                    </div>
-                    <div class="grid grid-cols-3 gap-3 mb-3">
-                        <div class="bg-slate-800 rounded-xl p-3 border border-pink-500/25 text-center">
-                            <p class="text-[9px] font-black text-pink-400 uppercase tracking-wider mb-1">Revenue</p>
-                            <p id="cr-tharu-rev" class="text-base font-black text-white">LKR 0.00</p>
-                        </div>
-                        <div class="bg-slate-800 rounded-xl p-3 border border-emerald-500/25 text-center">
-                            <p class="text-[9px] font-black text-emerald-400 uppercase tracking-wider mb-1">Profit</p>
-                            <p id="cr-tharu-prof" class="text-base font-black text-white">LKR 0.00</p>
-                        </div>
-                        <div class="bg-slate-800 rounded-xl p-3 border border-slate-600 text-center">
-                            <p class="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-1">Bills</p>
-                            <p id="cr-tharu-count" class="text-base font-black text-white">0</p>
-                        </div>
-                    </div>
-                    <div id="cr-tharu-bills" class="space-y-1 max-h-52 overflow-y-auto pr-1">
-                        <p style="font-size:12px;color:#475569;text-align:center;padding:12px;font-style:italic;">No bills found.</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Footer -->
-            <div class="p-4 border-t border-slate-700 text-right bg-slate-800 rounded-b-2xl">
-                <button onclick="document.getElementById('cashier-reports-modal').classList.add('hidden')" class="bg-slate-700 hover:bg-slate-600 text-white px-6 py-2.5 rounded-lg font-bold transition-colors border border-slate-500">Close</button>
             </div>
         </div>
     </div>
