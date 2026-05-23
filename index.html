@@ -1325,7 +1325,8 @@
                         const data = dataSnapshot.val();
                         const itemsArray = Object.values(data);
                         
-                        await window.db.inventory.clear();
+                        // FIX: Use bulkPut (merge/upsert) instead of clear+bulkPut
+                        // Clearing first wipes all local inventory if connection is partial
                         await window.db.inventory.bulkPut(itemsArray);
 
                         if(typeof window.renderInventory === 'function' && document.getElementById('tab-inventory').classList.contains('active')) {
@@ -1535,7 +1536,8 @@
             try {
                 const items = await db.sales.toArray();
                 const salesObj = {};
-                items.forEach(item => salesObj[item.id] = item);
+                // FIX: Never upload 'Being Edited' ghost bills to cloud
+                items.filter(item => item.status !== 'Being Edited').forEach(item => salesObj[item.id] = item);
                 await update(ref(fb_db, 'sales'), salesObj);
                 alert("Sales History successfully uploaded to Cloud!");
             } catch (error) {
@@ -1590,7 +1592,8 @@
                 const _items = await db.sales.toArray();
                 if (!_items.length) return;
                 const _obj = {};
-                _items.forEach(it => { _obj[it.id] = it; });
+                // FIX: Skip 'Being Edited' ghost bills — they must not reach the cloud
+                _items.filter(it => it.status !== 'Being Edited').forEach(it => { _obj[it.id] = it; });
                 await update(ref(fb_db, 'sales'), _obj);
             } catch(_e) { /* silent */ }
         };
@@ -1657,9 +1660,8 @@
                         const _mNew = Object.values(data.sales).filter(s => s && s.id && !_mLocalIds.has(s.id));
                         if (_mNew.length > 0) await db.sales.bulkAdd(_mNew);
                     }
-                    if(data.draftCart) {
-                        await db.draftCart.bulkPut(Object.values(data.draftCart));
-                    }
+                    // FIX: Do NOT sync draftCart from cloud — it restores deleted cart items
+                    // and auto-populates the cart with stale items from other sessions.
                     
                     alert("All cloud data merged successfully! Existing local data kept intact.");
                     
@@ -1943,23 +1945,21 @@
         window.forgetPrinter = forgetPrinter;
 
         window.syncCartWithInventory = async function() {
+            // FIX: Only update item NAME from inventory — never change prices/discounts
+            // of items already in the cart (prevents profit corruption and price surprises)
             if(cart && cart.length > 0) {
+                let changed = false;
                 for(let i=0; i<cart.length; i++) {
                     if(cart[i].code && cart[i].code !== 'unlisted' && cart[i].code !== 'service') {
                         const freshItem = await db.inventory.get(cart[i].code);
-                        if(freshItem) {
-                            const unitPrice = pricingMode === 'wholesale' ? (Number(freshItem.wholesalePrice) || freshItem.price) : freshItem.price;
-                            const itemDiscount = pricingMode === 'wholesale' ? 0 : (freshItem.discount || 0);
-                            cart[i].price = unitPrice;
-                            cart[i].discount = itemDiscount * cart[i].qty;
-                            cart[i].total = (unitPrice * cart[i].qty) - cart[i].discount;
+                        if(freshItem && freshItem.name && freshItem.name !== cart[i].name) {
                             cart[i].name = freshItem.name;
                             if(cart[i].id) await db.draftCart.put(cart[i]);
+                            changed = true;
                         }
                     }
                 }
-                renderCart();
-                updateLivePreview();
+                if(changed) { renderCart(); updateLivePreview(); }
             }
         };
 
@@ -2059,6 +2059,12 @@
             
             localStorage.removeItem('editingInvoiceNo');
             localStorage.removeItem('editingDate');
+            // FIX: Now that new bill is saved, delete the original 'Being Edited' bill
+            const _editingIdDP = localStorage.getItem('editingId');
+            if (_editingIdDP) {
+                await db.sales.delete(Number(_editingIdDP));
+                localStorage.removeItem('editingId');
+            }
 
             const printWindow = window.open('', '_blank', 'width=600,height=800');
             if(printWindow) {
@@ -2142,6 +2148,12 @@
             
             localStorage.removeItem('editingInvoiceNo');
             localStorage.removeItem('editingDate');
+            // FIX: Delete the original 'Being Edited' bill now that new one is saved
+            const _editingIdCB = localStorage.getItem('editingId');
+            if (_editingIdCB) {
+                await db.sales.delete(Number(_editingIdCB));
+                localStorage.removeItem('editingId');
+            }
 
             clearCart();
             alert("Bill Closed and Saved to History.");
@@ -2193,15 +2205,20 @@
                 const _cancelSaleId = await db.sales.add(saleDataToSave);
                 saleDataToSave.id = _cancelSaleId;
                 if(window._silentUploadSale) window._silentUploadSale(saleDataToSave);
+                // FIX: Delete the original 'Being Edited' bill if cancelling mid-edit
+                const _editingIdCA = localStorage.getItem('editingId');
+                if (_editingIdCA) {
+                    await db.sales.delete(Number(_editingIdCA));
+                    localStorage.removeItem('editingId');
+                }
+                localStorage.removeItem('editingInvoiceNo');
+                localStorage.removeItem('editingDate');
             } catch (err) {
                 console.error("Failed to save cancellation to history:", err);
                 alert("ERROR: Cancel record could not be saved to History.");
                 return;
             }
             
-            localStorage.removeItem('editingInvoiceNo');
-            localStorage.removeItem('editingDate');
-
             clearCart();
             alert("Bill Canceled and saved to history.");
             if(currentRole === 'cashier') renderCashierReport();
@@ -2400,9 +2417,15 @@
             let hasWarranty = sale.items && sale.items.some(i => i.customerWarrantyMonths > 0);
             let barcodeHtml = "";
             if (hasWarranty) {
-                let canvas = document.createElement("canvas");
-                JsBarcode(canvas, "INV-" + sale.invoiceNo, { format: "CODE128", width: 1.5, height: 40, displayValue: true, margin: 0 });
-                barcodeHtml = `<div style="text-align:center; margin-top:10px; color: black !important;"><img src="${canvas.toDataURL()}" style="max-width:100%;"></div>`;
+                try {
+                    const barcodeValue = "INV-" + (sale.invoiceNo || sale.id || "000");
+                    let canvas = document.createElement("canvas");
+                    JsBarcode(canvas, barcodeValue, { format: "CODE128", width: 1.5, height: 40, displayValue: true, margin: 0 });
+                    barcodeHtml = `<div style="text-align:center; margin-top:10px; color: black !important;"><img src="${canvas.toDataURL()}" style="max-width:100%;"></div>`;
+                } catch(bErr) {
+                    console.warn("Barcode generation failed:", bErr);
+                    barcodeHtml = `<div style="text-align:center; margin-top:10px; font-size:13px; color:black;">INV: ${sale.invoiceNo || sale.id}</div>`;
+                }
             }
 
             const printContent = `
@@ -3344,21 +3367,29 @@
             if (histDiv) {
                 try {
                     const allSales = await db.sales.toArray();
-                    const custBills = allSales.filter(s => (s.customer || '').toLowerCase() === name.toLowerCase() && s.status !== 'Canceled').sort((a, b) => b.date - a.date);
+                    const custBills = allSales.filter(s => (s.customer || '').toLowerCase() === name.toLowerCase() && s.status !== 'Canceled' && s.status !== 'Being Edited').sort((a, b) => b.date - a.date);
                     if (!custBills.length) {
                         histDiv.innerHTML = '<p class="text-slate-500 text-sm text-center italic py-4">No bills found for this customer.</p>';
                     } else {
+                        // Pre-fetch customer phone (cannot use await inside .map)
+                        const _cpCust = await db.customers.get(name).catch(() => null);
+                        const _cpPhone = (_cpCust && _cpCust.phone) ? _cpCust.phone.replace(/^0/, '') : '';
                         histDiv.innerHTML = custBills.map(s => {
                             const typeColor = s.type === 'credit' ? 'text-red-400' : (s.type === 'settlement' ? 'text-blue-400' : 'text-emerald-400');
+                            // Build WhatsApp message for this bill
+                            const waItems = (s.items || []).map(i => `  \u2022 ${i.name} x${i.qty} = Rs.${Number(i.total||0).toFixed(2)}`).join('\n');
+                            const waMsg = encodeURIComponent(`*RUWAN CELLULAR & SALON THARU*\n\uD83D\uDCCB Invoice: ${s.invoiceNo||s.id}\n\uD83D\uDCC5 Date: ${new Date(s.date).toLocaleDateString()}\n\n${waItems}\n\n\uD83D\uDCB0 *Total: Rs.${Number(s.total).toFixed(2)}*\n\uD83D\uDCDE 077 230 1099 / 075 548 5454\nMadagalla Road, Dagama`);
+                            const waHref = _cpPhone ? `https://wa.me/94${_cpPhone}?text=${waMsg}` : `https://wa.me/?text=${waMsg}`;
                             return `<div class="bg-slate-900/70 rounded-xl border border-slate-700 p-4 mb-2">
                                 <div class="flex justify-between items-center mb-2">
                                     <span class="font-black text-white text-sm">INV: ${s.invoiceNo || s.id}</span>
                                     <span class="font-black ${typeColor} text-sm">LKR ${Number(s.total).toFixed(2)}</span>
                                 </div>
-                                <p class="text-xs text-slate-500 font-mono mb-3">🕒 ${new Date(s.date).toLocaleString()}</p>
-                                <div class="flex gap-2">
-                                    <button onclick="reprintSale(${s.id})" class="flex-1 bg-blue-900/30 text-blue-400 border border-blue-500/40 px-3 py-2 rounded-lg text-xs font-black uppercase hover:bg-blue-600 hover:text-white transition-colors">🖨️ Print</button>
-                                    <button onclick="editSale(${s.id})" class="flex-1 bg-indigo-900/30 text-indigo-400 border border-indigo-500/40 px-3 py-2 rounded-lg text-xs font-black uppercase hover:bg-indigo-600 hover:text-white transition-colors">✏️ Edit</button>
+                                <p class="text-xs text-slate-500 font-mono mb-3">\uD83D\uDD52 ${new Date(s.date).toLocaleString()}</p>
+                                <div class="flex gap-2 flex-wrap">
+                                    <button onclick="reprintSale(${s.id})" class="flex-1 bg-blue-900/30 text-blue-400 border border-blue-500/40 px-3 py-2 rounded-lg text-xs font-black uppercase hover:bg-blue-600 hover:text-white transition-colors">\uD83D\uDDB8 Print</button>
+                                    <button onclick="editSale(${s.id})" class="flex-1 bg-indigo-900/30 text-indigo-400 border border-indigo-500/40 px-3 py-2 rounded-lg text-xs font-black uppercase hover:bg-indigo-600 hover:text-white transition-colors">\u270F\uFE0F Edit</button>
+                                    <a href="${waHref}" target="_blank" class="flex-1 bg-emerald-900/30 text-emerald-400 border border-emerald-500/40 px-3 py-2 rounded-lg text-xs font-black uppercase hover:bg-emerald-600 hover:text-white transition-colors text-center">\uD83D\uDCF2 WhatsApp</a>
                                 </div>
                             </div>`;
                         }).join('');
@@ -3547,6 +3578,8 @@
 
                 let sales = await db.sales.toArray();
                 
+                // FIX: Exclude bills currently being edited (they appear in cart, not history)
+                sales = sales.filter(s => s.status !== 'Being Edited');
                 // Filter by selected shop (handle older data that might not have a shop property)
                 sales = sales.filter(s => s.shop === currentHistShop || (!s.shop && currentHistShop === 'ruwancell'));
 
@@ -3777,8 +3810,10 @@
             
             localStorage.setItem('editingInvoiceNo', sale.invoiceNo || '');
             localStorage.setItem('editingDate', sale.date.toString());
-            
-            await db.sales.delete(id);
+            // FIX: Mark as 'Being Edited' instead of permanently deleting.
+            // If the app closes before saving, the bill can be recovered.
+            localStorage.setItem('editingId', id.toString());
+            await db.sales.update(id, { status: 'Being Edited' });
             renderCart();
             updateLivePreview();
             showTab('billing');
@@ -4215,7 +4250,7 @@
             
             let allDbSales = await db.sales.toArray();
             let shopSales = allDbSales.filter(s => s.shop === currentRepShop || (!s.shop && currentRepShop === 'ruwancell'));
-            const validSales = shopSales.filter(s => s.date >= startTime && s.status !== 'Canceled');
+            const validSales = shopSales.filter(s => s.date >= startTime && s.status !== 'Canceled' && s.status !== 'Being Edited');
 
             let totalRev = 0;
             let totalCost = 0;
@@ -4281,7 +4316,7 @@
             let shopSales = allDbSales.filter(s => s.shop === currentRepShop || (!s.shop && currentRepShop === 'ruwancell'));
 
             const allSales = shopSales.filter(s => s.date >= startTime && s.date < endTime);
-            const validSales = allSales.filter(s => s.status !== 'Canceled');
+            const validSales = allSales.filter(s => s.status !== 'Canceled' && s.status !== 'Being Edited');
 
             document.getElementById('rep-profit').innerText = `LKR ${validSales.reduce((s, a) => s + (a.profit || 0), 0).toFixed(2)}`;
             document.getElementById('rep-sales').innerText = `LKR ${validSales.reduce((s, a) => s + (a.total || 0), 0).toFixed(2)}`;
@@ -4374,6 +4409,19 @@
 
             const savedCart = await db.draftCart.toArray();
             if(savedCart.length > 0) { cart = savedCart; renderCart(); }
+            // FIX: If cart is empty but we have a stale 'editingId', restore that bill
+            // (handles app crash/close mid-edit — bill was marked 'Being Edited' not deleted)
+            if (savedCart.length === 0) {
+                const _staleId = localStorage.getItem('editingId');
+                if (_staleId) {
+                    try {
+                        await db.sales.update(Number(_staleId), { status: 'Completed' });
+                    } catch(_re) { /* ignore */ }
+                    localStorage.removeItem('editingId');
+                    localStorage.removeItem('editingInvoiceNo');
+                    localStorage.removeItem('editingDate');
+                }
+            }
             loadLogo(); updateCustomerDropdown(); updateLivePreview();
             const savedName = localStorage.getItem('persistent_printer_name');
             if(savedName) { document.getElementById('printer-status').innerHTML = `<span class="w-3 h-3 rounded-full bg-blue-500 inline-block"></span> Status: Saved Printer - ` + savedName; }
@@ -4660,14 +4708,21 @@
                 setBillingShop(sale.shop);
             }
             if (sale.customer) document.getElementById('bill-customer').value = sale.customer;
+            // FIX: Restore extra discount and bill note from the original bill
+            if (document.getElementById('bill-extra-discount')) document.getElementById('bill-extra-discount').value = sale.extraDiscount || 0;
+            if (document.getElementById('bill-note')) document.getElementById('bill-note').value = sale.note || '';
 
-            // Cancel original sale
-            await db.sales.update(_currentBillActionId, { status: 'Canceled' });
+            // FIX: Mark as 'Being Edited' (recoverable) instead of 'Canceled' (permanent)
+            // Store editingId/editingDate/editingInvoiceNo so the date is preserved on re-save
+            await db.sales.update(_currentBillActionId, { status: 'Being Edited' });
+            localStorage.setItem('editingId', _currentBillActionId.toString());
+            localStorage.setItem('editingDate', (sale.date || Date.now()).toString());
+            localStorage.setItem('editingInvoiceNo', sale.invoiceNo || '');
 
             showTab('billing');
             renderCart();
             updateLivePreview();
-            alert('✏️ Bill loaded for editing. Original marked as Canceled. Finish and print when done.');
+            alert('✏️ Bill loaded for editing. Original preserved. Finish and print when done.');
         };
 
         // Direct print/edit from bill card (bypass action modal)
