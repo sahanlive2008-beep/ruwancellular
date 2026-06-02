@@ -1154,6 +1154,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
         import { getDatabase, ref, set, get, child, onValue, update } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCvbgoJj_-VWHw7y23_OFtt6lQDuknqJ0k",
@@ -1212,15 +1213,33 @@
         });
 
         window.showLoginForm = function() {
-            document.getElementById('login-form').classList.remove('hidden');
-            document.getElementById('register-form').classList.add('hidden');
-            document.getElementById('login-error').classList.add('hidden');
+            console.log('Show login form called');
+            const loginForm = document.getElementById('login-form');
+            const registerForm = document.getElementById('register-form');
+            const loginError = document.getElementById('login-error');
+            const loginStatus = document.getElementById('login-status');
+            
+            if (loginForm) loginForm.classList.remove('hidden');
+            if (registerForm) registerForm.classList.add('hidden');
+            if (loginError) loginError.classList.add('hidden');
+            if (loginStatus) loginStatus.textContent = 'Please login to continue';
+            
+            console.log('Forms toggled');
         };
 
         window.showRegisterForm = function() {
-            document.getElementById('login-form').classList.add('hidden');
-            document.getElementById('register-form').classList.remove('hidden');
-            document.getElementById('login-error').classList.add('hidden');
+            console.log('Show register form called');
+            const loginForm = document.getElementById('login-form');
+            const registerForm = document.getElementById('register-form');
+            const loginError = document.getElementById('login-error');
+            const loginStatus = document.getElementById('login-status');
+            
+            if (loginForm) loginForm.classList.add('hidden');
+            if (registerForm) registerForm.classList.remove('hidden');
+            if (loginError) loginError.classList.add('hidden');
+            if (loginStatus) loginStatus.textContent = 'Create new account';
+            
+            console.log('Forms toggled');
         };
 
         window.handleLogin = async function() {
