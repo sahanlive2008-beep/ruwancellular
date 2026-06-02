@@ -1212,126 +1212,6 @@
             }
         });
 
-        window.showLoginForm = function() {
-            console.log('Show login form called');
-            const loginForm = document.getElementById('login-form');
-            const registerForm = document.getElementById('register-form');
-            const loginError = document.getElementById('login-error');
-            const loginStatus = document.getElementById('login-status');
-            
-            if (loginForm) loginForm.classList.remove('hidden');
-            if (registerForm) registerForm.classList.add('hidden');
-            if (loginError) loginError.classList.add('hidden');
-            if (loginStatus) loginStatus.textContent = 'Please login to continue';
-            
-            console.log('Forms toggled');
-        };
-
-        window.showRegisterForm = function() {
-            console.log('Show register form called');
-            const loginForm = document.getElementById('login-form');
-            const registerForm = document.getElementById('register-form');
-            const loginError = document.getElementById('login-error');
-            const loginStatus = document.getElementById('login-status');
-            
-            if (loginForm) loginForm.classList.add('hidden');
-            if (registerForm) registerForm.classList.remove('hidden');
-            if (loginError) loginError.classList.add('hidden');
-            if (loginStatus) loginStatus.textContent = 'Create new account';
-            
-            console.log('Forms toggled');
-        };
-
-        window.handleLogin = async function() {
-            console.log('Login button clicked');
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
-            const errorDiv = document.getElementById('login-error');
-            const loginStatus = document.getElementById('login-status');
-
-            console.log('Email:', email, 'Password:', password ? '***' : 'empty');
-
-            if (!email || !password) {
-                errorDiv.textContent = 'Please enter email and password';
-                errorDiv.classList.remove('hidden');
-                return;
-            }
-
-            try {
-                if (loginStatus) loginStatus.textContent = 'Logging in...';
-                await signInWithEmailAndPassword(fb_auth, email, password);
-                errorDiv.classList.add('hidden');
-                console.log('Login successful');
-            } catch (error) {
-                console.error('Login error:', error);
-                errorDiv.textContent = error.message;
-                errorDiv.classList.remove('hidden');
-                if (loginStatus) loginStatus.textContent = 'Login failed';
-            }
-        };
-
-        window.handleRegister = async function() {
-            console.log('Register button clicked');
-            const email = document.getElementById('register-email').value;
-            const password = document.getElementById('register-password').value;
-            const role = document.getElementById('register-role').value;
-            const displayName = document.getElementById('register-name').value;
-            const errorDiv = document.getElementById('login-error');
-            const loginStatus = document.getElementById('login-status');
-
-            console.log('Email:', email, 'Role:', role, 'Name:', displayName);
-
-            if (!email || !password || !displayName) {
-                errorDiv.textContent = 'Please fill all fields';
-                errorDiv.classList.remove('hidden');
-                return;
-            }
-
-            if (password.length < 6) {
-                errorDiv.textContent = 'Password must be at least 6 characters';
-                errorDiv.classList.remove('hidden');
-                return;
-            }
-
-            try {
-                if (loginStatus) loginStatus.textContent = 'Registering...';
-                // Create user in Firebase Auth
-                const userCredential = await createUserWithEmailAndPassword(fb_auth, email, password);
-                const user = userCredential.user;
-
-                // Update display name
-                await updateProfile(user, { displayName: displayName });
-
-                // Save user role to Firebase Database
-                await set(ref(fb_db, 'users/' + user.uid), {
-                    email: email,
-                    displayName: displayName,
-                    role: role,
-                    createdAt: Date.now()
-                });
-
-                errorDiv.classList.add('hidden');
-                console.log('Registration successful');
-                alert('Registration successful! You can now login.');
-                showLoginForm();
-            } catch (error) {
-                console.error('Registration error:', error);
-                errorDiv.textContent = error.message;
-                errorDiv.classList.remove('hidden');
-                if (loginStatus) loginStatus.textContent = 'Registration failed';
-            }
-        };
-
-        window.handleLogout = async function() {
-            try {
-                await signOut(fb_auth);
-                currentUser = null;
-                userRole = null;
-            } catch (error) {
-                console.error('Logout error:', error);
-            }
-        };
-
         // --- DAILY LIMIT FOR CLOUD UPLOAD/DOWNLOAD ---
         function checkDailyLimit(action) {
             const today = new Date().toDateString();
@@ -5191,6 +5071,133 @@
 
         init();
         startCloudAutoDownload();
+    </script>
+
+    <!-- Firebase Authentication Functions (Outside Module for HTML Access) -->
+    <script>
+        // These functions are outside the module so HTML onclick handlers can access them
+        // They use the Firebase compat SDK which is available globally
+        
+        window.showLoginForm = function() {
+            console.log('Show login form called');
+            const loginForm = document.getElementById('login-form');
+            const registerForm = document.getElementById('register-form');
+            const loginError = document.getElementById('login-error');
+            const loginStatus = document.getElementById('login-status');
+            
+            if (loginForm) loginForm.classList.remove('hidden');
+            if (registerForm) registerForm.classList.add('hidden');
+            if (loginError) loginError.classList.add('hidden');
+            if (loginStatus) loginStatus.textContent = 'Please login to continue';
+            
+            console.log('Forms toggled');
+        };
+
+        window.showRegisterForm = function() {
+            console.log('Show register form called');
+            const loginForm = document.getElementById('login-form');
+            const registerForm = document.getElementById('register-form');
+            const loginError = document.getElementById('login-error');
+            const loginStatus = document.getElementById('login-status');
+            
+            if (loginForm) loginForm.classList.add('hidden');
+            if (registerForm) registerForm.classList.remove('hidden');
+            if (loginError) loginError.classList.add('hidden');
+            if (loginStatus) loginStatus.textContent = 'Create new account';
+            
+            console.log('Forms toggled');
+        };
+
+        window.handleLogin = async function() {
+            console.log('Login button clicked');
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const errorDiv = document.getElementById('login-error');
+            const loginStatus = document.getElementById('login-status');
+
+            console.log('Email:', email, 'Password:', password ? '***' : 'empty');
+
+            if (!email || !password) {
+                errorDiv.textContent = 'Please enter email and password';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                if (loginStatus) loginStatus.textContent = 'Logging in...';
+                // Use Firebase compat SDK
+                await firebase.auth().signInWithEmailAndPassword(email, password);
+                errorDiv.classList.add('hidden');
+                console.log('Login successful');
+            } catch (error) {
+                console.error('Login error:', error);
+                errorDiv.textContent = error.message;
+                errorDiv.classList.remove('hidden');
+                if (loginStatus) loginStatus.textContent = 'Login failed';
+            }
+        };
+
+        window.handleRegister = async function() {
+            console.log('Register button clicked');
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+            const role = document.getElementById('register-role').value;
+            const displayName = document.getElementById('register-name').value;
+            const errorDiv = document.getElementById('login-error');
+            const loginStatus = document.getElementById('login-status');
+
+            console.log('Email:', email, 'Role:', role, 'Name:', displayName);
+
+            if (!email || !password || !displayName) {
+                errorDiv.textContent = 'Please fill all fields';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            if (password.length < 6) {
+                errorDiv.textContent = 'Password must be at least 6 characters';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                if (loginStatus) loginStatus.textContent = 'Registering...';
+                // Create user in Firebase Auth using compat SDK
+                const userCredential = await firebase.auth().createUserWithEmailAndPassword(email, password);
+                const user = userCredential.user;
+
+                // Update display name
+                await user.updateProfile({ displayName: displayName });
+
+                // Save user role to Firebase Database using compat SDK
+                await firebase.database().ref('users/' + user.uid).set({
+                    email: email,
+                    displayName: displayName,
+                    role: role,
+                    createdAt: Date.now()
+                });
+
+                errorDiv.classList.add('hidden');
+                console.log('Registration successful');
+                alert('Registration successful! You can now login.');
+                showLoginForm();
+            } catch (error) {
+                console.error('Registration error:', error);
+                errorDiv.textContent = error.message;
+                errorDiv.classList.remove('hidden');
+                if (loginStatus) loginStatus.textContent = 'Registration failed';
+            }
+        };
+
+        window.handleLogout = async function() {
+            try {
+                await firebase.auth().signOut();
+                currentUser = null;
+                userRole = null;
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+        };
     </script>
 
     <!-- ═══ CASHIER BILLS MODAL ═══ -->
