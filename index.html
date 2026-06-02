@@ -263,6 +263,7 @@
     <div id="firebase-login-modal" class="fixed inset-0 bg-slate-950 bg-opacity-95 z-[300] flex items-center justify-center backdrop-blur-sm">
         <div class="bg-slate-800 p-8 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.8)] border border-slate-600 w-11/12 max-w-md">
             <h3 class="text-white font-black text-2xl mb-6 text-center tracking-wide">🔐 POS Login</h3>
+            <p id="login-status" class="text-slate-400 text-sm text-center mb-4">Please login to continue</p>
             
             <div id="login-form">
                 <div class="mb-4">
@@ -1180,6 +1181,9 @@
 
         // Check authentication state on load
         onAuthStateChanged(fb_auth, async (user) => {
+            const loginModal = document.getElementById('firebase-login-modal');
+            const loginStatus = document.getElementById('login-status');
+            
             if (user) {
                 currentUser = user;
                 // Get user role from Firebase Database
@@ -1191,7 +1195,7 @@
                     userRole = 'cashier';
                 }
                 // Hide login modal
-                document.getElementById('firebase-login-modal').classList.add('hidden');
+                if (loginModal) loginModal.classList.add('hidden');
                 // Set role in the app
                 setRole(userRole === 'admin' ? 'owner' : 'cashier');
                 // Update sidebar based on role
@@ -1200,7 +1204,10 @@
                 currentUser = null;
                 userRole = null;
                 // Show login modal
-                document.getElementById('firebase-login-modal').classList.remove('hidden');
+                if (loginModal) {
+                    loginModal.classList.remove('hidden');
+                    if (loginStatus) loginStatus.textContent = 'Please login to continue';
+                }
             }
         });
 
@@ -1217,9 +1224,13 @@
         };
 
         window.handleLogin = async function() {
+            console.log('Login button clicked');
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
             const errorDiv = document.getElementById('login-error');
+            const loginStatus = document.getElementById('login-status');
+
+            console.log('Email:', email, 'Password:', password ? '***' : 'empty');
 
             if (!email || !password) {
                 errorDiv.textContent = 'Please enter email and password';
@@ -1228,20 +1239,28 @@
             }
 
             try {
+                if (loginStatus) loginStatus.textContent = 'Logging in...';
                 await signInWithEmailAndPassword(fb_auth, email, password);
                 errorDiv.classList.add('hidden');
+                console.log('Login successful');
             } catch (error) {
+                console.error('Login error:', error);
                 errorDiv.textContent = error.message;
                 errorDiv.classList.remove('hidden');
+                if (loginStatus) loginStatus.textContent = 'Login failed';
             }
         };
 
         window.handleRegister = async function() {
+            console.log('Register button clicked');
             const email = document.getElementById('register-email').value;
             const password = document.getElementById('register-password').value;
             const role = document.getElementById('register-role').value;
             const displayName = document.getElementById('register-name').value;
             const errorDiv = document.getElementById('login-error');
+            const loginStatus = document.getElementById('login-status');
+
+            console.log('Email:', email, 'Role:', role, 'Name:', displayName);
 
             if (!email || !password || !displayName) {
                 errorDiv.textContent = 'Please fill all fields';
@@ -1256,6 +1275,7 @@
             }
 
             try {
+                if (loginStatus) loginStatus.textContent = 'Registering...';
                 // Create user in Firebase Auth
                 const userCredential = await createUserWithEmailAndPassword(fb_auth, email, password);
                 const user = userCredential.user;
@@ -1272,11 +1292,14 @@
                 });
 
                 errorDiv.classList.add('hidden');
+                console.log('Registration successful');
                 alert('Registration successful! You can now login.');
                 showLoginForm();
             } catch (error) {
+                console.error('Registration error:', error);
                 errorDiv.textContent = error.message;
                 errorDiv.classList.remove('hidden');
+                if (loginStatus) loginStatus.textContent = 'Registration failed';
             }
         };
 
