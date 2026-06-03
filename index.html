@@ -414,6 +414,16 @@
                         <button onclick="handleLogout()" class="w-full bg-red-600 hover:bg-red-500 text-white py-3 rounded-lg font-bold shadow-[0_0_10px_rgba(220,38,38,0.4)] transition-colors relative z-10 uppercase tracking-wider">Sign Out</button>
                     </div>
                 </div>
+
+                <!-- Firebase Logout Section (Always visible when logged in) -->
+                <div id="firebase-logout-section" class="hidden mt-6">
+                    <div class="bg-red-900/20 p-6 rounded-xl border border-red-500/30 shadow-lg text-left relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-32 h-32 bg-red-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10"></div>
+                        <h4 class="font-bold text-lg text-red-300 mb-4 relative z-10">🚪 Logout</h4>
+                        <p class="text-xs text-slate-400 mb-4 relative z-10">Sign out of your Firebase account.</p>
+                        <button onclick="handleLogout()" class="w-full bg-red-600 hover:bg-red-500 text-white py-3 rounded-lg font-bold shadow-[0_0_10px_rgba(220,38,38,0.4)] transition-colors relative z-10 uppercase tracking-wider">Sign Out</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -1078,6 +1088,7 @@
             const roleSelectionButtons = document.getElementById('role-selection-buttons');
             const cashierModeHeader = document.getElementById('cashier-mode-header');
             const cashierShiftSection = document.getElementById('cashier-shift-section');
+            const firebaseLogoutSection = document.getElementById('firebase-logout-section');
             
             if (user) {
                 currentUser = user;
@@ -1094,6 +1105,9 @@
                 
                 // Hide role selection buttons when Firebase user is logged in
                 if (roleSelectionButtons) roleSelectionButtons.classList.add('hidden');
+                
+                // Show logout section for all Firebase users
+                if (firebaseLogoutSection) firebaseLogoutSection.classList.remove('hidden');
                 
                 // Hide cashier mode header when Firebase admin is logged in
                 if (cashierModeHeader) {
@@ -1120,6 +1134,8 @@
                 }
                 // Show role selection buttons when no Firebase user
                 if (roleSelectionButtons) roleSelectionButtons.classList.remove('hidden');
+                // Hide logout section when no Firebase user
+                if (firebaseLogoutSection) firebaseLogoutSection.classList.add('hidden');
                 // Hide cashier mode header and shift section
                 if (cashierModeHeader) cashierModeHeader.classList.add('hidden');
                 if (cashierShiftSection) cashierShiftSection.classList.add('hidden');
@@ -1437,7 +1453,7 @@
                 // Show all tabs for admin
                 restrictedTabs.forEach(id => {
                     const el = document.getElementById(id);
-                    if (el) el.style.display = 'block';
+                    if (el) el.style.display = '';
                 });
             }
         }
