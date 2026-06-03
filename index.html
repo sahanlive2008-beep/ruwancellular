@@ -358,48 +358,23 @@
                     <button onclick="setRole('owner')" class="text-xs bg-slate-800 text-emerald-400 font-bold px-4 py-2 rounded-lg shadow border border-slate-600 hover:bg-slate-700 hover:text-white transition-colors">🔄 Switch Owner</button>
                 </div>
 
-                <div id="owner-setup-section" class="hidden mt-6 border-t border-slate-700 pt-8">
-                    <h3 class="font-bold text-2xl mb-6 text-white">Host Server (Admin)</h3>
-                    
-                    <div class="bg-slate-800/80 p-6 rounded-xl border border-slate-600 shadow-lg text-left mb-6 relative overflow-hidden">
-                        <div class="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>
-                        <h4 class="font-bold text-lg text-blue-400 mb-2 relative z-10">📡 Live Connection Link</h4>
-                        <p class="text-sm text-slate-400 mb-4 relative z-10">Create a persistent server to stream live inventory updates to your cashier.</p>
-                        <button onclick="startHostServer()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-lg font-bold shadow-[0_0_10px_rgba(37,99,235,0.3)] transition-colors mb-4 relative z-10">Start / Resume Live Server</button>
-                        <div id="host-credentials" class="hidden grid grid-cols-2 gap-4 relative z-10">
-                            <div>
-                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Server IP</label>
-                                <input type="text" id="host-ip" readonly class="w-full p-3 border border-blue-500/50 rounded-lg font-mono text-blue-300 font-bold bg-slate-900 text-base text-center shadow-inner">
-                            </div>
-                            <div>
-                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Password</label>
-                                <input type="text" id="host-password" readonly class="w-full p-3 border border-red-500/50 rounded-lg font-mono text-red-400 font-bold bg-slate-900 text-base text-center shadow-inner">
-                            </div>
-                        </div>
-                        <p id="host-status" class="text-sm font-bold text-emerald-400 mt-4 hidden text-center animate-pulse relative z-10">🟢 Server Active & Broadcasting...</p>
-                        
-                        <div id="connected-cashiers-container" class="mt-6 pt-6 border-t border-slate-700 relative z-10">
-                            <h5 class="font-bold text-sm text-slate-300 mb-3 uppercase tracking-wider">🔌 Connected Cashiers</h5>
-                            <div id="connected-cashiers-list" class="space-y-2 max-h-32 overflow-y-auto pr-2">
-                                <p class="text-sm text-slate-500 italic">No cashiers connected yet.</p>
-                            </div>
-                        </div>
-
-                        <div class="mt-6 pt-6 border-t border-slate-700 relative z-10">
-                            <h5 class="font-bold text-sm text-slate-300 mb-3 uppercase tracking-wider">📊 View Bills by Cashier</h5>
-                            <p class="text-xs text-slate-500 mb-3">Click any cashier name above, or search all cashiers below:</p>
-                            <button onclick="openCashierBillsSearch()" class="w-full bg-yellow-600 hover:bg-yellow-500 text-slate-900 font-black py-3 rounded-xl uppercase tracking-wider border border-yellow-400 shadow transition-all text-sm">📋 Browse All Cashier Bills</button>
-                        </div>
-
-                        <div class="mt-6 pt-6 border-t border-slate-700 relative z-10">
-                            <h5 class="font-bold text-sm text-slate-300 mb-3 uppercase tracking-wider">🪪 Cashier Info Verification</h5>
-                            <p class="text-xs text-slate-500 mb-3">Live snapshot of each connected cashier's profile information.</p>
-                            <div id="cashier-info-panel" class="space-y-3">
-                                <p class="text-xs text-slate-600 italic text-center py-3">No cashiers connected.</p>
-                            </div>
-                        </div>
+                <!-- Firebase Cashier Shift Management (for cashiers) -->
+                <div id="cashier-shift-section" class="hidden mb-6 bg-emerald-900/30 border border-emerald-500/50 p-6 rounded-xl">
+                    <h3 class="font-bold text-xl text-emerald-400 mb-4">🕒 Shift Management</h3>
+                    <div id="shift-closed-view">
+                        <p class="text-slate-400 mb-4">Your shift is currently closed. Open your shift to start billing.</p>
+                        <button onclick="openCashierShift()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-4 rounded-xl font-black text-lg uppercase tracking-wider shadow-[0_0_15px_rgba(16,185,129,0.4)] transition-all">🟢 Open Shift</button>
                     </div>
+                    <div id="shift-open-view" class="hidden">
+                        <p class="text-emerald-400 mb-2">✅ Shift is Open</p>
+                        <p class="text-slate-400 mb-4">Shift started at: <span id="shift-start-time" class="font-bold text-white"></span></p>
+                        <button onclick="closeCashierShift()" class="w-full bg-red-600 hover:bg-red-500 text-white py-4 rounded-xl font-black text-lg uppercase tracking-wider shadow-[0_0_15px_rgba(220,38,38,0.4)] transition-all">🔴 Close Shift</button>
+                    </div>
+                </div>
 
+                <div id="owner-setup-section" class="hidden mt-6 border-t border-slate-700 pt-8">
+                    <h3 class="font-bold text-2xl mb-6 text-white">Admin Settings</h3>
+                    
                     <div class="bg-slate-800/80 p-6 rounded-xl border border-slate-600 shadow-lg text-left relative overflow-hidden">
                         <h4 class="font-bold text-lg text-yellow-400 mb-4 relative z-10">🔐 Change Admin Password</h4>
                         <div class="grid grid-cols-1 gap-4 relative z-10">
@@ -424,104 +399,20 @@
                         <div id="firebase-cashiers-list" class="mt-4 space-y-2 max-h-60 overflow-y-auto relative z-10"></div>
                     </div>
 
+                    <div class="bg-blue-900/20 p-6 rounded-xl border border-blue-500/30 shadow-lg text-left mt-6 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10"></div>
+                        <h4 class="font-bold text-lg text-blue-300 mb-4 relative z-10">📊 Cashier Bills & Shifts</h4>
+                        <p class="text-xs text-slate-400 mb-4 relative z-10">View cashier bills and shift data.</p>
+                        <button onclick="loadCashierBillsData()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-lg font-bold shadow-[0_0_10px_rgba(37,99,235,0.4)] transition-colors mb-4 relative z-10 uppercase tracking-wider">📋 Load Cashier Data</button>
+                        <div id="cashier-bills-data" class="mt-4 space-y-2 max-h-60 overflow-y-auto relative z-10"></div>
+                    </div>
+
                     <div class="bg-red-900/20 p-6 rounded-xl border border-red-500/30 shadow-lg text-left mt-6 relative overflow-hidden">
                         <div class="absolute top-0 right-0 w-32 h-32 bg-red-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10"></div>
                         <h4 class="font-bold text-lg text-red-300 mb-4 relative z-10">🚪 Logout</h4>
                         <p class="text-xs text-slate-400 mb-4 relative z-10">Sign out of your Firebase account.</p>
                         <button onclick="handleLogout()" class="w-full bg-red-600 hover:bg-red-500 text-white py-3 rounded-lg font-bold shadow-[0_0_10px_rgba(220,38,38,0.4)] transition-colors relative z-10 uppercase tracking-wider">Sign Out</button>
                     </div>
-                </div>
-
-                <div id="cashier-setup-section" class="hidden mt-6 border-t border-slate-700 pt-6">
-                    <h3 class="font-bold text-2xl mb-6 text-white">Smart Cashier Profile</h3>
-                    
-                    <div class="flex flex-col md:flex-row gap-6 items-center mb-6 bg-slate-800/80 p-6 rounded-xl border border-slate-600 shadow-lg">
-                        <div class="w-32 h-32 bg-slate-900 rounded-full overflow-hidden border-4 border-emerald-500 flex-shrink-0 relative shadow-[0_0_15px_rgba(16,185,129,0.4)]">
-                            <img id="cashier-photo-preview" src="" class="w-full h-full object-cover hidden">
-                            <span id="cashier-photo-placeholder" class="text-slate-500 flex items-center justify-center h-full text-sm font-bold absolute inset-0 uppercase tracking-wider">No Photo</span>
-                        </div>
-                        <div class="flex-1 w-full space-y-4 text-left">
-                            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Cashier Name</label>
-                            <input type="text" id="cashier-name" placeholder="Enter Your Name" class="w-full p-3 bg-slate-900 border border-slate-600 text-white rounded-lg font-bold shadow-inner focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 glow-focus outline-none text-lg" oninput="saveCashierInfo()">
-                            
-                            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider block mt-2">Update Photo</label>
-                            <input type="file" id="cashier-photo-upload" accept="image/*" class="w-full text-sm text-slate-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-slate-700 file:text-white hover:file:bg-slate-600 transition-colors" onchange="handleCashierPhoto(this)">
-                        </div>
-                    </div>
-
-                    <div class="bg-indigo-900/20 p-6 rounded-xl border border-indigo-500/30 shadow-lg mb-6 text-left relative overflow-hidden">
-                        <div class="absolute top-0 right-0 w-32 h-32 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10"></div>
-                        <h4 class="font-bold text-lg text-indigo-300 mb-4 relative z-10">🔌 Connect to Admin Panel</h4>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 relative z-10">
-                            <div>
-                                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Device Name</label>
-                                <input type="text" id="client-device" placeholder="E.g. Front Counter" class="w-full p-3 bg-slate-900 border rounded-lg font-mono text-sm border-slate-600 text-white focus:border-indigo-400 glow-focus outline-none">
-                            </div>
-                            <div>
-                                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Host IP</label>
-                                <input type="text" id="client-ip" placeholder="192.168.x.x" class="w-full p-3 bg-slate-900 border rounded-lg font-mono text-sm border-slate-600 text-white focus:border-indigo-400 glow-focus outline-none text-center">
-                            </div>
-                            <div>
-                                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Password</label>
-                                <input type="password" id="client-password" class="w-full p-3 bg-slate-900 border rounded-lg font-mono text-sm border-slate-600 text-white focus:border-indigo-400 glow-focus outline-none text-center tracking-widest">
-                            </div>
-                        </div>
-                        <button onclick="connectToHost()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-3 rounded-lg font-bold shadow-[0_0_10px_rgba(79,70,229,0.4)] transition-colors uppercase tracking-wider relative z-10">Connect Server</button>
-                        <p id="client-status" class="text-sm font-bold text-emerald-400 mt-4 hidden text-center animate-pulse relative z-10">🟢 Connected to Admin Panel</p>
-                    </div>
-                    
-                    <div class="bg-slate-800 p-6 rounded-xl border border-slate-600 shadow-lg text-left">
-                        <div class="flex justify-between items-center mb-6 border-b border-slate-700 pb-4">
-                            <h4 class="font-bold text-xl text-white">📊 My Daily Sales (Today)</h4>
-                            <button onclick="renderCashierReport()" class="text-xs bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg font-bold shadow border border-slate-500 transition-colors uppercase tracking-wider">🔄 Refresh Stats</button>
-                        </div>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div class="bg-slate-900 p-5 rounded-xl shadow-inner border border-slate-700 flex flex-col items-center justify-center text-center">
-                                <p class="text-xs uppercase font-bold text-blue-400 tracking-wider mb-2">📱 Ruwan Cellular</p>
-                                <p id="cashier-sales-ruwan" class="font-black text-2xl text-white">LKR 0.00</p>
-                            </div>
-                            <div class="bg-slate-900 p-5 rounded-xl shadow-inner border border-slate-700 flex flex-col items-center justify-center text-center">
-                                <p class="text-xs uppercase font-bold text-pink-400 tracking-wider mb-2">💇‍♀️ Salon Tharu</p>
-                                <p id="cashier-sales-tharu" class="font-black text-2xl text-white">LKR 0.00</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-slate-800/80 p-6 rounded-xl border border-slate-600 shadow-lg text-left mt-6 relative overflow-hidden">
-                    <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10"></div>
-                    <h4 class="font-bold text-lg text-emerald-400 mb-1 relative z-10">⏱️ Cloud Auto-Sync Timer</h4>
-                    <p class="text-xs text-slate-400 mb-4 relative z-10">Automatically upload all data to cloud at a set interval. A countdown popup will appear before each sync.</p>
-                    <div class="flex flex-col sm:flex-row gap-4 items-end relative z-10">
-                        <div class="flex items-center gap-3">
-                            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Enable</label>
-                            <input type="checkbox" id="auto-sync-toggle" class="w-5 h-5 accent-emerald-500 cursor-pointer" onchange="saveAutoSyncSettings()">
-                        </div>
-                        <div class="flex-1">
-                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Interval (Minutes)</label>
-                            <input type="number" id="auto-sync-minutes-input" min="1" max="60" value="3" class="w-full p-3 bg-slate-900 border border-slate-600 text-white rounded-lg font-bold shadow-inner focus:border-emerald-500 glow-focus outline-none text-center text-lg">
-                        </div>
-                        <button onclick="saveAutoSyncSettings()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-lg font-bold border border-emerald-500 shadow transition-colors uppercase tracking-wider whitespace-nowrap">💾 Save</button>
-                    </div>
-                    <p id="auto-sync-status" class="text-xs text-emerald-400 font-bold mt-3 hidden relative z-10">✅ Auto-sync is active.</p>
-                </div>
-
-                <div class="bg-slate-800/80 p-6 rounded-xl border border-blue-500/40 shadow-lg text-left mt-6 relative overflow-hidden">
-                    <div class="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10"></div>
-                    <h4 class="font-bold text-lg text-blue-300 mb-1 relative z-10">⬇️ Auto Cloud Data Download Reminder</h4>
-                    <p class="text-xs text-slate-400 mb-4 relative z-10">Set a timer to auto-download the latest cloud data (inventory, customers, history) at a set interval. A reminder popup will appear before each download.</p>
-                    <div class="flex flex-col sm:flex-row gap-4 items-end relative z-10">
-                        <div class="flex items-center gap-3">
-                            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Enable</label>
-                            <input type="checkbox" id="auto-download-toggle" class="w-5 h-5 accent-blue-500 cursor-pointer" onchange="saveAutoDownloadSettings()">
-                        </div>
-                        <div class="flex-1">
-                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Interval (Minutes)</label>
-                            <input type="number" id="auto-download-minutes-input" min="1" max="60" value="4" class="w-full p-3 bg-slate-900 border border-slate-600 text-white rounded-lg font-bold shadow-inner focus:border-blue-500 glow-focus outline-none text-center text-lg">
-                        </div>
-                        <button onclick="saveAutoDownloadSettings()" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-lg font-bold border border-blue-500 shadow transition-colors uppercase tracking-wider whitespace-nowrap">💾 Save</button>
-                    </div>
-                    <p id="auto-download-status" class="text-xs text-blue-400 font-bold mt-3 hidden relative z-10">✅ Auto-download reminder is active.</p>
                 </div>
             </div>
         </div>
@@ -1184,6 +1075,9 @@
         onAuthStateChanged(fb_auth, async (user) => {
             const loginModal = document.getElementById('firebase-login-modal');
             const loginStatus = document.getElementById('login-status');
+            const roleSelectionButtons = document.getElementById('role-selection-buttons');
+            const cashierModeHeader = document.getElementById('cashier-mode-header');
+            const cashierShiftSection = document.getElementById('cashier-shift-section');
             
             if (user) {
                 currentUser = user;
@@ -1197,6 +1091,21 @@
                 }
                 // Hide login modal
                 if (loginModal) loginModal.classList.add('hidden');
+                
+                // Hide role selection buttons when Firebase user is logged in
+                if (roleSelectionButtons) roleSelectionButtons.classList.add('hidden');
+                
+                // Hide cashier mode header when Firebase admin is logged in
+                if (cashierModeHeader) {
+                    if (userRole === 'admin') {
+                        cashierModeHeader.classList.add('hidden');
+                    } else {
+                        cashierModeHeader.classList.remove('hidden');
+                        // Show shift section for cashiers
+                        if (cashierShiftSection) cashierShiftSection.classList.remove('hidden');
+                    }
+                }
+                
                 // Set role in the app
                 setRole(userRole === 'admin' ? 'owner' : 'cashier');
                 // Update sidebar based on role
@@ -1209,6 +1118,11 @@
                     loginModal.classList.remove('hidden');
                     if (loginStatus) loginStatus.textContent = 'Please login to continue';
                 }
+                // Show role selection buttons when no Firebase user
+                if (roleSelectionButtons) roleSelectionButtons.classList.remove('hidden');
+                // Hide cashier mode header and shift section
+                if (cashierModeHeader) cashierModeHeader.classList.add('hidden');
+                if (cashierShiftSection) cashierShiftSection.classList.add('hidden');
             }
         });
 
@@ -1400,6 +1314,112 @@
                 loadCashiersList();
             } catch (error) {
                 alert('Error deleting cashier: ' + error.message);
+            }
+        };
+
+        // --- CASHIER SHIFT MANAGEMENT ---
+        let currentShift = null;
+
+        window.openCashierShift = async function() {
+            if (!currentUser) return;
+            
+            const shiftData = {
+                cashierId: currentUser.uid,
+                cashierName: currentUser.displayName || 'Cashier',
+                startTime: Date.now(),
+                endTime: null,
+                bills: [],
+                isOpen: true
+            };
+            
+            try {
+                await set(ref(fb_db, 'shifts/' + currentUser.uid), shiftData);
+                currentShift = shiftData;
+                localStorage.setItem('current_shift', JSON.stringify(shiftData));
+                updateShiftUI();
+                alert('Shift opened successfully!');
+            } catch (error) {
+                console.error('Error opening shift:', error);
+                alert('Error opening shift: ' + error.message);
+            }
+        };
+
+        window.closeCashierShift = async function() {
+            if (!currentUser || !currentShift) return;
+            
+            try {
+                const shiftRef = ref(fb_db, 'shifts/' + currentUser.uid);
+                const shiftData = {
+                    ...currentShift,
+                    endTime: Date.now(),
+                    isOpen: false
+                };
+                
+                await set(shiftRef, shiftData);
+                currentShift = null;
+                localStorage.removeItem('current_shift');
+                updateShiftUI();
+                alert('Shift closed successfully! Bills saved to admin.');
+            } catch (error) {
+                console.error('Error closing shift:', error);
+                alert('Error closing shift: ' + error.message);
+            }
+        };
+
+        function updateShiftUI() {
+            const shiftClosedView = document.getElementById('shift-closed-view');
+            const shiftOpenView = document.getElementById('shift-open-view');
+            const shiftStartTime = document.getElementById('shift-start-time');
+            
+            if (currentShift && currentShift.isOpen) {
+                if (shiftClosedView) shiftClosedView.classList.add('hidden');
+                if (shiftOpenView) shiftOpenView.classList.remove('hidden');
+                if (shiftStartTime) {
+                    shiftStartTime.textContent = new Date(currentShift.startTime).toLocaleString();
+                }
+            } else {
+                if (shiftClosedView) shiftClosedView.classList.remove('hidden');
+                if (shiftOpenView) shiftOpenView.classList.add('hidden');
+            }
+        }
+
+        window.loadCashierBillsData = async function() {
+            const cashierBillsData = document.getElementById('cashier-bills-data');
+            if (!cashierBillsData) return;
+            
+            try {
+                const shiftsRef = ref(fb_db, 'shifts');
+                const snapshot = await get(shiftsRef);
+                
+                if (snapshot.exists()) {
+                    const shifts = snapshot.val();
+                    let html = '';
+                    
+                    for (const shiftId in shifts) {
+                        const shift = shifts[shiftId];
+                        const totalSales = shift.bills ? shift.bills.reduce((sum, bill) => sum + (bill.total || 0), 0) : 0;
+                        const billCount = shift.bills ? shift.bills.length : 0;
+                        
+                        html += `
+                            <div class="bg-slate-900 p-3 rounded-lg border border-slate-700">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-white font-bold">${shift.cashierName || 'Cashier'}</span>
+                                    <span class="text-xs ${shift.isOpen ? 'text-emerald-400' : 'text-red-400'}">${shift.isOpen ? '🟢 Open' : '🔴 Closed'}</span>
+                                </div>
+                                <div class="text-xs text-slate-400 mt-1">
+                                    Bills: ${billCount} | Sales: LKR ${totalSales.toFixed(2)}
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    cashierBillsData.innerHTML = html || '<p class="text-slate-500 text-sm">No cashier data found.</p>';
+                } else {
+                    cashierBillsData.innerHTML = '<p class="text-slate-500 text-sm">No cashier data found.</p>';
+                }
+            } catch (error) {
+                console.error('Error loading cashier bills data:', error);
+                cashierBillsData.innerHTML = '<p class="text-red-400 text-sm">Error loading data.</p>';
             }
         };
 
@@ -5231,8 +5251,20 @@
         window.handleLogout = async function() {
             try {
                 await firebase.auth().signOut();
-                currentUser = null;
-                userRole = null;
+                window.currentUser = null;
+                window.userRole = null;
+                // Show login modal
+                const loginModal = document.getElementById('firebase-login-modal');
+                if (loginModal) loginModal.classList.remove('hidden');
+                // Reset forms
+                const loginForm = document.getElementById('login-form');
+                const registerForm = document.getElementById('register-form');
+                const loginError = document.getElementById('login-error');
+                const loginStatus = document.getElementById('login-status');
+                if (loginForm) loginForm.classList.remove('hidden');
+                if (registerForm) registerForm.classList.add('hidden');
+                if (loginError) loginError.classList.add('hidden');
+                if (loginStatus) loginStatus.textContent = 'Please login to continue';
             } catch (error) {
                 console.error('Logout error:', error);
             }
