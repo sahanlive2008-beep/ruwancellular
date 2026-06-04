@@ -11,10 +11,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
         /* Base Dark Theme Overrides for Scrollbars */
         ::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -122,17 +120,6 @@
     <div id="add-item-scanner-container">
         <div id="add-item-reader" style="flex:1;background:#000;"></div>
         <button onclick="stopAddItemScanner()" class="bg-red-600 text-white w-full py-6 font-bold text-lg tracking-widest uppercase">Close Scanner</button>
-    </div>
-
-    <div id="password-modal" class="hidden fixed inset-0 bg-slate-950 bg-opacity-90 z-[200] flex items-center justify-center backdrop-blur-sm transition-opacity">
-        <div class="bg-slate-800 p-8 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.8)] border border-slate-600 w-80 transform transition-all scale-100">
-            <h3 id="password-modal-msg" class="text-white font-bold mb-6 text-lg text-center tracking-wide">Enter Password</h3>
-            <input type="password" id="password-modal-input" class="w-full p-4 rounded-xl bg-slate-900 text-white border border-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none text-center tracking-[0.5em] font-mono text-2xl mb-8 glow-focus shadow-inner">
-            <div class="flex justify-center gap-4">
-                <button onclick="closePasswordModal(false)" class="flex-1 py-3 bg-slate-700 hover:bg-slate-600 rounded-xl text-slate-200 font-bold transition-colors border border-slate-600">Cancel</button>
-                <button onclick="closePasswordModal(true)" class="flex-1 py-3 bg-blue-600 hover:bg-blue-500 rounded-xl text-white font-bold shadow-[0_0_15px_rgba(37,99,235,0.4)] hover:shadow-[0_0_25px_rgba(37,99,235,0.6)] transition-all border border-blue-500">Unlock</button>
-            </div>
-        </div>
     </div>
 
     <div id="item-select-modal" class="hidden fixed inset-0 bg-slate-950 bg-opacity-90 z-[200] flex items-center justify-center backdrop-blur-sm transition-opacity p-4">
@@ -259,53 +246,6 @@
         </div>
     </div>
 
-    <!-- Firebase Login Modal -->
-    <div id="firebase-login-modal" class="fixed inset-0 bg-slate-950 bg-opacity-95 z-[300] flex items-center justify-center backdrop-blur-sm">
-        <div class="bg-slate-800 p-8 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.8)] border border-slate-600 w-11/12 max-w-md">
-            <h3 class="text-white font-black text-2xl mb-6 text-center tracking-wide">🔐 POS Login</h3>
-            <p id="login-status" class="text-slate-400 text-sm text-center mb-4">Please login to continue</p>
-            
-            <div id="login-form">
-                <div class="mb-4">
-                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Email</label>
-                    <input type="email" id="login-email" class="w-full p-3 rounded-lg bg-slate-900 border border-slate-600 text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none font-bold" placeholder="Enter email">
-                </div>
-                <div class="mb-6">
-                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Password</label>
-                    <input type="password" id="login-password" class="w-full p-3 rounded-lg bg-slate-900 border border-slate-600 text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none font-bold" placeholder="Enter password">
-                </div>
-                <button onclick="handleLogin()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-xl font-black text-lg shadow-[0_0_15px_rgba(37,99,235,0.4)] transition-colors mb-4 uppercase tracking-wider">🔐 Login Now</button>
-                <button onclick="showRegisterForm()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-4 rounded-xl font-black text-lg shadow-[0_0_15px_rgba(16,185,129,0.4)] transition-colors uppercase tracking-wider">📝 Register Now</button>
-            </div>
-
-            <div id="register-form" class="hidden">
-                <div class="mb-4">
-                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Email</label>
-                    <input type="email" id="register-email" class="w-full p-3 rounded-lg bg-slate-900 border border-slate-600 text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none font-bold" placeholder="Enter email">
-                </div>
-                <div class="mb-4">
-                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Password</label>
-                    <input type="password" id="register-password" class="w-full p-3 rounded-lg bg-slate-900 border border-slate-600 text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none font-bold" placeholder="Create password (min 6 characters)">
-                </div>
-                <div class="mb-4">
-                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Role</label>
-                    <select id="register-role" class="w-full p-3 rounded-lg bg-slate-900 border border-slate-600 text-white focus:border-blue-500 outline-none font-bold">
-                        <option value="cashier">Cashier</option>
-                        <option value="admin">Admin</option>
-                    </select>
-                </div>
-                <div class="mb-6">
-                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Display Name</label>
-                    <input type="text" id="register-name" class="w-full p-3 rounded-lg bg-slate-900 border border-slate-600 text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500 outline-none font-bold" placeholder="Your name">
-                </div>
-                <button onclick="handleRegister()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-4 rounded-xl font-black text-lg shadow-[0_0_15px_rgba(16,185,129,0.4)] transition-colors mb-4 uppercase tracking-wider">✅ Register Now</button>
-                <button onclick="showLoginForm()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-xl font-black text-lg shadow-[0_0_15px_rgba(37,99,235,0.4)] transition-colors uppercase tracking-wider">🔐 Back to Login</button>
-            </div>
-
-            <div id="login-error" class="hidden mt-4 p-3 bg-red-900/30 border border-red-500/50 rounded-lg text-red-400 text-sm text-center font-bold"></div>
-        </div>
-    </div>
-
     <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black opacity-60 z-[70] hidden backdrop-blur-sm"></div>
     <nav id="sidebar" class="fixed top-0 left-0 h-full w-64 bg-slate-950 text-white z-[80] shadow-2xl p-4 border-r border-slate-800">
         <div class="flex justify-between items-center mb-8">
@@ -358,71 +298,76 @@
                     <button onclick="setRole('owner')" class="text-xs bg-slate-800 text-emerald-400 font-bold px-4 py-2 rounded-lg shadow border border-slate-600 hover:bg-slate-700 hover:text-white transition-colors">🔄 Switch Owner</button>
                 </div>
 
-                <!-- Firebase Cashier Shift Management (for cashiers) -->
-                <div id="cashier-shift-section" class="hidden mb-6 bg-emerald-900/30 border border-emerald-500/50 p-6 rounded-xl">
-                    <h3 class="font-bold text-xl text-emerald-400 mb-4">🕒 Shift Management</h3>
-                    <div id="shift-closed-view">
-                        <p class="text-slate-400 mb-4">Your shift is currently closed. Open your shift to start billing.</p>
-                        <button onclick="openCashierShift()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-4 rounded-xl font-black text-lg uppercase tracking-wider shadow-[0_0_15px_rgba(16,185,129,0.4)] transition-all">🟢 Open Shift</button>
-                    </div>
-                    <div id="shift-open-view" class="hidden">
-                        <p class="text-emerald-400 mb-2">✅ Shift is Open</p>
-                        <p class="text-slate-400 mb-4">Shift started at: <span id="shift-start-time" class="font-bold text-white"></span></p>
-                        <button onclick="closeCashierShift()" class="w-full bg-red-600 hover:bg-red-500 text-white py-4 rounded-xl font-black text-lg uppercase tracking-wider shadow-[0_0_15px_rgba(220,38,38,0.4)] transition-all">🔴 Close Shift</button>
-                    </div>
-                </div>
 
-                <div id="owner-setup-section" class="hidden mt-6 border-t border-slate-700 pt-8">
-                    <h3 class="font-bold text-2xl mb-6 text-white">Admin Settings</h3>
+                <div id="cashier-setup-section" class="hidden mt-6 border-t border-slate-700 pt-6">
+                    <h3 class="font-bold text-2xl mb-6 text-white">Smart Cashier Profile</h3>
                     
-                    <div class="bg-slate-800/80 p-6 rounded-xl border border-slate-600 shadow-lg text-left relative overflow-hidden">
-                        <h4 class="font-bold text-lg text-yellow-400 mb-4 relative z-10">🔐 Change Admin Password</h4>
-                        <div class="grid grid-cols-1 gap-4 relative z-10">
-                            <div>
-                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Old Password</label>
-                                <input type="password" id="change-pass-old" class="w-full p-3 rounded-lg font-mono text-lg bg-slate-900 border border-slate-600 text-white focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 outline-none glow-focus text-center tracking-widest">
-                            </div>
-                            <div>
-                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">New Password</label>
-                                <input type="password" id="change-pass-new" class="w-full p-3 rounded-lg font-mono text-lg bg-slate-900 border border-slate-600 text-white focus:border-yellow-400 focus:ring-1 focus:ring-yellow-400 outline-none glow-focus text-center tracking-widest">
-                            </div>
-                            <button onclick="changeAdminPassword()" class="w-full bg-yellow-600 hover:bg-yellow-500 text-slate-900 py-3 rounded-lg font-black shadow-[0_0_10px_rgba(202,138,4,0.3)] transition-colors mt-2 uppercase tracking-wide">Update Password</button>
+                    <div class="flex flex-col md:flex-row gap-6 items-center mb-6 bg-slate-800/80 p-6 rounded-xl border border-slate-600 shadow-lg">
+                        <div class="w-32 h-32 bg-slate-900 rounded-full overflow-hidden border-4 border-emerald-500 flex-shrink-0 relative shadow-[0_0_15px_rgba(16,185,129,0.4)]">
+                            <img id="cashier-photo-preview" src="" class="w-full h-full object-cover hidden">
+                            <span id="cashier-photo-placeholder" class="text-slate-500 flex items-center justify-center h-full text-sm font-bold absolute inset-0 uppercase tracking-wider">No Photo</span>
+                        </div>
+                        <div class="flex-1 w-full space-y-4 text-left">
+                            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Cashier Name</label>
+                            <input type="text" id="cashier-name" placeholder="Enter Your Name" class="w-full p-3 bg-slate-900 border border-slate-600 text-white rounded-lg font-bold shadow-inner focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 glow-focus outline-none text-lg" oninput="saveCashierInfo()">
+                            
+                            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider block mt-2">Update Photo</label>
+                            <input type="file" id="cashier-photo-upload" accept="image/*" class="w-full text-sm text-slate-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-slate-700 file:text-white hover:file:bg-slate-600 transition-colors" onchange="handleCashierPhoto(this)">
                         </div>
                     </div>
 
-                    <div class="bg-purple-900/20 p-6 rounded-xl border border-purple-500/30 shadow-lg text-left mt-6 relative overflow-hidden">
-                        <div class="absolute top-0 right-0 w-32 h-32 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10"></div>
-                        <h4 class="font-bold text-lg text-purple-300 mb-4 relative z-10">👥 Firebase Cashier Management</h4>
-                        <p class="text-xs text-slate-400 mb-4 relative z-10">Add and manage cashiers with Firebase authentication. Cashiers can only access billing, history, and customer tabs.</p>
-                        <button onclick="addCashierToFirebase()" class="w-full bg-purple-600 hover:bg-purple-500 text-white py-3 rounded-lg font-bold shadow-[0_0_10px_rgba(147,51,234,0.4)] transition-colors mb-4 relative z-10 uppercase tracking-wider">➕ Add New Cashier</button>
-                        <button onclick="loadCashiersList()" class="w-full bg-slate-700 hover:bg-slate-600 text-white py-3 rounded-lg font-bold border border-slate-500 transition-colors relative z-10 uppercase tracking-wider">🔄 Refresh Cashier List</button>
-                        <div id="firebase-cashiers-list" class="mt-4 space-y-2 max-h-60 overflow-y-auto relative z-10"></div>
-                    </div>
-
-                    <div class="bg-blue-900/20 p-6 rounded-xl border border-blue-500/30 shadow-lg text-left mt-6 relative overflow-hidden">
-                        <div class="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10"></div>
-                        <h4 class="font-bold text-lg text-blue-300 mb-4 relative z-10">📊 Cashier Bills & Shifts</h4>
-                        <p class="text-xs text-slate-400 mb-4 relative z-10">View cashier bills and shift data.</p>
-                        <button onclick="loadCashierBillsData()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-lg font-bold shadow-[0_0_10px_rgba(37,99,235,0.4)] transition-colors mb-4 relative z-10 uppercase tracking-wider">📋 Load Cashier Data</button>
-                        <div id="cashier-bills-data" class="mt-4 space-y-2 max-h-60 overflow-y-auto relative z-10"></div>
-                    </div>
-
-                    <div class="bg-red-900/20 p-6 rounded-xl border border-red-500/30 shadow-lg text-left mt-6 relative overflow-hidden">
-                        <div class="absolute top-0 right-0 w-32 h-32 bg-red-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10"></div>
-                        <h4 class="font-bold text-lg text-red-300 mb-4 relative z-10">🚪 Logout</h4>
-                        <p class="text-xs text-slate-400 mb-4 relative z-10">Sign out of your Firebase account.</p>
-                        <button onclick="handleLogout()" class="w-full bg-red-600 hover:bg-red-500 text-white py-3 rounded-lg font-bold shadow-[0_0_10px_rgba(220,38,38,0.4)] transition-colors relative z-10 uppercase tracking-wider">Sign Out</button>
+                    <div class="bg-slate-800 p-6 rounded-xl border border-slate-600 shadow-lg text-left">
+                        <div class="flex justify-between items-center mb-6 border-b border-slate-700 pb-4">
+                            <h4 class="font-bold text-xl text-white">📊 My Daily Sales (Today)</h4>
+                            <button onclick="renderCashierReport()" class="text-xs bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg font-bold shadow border border-slate-500 transition-colors uppercase tracking-wider">🔄 Refresh Stats</button>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="bg-slate-900 p-5 rounded-xl shadow-inner border border-slate-700 flex flex-col items-center justify-center text-center">
+                                <p class="text-xs uppercase font-bold text-blue-400 tracking-wider mb-2">📱 Ruwan Cellular</p>
+                                <p id="cashier-sales-ruwan" class="font-black text-2xl text-white">LKR 0.00</p>
+                            </div>
+                            <div class="bg-slate-900 p-5 rounded-xl shadow-inner border border-slate-700 flex flex-col items-center justify-center text-center">
+                                <p class="text-xs uppercase font-bold text-pink-400 tracking-wider mb-2">💇‍♀️ Salon Tharu</p>
+                                <p id="cashier-sales-tharu" class="font-black text-2xl text-white">LKR 0.00</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Firebase Logout Section (Always visible when logged in) -->
-                <div id="firebase-logout-section" class="hidden mt-6">
-                    <div class="bg-red-900/20 p-6 rounded-xl border border-red-500/30 shadow-lg text-left relative overflow-hidden">
-                        <div class="absolute top-0 right-0 w-32 h-32 bg-red-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10"></div>
-                        <h4 class="font-bold text-lg text-red-300 mb-4 relative z-10">🚪 Logout</h4>
-                        <p class="text-xs text-slate-400 mb-4 relative z-10">Sign out of your Firebase account.</p>
-                        <button onclick="handleLogout()" class="w-full bg-red-600 hover:bg-red-500 text-white py-3 rounded-lg font-bold shadow-[0_0_10px_rgba(220,38,38,0.4)] transition-colors relative z-10 uppercase tracking-wider">Sign Out</button>
+                <div class="bg-slate-800/80 p-6 rounded-xl border border-slate-600 shadow-lg text-left mt-6 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10"></div>
+                    <h4 class="font-bold text-lg text-emerald-400 mb-1 relative z-10">⏱️ Cloud Auto-Sync Timer</h4>
+                    <p class="text-xs text-slate-400 mb-4 relative z-10">Automatically upload all data to cloud at a set interval. A countdown popup will appear before each sync.</p>
+                    <div class="flex flex-col sm:flex-row gap-4 items-end relative z-10">
+                        <div class="flex items-center gap-3">
+                            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Enable</label>
+                            <input type="checkbox" id="auto-sync-toggle" class="w-5 h-5 accent-emerald-500 cursor-pointer" onchange="saveAutoSyncSettings()">
+                        </div>
+                        <div class="flex-1">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Interval (Minutes)</label>
+                            <input type="number" id="auto-sync-minutes-input" min="1" max="60" value="3" class="w-full p-3 bg-slate-900 border border-slate-600 text-white rounded-lg font-bold shadow-inner focus:border-emerald-500 glow-focus outline-none text-center text-lg">
+                        </div>
+                        <button onclick="saveAutoSyncSettings()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-lg font-bold border border-emerald-500 shadow transition-colors uppercase tracking-wider whitespace-nowrap">💾 Save</button>
                     </div>
+                    <p id="auto-sync-status" class="text-xs text-emerald-400 font-bold mt-3 hidden relative z-10">✅ Auto-sync is active.</p>
+                </div>
+
+                <div class="bg-slate-800/80 p-6 rounded-xl border border-blue-500/40 shadow-lg text-left mt-6 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10"></div>
+                    <h4 class="font-bold text-lg text-blue-300 mb-1 relative z-10">⬇️ Auto Cloud Data Download Reminder</h4>
+                    <p class="text-xs text-slate-400 mb-4 relative z-10">Set a timer to auto-download the latest cloud data (inventory, customers, history) at a set interval. A reminder popup will appear before each download.</p>
+                    <div class="flex flex-col sm:flex-row gap-4 items-end relative z-10">
+                        <div class="flex items-center gap-3">
+                            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Enable</label>
+                            <input type="checkbox" id="auto-download-toggle" class="w-5 h-5 accent-blue-500 cursor-pointer" onchange="saveAutoDownloadSettings()">
+                        </div>
+                        <div class="flex-1">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Interval (Minutes)</label>
+                            <input type="number" id="auto-download-minutes-input" min="1" max="60" value="4" class="w-full p-3 bg-slate-900 border border-slate-600 text-white rounded-lg font-bold shadow-inner focus:border-blue-500 glow-focus outline-none text-center text-lg">
+                        </div>
+                        <button onclick="saveAutoDownloadSettings()" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-lg font-bold border border-blue-500 shadow transition-colors uppercase tracking-wider whitespace-nowrap">💾 Save</button>
+                    </div>
+                    <p id="auto-download-status" class="text-xs text-blue-400 font-bold mt-3 hidden relative z-10">✅ Auto-download reminder is active.</p>
                 </div>
             </div>
         </div>
@@ -430,12 +375,7 @@
         <div id="tab-cloud" class="tab-content">
             <div class="glass-panel p-8 rounded-2xl shadow-2xl border-t-4 border-emerald-500 mb-4 text-center max-w-lg mx-auto mt-4">
                 <h2 class="font-black text-3xl mb-2 text-white tracking-wide">☁️ Master Cloud Sync</h2>
-                <p class="text-sm text-slate-400 mb-4">Backup or Restore all system data (Inventory, Customers, History, Drafts) at once.</p>
-                
-                <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-700 mb-6">
-                    <p id="upload-limit-display" class="text-sm font-bold text-blue-400">Upload: 3/3 remaining today</p>
-                    <p id="download-limit-display" class="text-sm font-bold text-emerald-400 mt-1">Download: 3/3 remaining today</p>
-                </div>
+                <p class="text-sm text-slate-400 mb-8">Backup or Restore all system data (Inventory, Customers, History, Drafts) at once.</p>
                 
                 <div class="space-y-4">
                     <button id="master-upload-btn" onclick="uploadAllToCloud()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-5 rounded-xl font-black shadow-[0_0_15px_rgba(37,99,235,0.3)] flex justify-center items-center gap-3 text-lg transition-all border border-blue-500 uppercase tracking-widest">
@@ -448,8 +388,6 @@
                 </div>
                 <div class="mt-8 text-xs text-slate-400 text-left bg-slate-900/50 p-4 rounded-xl border border-slate-700 shadow-inner">
                     <strong class="text-emerald-400">✅ Safe Merge Mode:</strong> Uploading <em>adds</em> your local data to the cloud without deleting existing cloud records. Downloading <em>adds</em> new cloud records to your local data without deleting anything. Your data is always preserved.
-                    <br><br>
-                    <strong class="text-yellow-400">⚠️ Daily Limit:</strong> Upload and download are limited to 3 times per day each.
                 </div>
             </div>
         </div>
@@ -1051,11 +989,10 @@
         </div>
     </main>
 
-    <script type="module" defer>
+    <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
         import { getDatabase, ref, set, get, child, onValue, update } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCvbgoJj_-VWHw7y23_OFtt6lQDuknqJ0k",
@@ -1072,638 +1009,6 @@
         const analytics = getAnalytics(app);
         const fb_db = getDatabase(app);
         window.fb_db = fb_db;
-        
-        // Firebase Authentication
-        const fb_auth = getAuth(app);
-        window.fb_auth = fb_auth;
-
-        // --- FIREBASE AUTHENTICATION FUNCTIONS ---
-        let currentUser = null;
-        let userRole = null;
-
-        // Check authentication state on load
-        onAuthStateChanged(fb_auth, async (user) => {
-            const loginModal = document.getElementById('firebase-login-modal');
-            const loginStatus = document.getElementById('login-status');
-            const roleSelectionButtons = document.getElementById('role-selection-buttons');
-            const cashierModeHeader = document.getElementById('cashier-mode-header');
-            const cashierShiftSection = document.getElementById('cashier-shift-section');
-            const firebaseLogoutSection = document.getElementById('firebase-logout-section');
-            
-            if (user) {
-                currentUser = user;
-                // Get user role from Firebase Database
-                const userRef = ref(fb_db, 'users/' + user.uid);
-                const snapshot = await get(userRef);
-                if (snapshot.exists()) {
-                    userRole = snapshot.val().role || 'cashier';
-                } else {
-                    userRole = 'cashier';
-                }
-                // Hide login modal
-                if (loginModal) loginModal.classList.add('hidden');
-                
-                // Hide role selection buttons when Firebase user is logged in
-                if (roleSelectionButtons) roleSelectionButtons.classList.add('hidden');
-                
-                // Show logout section for all Firebase users
-                if (firebaseLogoutSection) firebaseLogoutSection.classList.remove('hidden');
-                
-                // Hide cashier mode header when Firebase admin is logged in
-                if (cashierModeHeader) {
-                    if (userRole === 'admin') {
-                        cashierModeHeader.classList.add('hidden');
-                    } else {
-                        cashierModeHeader.classList.remove('hidden');
-                        // Show shift section for cashiers
-                        if (cashierShiftSection) cashierShiftSection.classList.remove('hidden');
-                    }
-                }
-                
-                // Set role in the app
-                setRole(userRole === 'admin' ? 'owner' : 'cashier');
-                // Update sidebar based on role
-                updateSidebarForRole();
-            } else {
-                currentUser = null;
-                userRole = null;
-                // Show login modal
-                if (loginModal) {
-                    loginModal.classList.remove('hidden');
-                    if (loginStatus) loginStatus.textContent = 'Please login to continue';
-                }
-                // Show role selection buttons when no Firebase user
-                if (roleSelectionButtons) roleSelectionButtons.classList.remove('hidden');
-                // Hide logout section when no Firebase user
-                if (firebaseLogoutSection) firebaseLogoutSection.classList.add('hidden');
-                // Hide cashier mode header and shift section
-                if (cashierModeHeader) cashierModeHeader.classList.add('hidden');
-                if (cashierShiftSection) cashierShiftSection.classList.add('hidden');
-            }
-        });
-
-        // --- DAILY LIMIT FOR CLOUD UPLOAD/DOWNLOAD ---
-        function checkDailyLimit(action) {
-            const today = new Date().toDateString();
-            const key = `cloud_${action}_${today}`;
-            const count = parseInt(localStorage.getItem(key) || '0');
-            return count < 3;
-        }
-
-        function incrementDailyLimit(action) {
-            const today = new Date().toDateString();
-            const key = `cloud_${action}_${today}`;
-            const count = parseInt(localStorage.getItem(key) || '0');
-            localStorage.setItem(key, String(count + 1));
-        }
-
-        function getRemainingDailyLimit(action) {
-            const today = new Date().toDateString();
-            const key = `cloud_${action}_${today}`;
-            const count = parseInt(localStorage.getItem(key) || '0');
-            return 3 - count;
-        }
-
-        // Override cloud upload/download functions with daily limit
-        const originalUploadInventoryToCloud = window.uploadInventoryToCloud;
-        window.uploadInventoryToCloud = async function() {
-            if (!checkDailyLimit('upload')) {
-                alert('Daily upload limit reached (3 times per day). Please try again tomorrow.');
-                return;
-            }
-            await originalUploadInventoryToCloud();
-            incrementDailyLimit('upload');
-            updateCloudLimitDisplay();
-        };
-
-        const originalDownloadInventoryFromCloud = window.downloadInventoryFromCloud;
-        window.downloadInventoryFromCloud = async function() {
-            if (!checkDailyLimit('download')) {
-                alert('Daily download limit reached (3 times per day). Please try again tomorrow.');
-                return;
-            }
-            await originalDownloadInventoryFromCloud();
-            incrementDailyLimit('download');
-            updateCloudLimitDisplay();
-        };
-
-        const originalUploadHistoryToCloud = window.uploadHistoryToCloud;
-        window.uploadHistoryToCloud = async function() {
-            if (!checkDailyLimit('upload')) {
-                alert('Daily upload limit reached (3 times per day). Please try again tomorrow.');
-                return;
-            }
-            await originalUploadHistoryToCloud();
-            incrementDailyLimit('upload');
-            updateCloudLimitDisplay();
-        };
-
-        const originalDownloadHistoryFromCloud = window.downloadHistoryFromCloud;
-        window.downloadHistoryFromCloud = async function() {
-            if (!checkDailyLimit('download')) {
-                alert('Daily download limit reached (3 times per day). Please try again tomorrow.');
-                return;
-            }
-            await originalDownloadHistoryFromCloud();
-            incrementDailyLimit('download');
-            updateCloudLimitDisplay();
-        };
-
-        const originalUploadAllToCloud = window.uploadAllToCloud;
-        window.uploadAllToCloud = async function() {
-            if (!checkDailyLimit('upload')) {
-                alert('Daily upload limit reached (3 times per day). Please try again tomorrow.');
-                return;
-            }
-            await originalUploadAllToCloud();
-            incrementDailyLimit('upload');
-            updateCloudLimitDisplay();
-        };
-
-        const originalDownloadAllFromCloud = window.downloadAllFromCloud;
-        window.downloadAllFromCloud = async function() {
-            if (!checkDailyLimit('download')) {
-                alert('Daily download limit reached (3 times per day). Please try again tomorrow.');
-                return;
-            }
-            await originalDownloadAllFromCloud();
-            incrementDailyLimit('download');
-            updateCloudLimitDisplay();
-        };
-
-        function updateCloudLimitDisplay() {
-            const uploadRemaining = getRemainingDailyLimit('upload');
-            const downloadRemaining = getRemainingDailyLimit('download');
-            
-            const uploadDisplay = document.getElementById('upload-limit-display');
-            const downloadDisplay = document.getElementById('download-limit-display');
-            
-            if (uploadDisplay) {
-                uploadDisplay.textContent = `Upload: ${uploadRemaining}/3 remaining today`;
-            }
-            if (downloadDisplay) {
-                downloadDisplay.textContent = `Download: ${downloadRemaining}/3 remaining today`;
-            }
-        }
-
-        // --- CASHIER MANAGEMENT IN PROFILE TAB ---
-        window.addCashierToFirebase = async function() {
-            if (userRole !== 'admin') {
-                alert('Only admins can add cashiers');
-                return;
-            }
-
-            const cashierEmail = prompt('Enter cashier email:');
-            const cashierName = prompt('Enter cashier name:');
-            const cashierPassword = prompt('Enter cashier password (min 6 characters):');
-
-            if (!cashierEmail || !cashierName || !cashierPassword) {
-                alert('All fields are required');
-                return;
-            }
-
-            if (cashierPassword.length < 6) {
-                alert('Password must be at least 6 characters');
-                return;
-            }
-
-            try {
-                // Create cashier user
-                const userCredential = await createUserWithEmailAndPassword(fb_auth, cashierEmail, cashierPassword);
-                const user = userCredential.user;
-
-                // Save cashier to Firebase Database with cashier role
-                await set(ref(fb_db, 'users/' + user.uid), {
-                    email: cashierEmail,
-                    displayName: cashierName,
-                    role: 'cashier',
-                    createdBy: currentUser.uid,
-                    createdAt: Date.now()
-                });
-
-                alert('Cashier added successfully!');
-                loadCashiersList();
-            } catch (error) {
-                alert('Error adding cashier: ' + error.message);
-            }
-        };
-
-        window.loadCashiersList = async function() {
-            if (userRole !== 'admin') return;
-
-            const cashiersList = document.getElementById('firebase-cashiers-list');
-            if (!cashiersList) return;
-
-            try {
-                const usersRef = ref(fb_db, 'users');
-                const snapshot = await get(usersRef);
-                
-                if (snapshot.exists()) {
-                    const users = snapshot.val();
-                    const cashiers = Object.entries(users).filter(([uid, data]) => data.role === 'cashier');
-                    
-                    cashiersList.innerHTML = cashiers.map(([uid, data]) => `
-                        <div class="bg-slate-900 p-4 rounded-xl border border-slate-700 mb-2">
-                            <div class="flex justify-between items-center">
-                                <div>
-                                    <p class="font-bold text-white">${data.displayName || 'Unknown'}</p>
-                                    <p class="text-sm text-slate-400">${data.email}</p>
-                                </div>
-                                <button onclick="deleteCashier('${uid}')" class="bg-red-600 hover:bg-red-500 text-white px-3 py-1 rounded-lg text-sm font-bold">Delete</button>
-                            </div>
-                        </div>
-                    `).join('');
-                } else {
-                    cashiersList.innerHTML = '<p class="text-slate-400 text-center">No cashiers found</p>';
-                }
-            } catch (error) {
-                console.error('Error loading cashiers:', error);
-            }
-        };
-
-        window.deleteCashier = async function(uid) {
-            if (!confirm('Are you sure you want to delete this cashier?')) return;
-
-            try {
-                await set(ref(fb_db, 'users/' + uid), null);
-                alert('Cashier deleted successfully');
-                loadCashiersList();
-            } catch (error) {
-                alert('Error deleting cashier: ' + error.message);
-            }
-        };
-
-        // --- CASHIER SHIFT MANAGEMENT ---
-        let currentShift = null;
-
-        window.openCashierShift = async function() {
-            if (!currentUser) return;
-            
-            const shiftData = {
-                cashierId: currentUser.uid,
-                cashierName: currentUser.displayName || 'Cashier',
-                startTime: Date.now(),
-                endTime: null,
-                bills: [],
-                isOpen: true
-            };
-            
-            try {
-                await set(ref(fb_db, 'shifts/' + currentUser.uid), shiftData);
-                currentShift = shiftData;
-                localStorage.setItem('current_shift', JSON.stringify(shiftData));
-                updateShiftUI();
-                alert('Shift opened successfully!');
-            } catch (error) {
-                console.error('Error opening shift:', error);
-                alert('Error opening shift: ' + error.message);
-            }
-        };
-
-        window.closeCashierShift = async function() {
-            if (!currentUser || !currentShift) return;
-            
-            try {
-                const shiftRef = ref(fb_db, 'shifts/' + currentUser.uid);
-                const shiftData = {
-                    ...currentShift,
-                    endTime: Date.now(),
-                    isOpen: false
-                };
-                
-                await set(shiftRef, shiftData);
-                currentShift = null;
-                localStorage.removeItem('current_shift');
-                updateShiftUI();
-                alert('Shift closed successfully! Bills saved to admin.');
-            } catch (error) {
-                console.error('Error closing shift:', error);
-                alert('Error closing shift: ' + error.message);
-            }
-        };
-
-        function updateShiftUI() {
-            const shiftClosedView = document.getElementById('shift-closed-view');
-            const shiftOpenView = document.getElementById('shift-open-view');
-            const shiftStartTime = document.getElementById('shift-start-time');
-            
-            if (currentShift && currentShift.isOpen) {
-                if (shiftClosedView) shiftClosedView.classList.add('hidden');
-                if (shiftOpenView) shiftOpenView.classList.remove('hidden');
-                if (shiftStartTime) {
-                    shiftStartTime.textContent = new Date(currentShift.startTime).toLocaleString();
-                }
-            } else {
-                if (shiftClosedView) shiftClosedView.classList.remove('hidden');
-                if (shiftOpenView) shiftOpenView.classList.add('hidden');
-            }
-        }
-
-        window.loadCashierBillsData = async function() {
-            const cashierBillsData = document.getElementById('cashier-bills-data');
-            if (!cashierBillsData) return;
-            
-            try {
-                const shiftsRef = ref(fb_db, 'shifts');
-                const snapshot = await get(shiftsRef);
-                
-                if (snapshot.exists()) {
-                    const shifts = snapshot.val();
-                    let html = '';
-                    
-                    for (const shiftId in shifts) {
-                        const shift = shifts[shiftId];
-                        const totalSales = shift.bills ? shift.bills.reduce((sum, bill) => sum + (bill.total || 0), 0) : 0;
-                        const billCount = shift.bills ? shift.bills.length : 0;
-                        
-                        html += `
-                            <div class="bg-slate-900 p-3 rounded-lg border border-slate-700">
-                                <div class="flex justify-between items-center">
-                                    <span class="text-white font-bold">${shift.cashierName || 'Cashier'}</span>
-                                    <span class="text-xs ${shift.isOpen ? 'text-emerald-400' : 'text-red-400'}">${shift.isOpen ? '🟢 Open' : '🔴 Closed'}</span>
-                                </div>
-                                <div class="text-xs text-slate-400 mt-1">
-                                    Bills: ${billCount} | Sales: LKR ${totalSales.toFixed(2)}
-                                </div>
-                            </div>
-                        `;
-                    }
-                    
-                    cashierBillsData.innerHTML = html || '<p class="text-slate-500 text-sm">No cashier data found.</p>';
-                } else {
-                    cashierBillsData.innerHTML = '<p class="text-slate-500 text-sm">No cashier data found.</p>';
-                }
-            } catch (error) {
-                console.error('Error loading cashier bills data:', error);
-                cashierBillsData.innerHTML = '<p class="text-red-400 text-sm">Error loading data.</p>';
-            }
-        };
-
-        // --- SIDEBAR VISIBILITY BASED ON ROLE ---
-        function updateSidebarForRole() {
-            const restrictedTabs = ['nav-serial', 'nav-inventory', 'nav-add-items', 'nav-reports', 'nav-printer', 'nav-cloud', 'nav-warranty', 'nav-barcode-gen'];
-            
-            if (userRole === 'cashier') {
-                // Hide restricted tabs for cashiers
-                restrictedTabs.forEach(id => {
-                    const el = document.getElementById(id);
-                    if (el) el.style.display = 'none';
-                });
-            } else if (userRole === 'admin') {
-                // Show all tabs for admin
-                restrictedTabs.forEach(id => {
-                    const el = document.getElementById(id);
-                    if (el) el.style.display = 'block';
-                });
-            }
-        }
-        window.updateSidebarForRole = updateSidebarForRole;
-
-        // --- LIVE SYNC SERVER (HOST/CLIENT) ---
-        let isHost = false;
-        let isClient = false;
-        let liveSyncRoom = null;
-        Object.defineProperty(window, '_liveSyncRoom', {
-            get: () => liveSyncRoom,
-            set: (v) => { liveSyncRoom = v; }
-        });
-
-        // Track heartbeat so we only register once
-        let _hostHeartbeat = null;
-        let _hostCashierListener = null;
-
-        window.startHostServer = async function(silent = false) {
-            let ip = localStorage.getItem('host_ip');
-            let password = localStorage.getItem('host_password');
-            if(!ip) {
-                ip = `192.168.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}`;
-                password = Math.floor(1000 + Math.random() * 9000).toString();
-                localStorage.setItem('host_ip', ip);
-                localStorage.setItem('host_password', password);
-            }
-
-            const ipEl = document.getElementById('host-ip');
-            const pwEl = document.getElementById('host-password');
-            const credEl = document.getElementById('host-credentials');
-            const statEl = document.getElementById('host-status');
-            if(ipEl) ipEl.value = ip;
-            if(pwEl) pwEl.value = password;
-            if(credEl) credEl.classList.remove('hidden');
-            if(statEl) statEl.classList.remove('hidden');
-
-            liveSyncRoom = ip.replace(/\./g, '_');
-            isHost = true;
-            localStorage.setItem('is_host', 'true');
-
-            const roomRef = ref(fb_db, 'live_rooms/' + liveSyncRoom);
-
-            // ── Write room record (keeps inventory data, only updates meta) ──
-            await set(child(roomRef, 'meta'), {
-                password: password,
-                status: 'active',
-                timestamp: Date.now()
-            });
-
-            // ── onDisconnect: mark offline so cashiers know, but data stays ──
-            const { onDisconnect: fbOnDisconnect } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js");
-            fbOnDisconnect(child(roomRef, 'meta/status')).set('offline');
-
-            // ── Wipe stale cashier entries on every server start ──
-            try { await set(child(roomRef, 'cashiers'), null); } catch(_e) {}
-
-            // ── Push inventory immediately ──
-            window.broadcastInventoryUpdate();
-
-            // ── Heartbeat: re-mark active + re-broadcast every 30 s ──
-            if(_hostHeartbeat) clearInterval(_hostHeartbeat);
-            _hostHeartbeat = setInterval(async () => {
-                try {
-                    await set(child(roomRef, 'meta/status'), 'active');
-                    await set(child(roomRef, 'meta/timestamp'), Date.now());
-                    await window.broadcastInventoryUpdate();
-                } catch(e) { console.warn('Heartbeat failed:', e); }
-            }, 30000);
-
-            // ── Listen for connected cashiers (only register once) ──
-            if(!_hostCashierListener) {
-                _hostCashierListener = onValue(child(roomRef, 'cashiers'), (snap) => {
-                    const list = document.getElementById('connected-cashiers-list');
-                    if(!list) return;
-                    list.innerHTML = '';
-                    if(snap.exists()){
-                        const _ents = Object.entries(snap.val());
-                        list.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">'
-                            + '<span style="font-size:10px;font-weight:900;color:#94a3b8;text-transform:uppercase;letter-spacing:0.1em;">Live (' + _ents.length + ')</span>'
-                            + '<button onclick="removeAllCashiers()" style="font-size:10px;font-weight:700;color:#f87171;background:rgba(153,27,27,0.3);border:1px solid rgba(239,68,68,0.4);padding:3px 10px;border-radius:6px;cursor:pointer;">Remove All</button>'
-                            + '</div>';
-                        _ents.forEach(([_sid, _c]) => {
-                            const _ph = _c.photo
-                                ? '<img src="' + _c.photo + '" style="width:38px;height:38px;border-radius:50%;object-fit:cover;border:2px solid #22c55e;flex-shrink:0;">'
-                                : '<div style="width:38px;height:38px;border-radius:50%;background:#0f172a;border:2px solid #334155;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">🧑‍💼</div>';
-                            const _tm = _c.connectedAt ? new Date(_c.connectedAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : '';
-                            const _name = (_c.name || '').replace(/'/g, "\\'");
-                            list.innerHTML += '<div style="background:#0f172a;border:1px solid rgba(34,197,94,0.2);border-radius:10px;padding:9px 10px;margin-bottom:7px;">'
-                                + '<div style="display:flex;align-items:center;gap:9px;">'
-                                + _ph
-                                + '<div style="flex:1;min-width:0;">'
-                                + '<button onclick="showCashierBills(\'' + _name + '\')" style="font-weight:900;font-size:13px;color:#6ee7b7;text-decoration:underline;text-underline-offset:3px;background:none;border:none;cursor:pointer;padding:0;display:block;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;">' + _c.name + '</button>'
-                                + '<div style="font-size:10px;color:#64748b;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + _c.device + (_tm ? ' · ' + _tm : '') + '</div>'
-                                + '</div>'
-                                + '<div style="display:flex;flex-direction:column;gap:3px;align-items:flex-end;flex-shrink:0;">'
-                                + '<span style="width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block;"></span>'
-                                + '<button onclick="disconnectCashier(\'' + _sid + '\')" style="font-size:9px;font-weight:900;color:#fbbf24;background:rgba(120,53,15,0.4);border:1px solid rgba(251,191,36,0.4);padding:2px 6px;border-radius:5px;cursor:pointer;white-space:nowrap;">⏹ Kick</button>'
-                                + '<button onclick="removeCashier(\'' + _sid + '\')" style="font-size:9px;font-weight:900;color:#f87171;background:rgba(127,29,29,0.4);border:1px solid rgba(248,113,113,0.4);padding:2px 6px;border-radius:5px;cursor:pointer;white-space:nowrap;">🗑 Remove</button>'
-                                + '</div>'
-                                + '</div>'
-                                + '</div>';
-                        });
-
-                        // Update cashier-info-panel with full profile cards
-                        const _infoPanelEl = document.getElementById('cashier-info-panel');
-                        if (_infoPanelEl) {
-                            _infoPanelEl.innerHTML = _ents.map(([_sid, _c]) => {
-                                const _tm = _c.connectedAt ? new Date(_c.connectedAt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : '';
-                                const _safeName = (_c.name || 'Unknown').replace(/'/g, "\\'");
-                                return '<div style="display:flex;gap:14px;align-items:flex-start;background:#0f172a;border:1px solid rgba(99,102,241,0.35);border-radius:14px;padding:13px 14px;margin-bottom:8px;">'
-                                    + (_c.photo ? '<img src="' + _c.photo + '" style="width:54px;height:54px;border-radius:50%;object-fit:cover;border:2.5px solid #6366f1;flex-shrink:0;">'
-                                               : '<div style="width:54px;height:54px;border-radius:50%;background:#1e293b;border:2.5px solid #475569;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">🧑‍💼</div>')
-                                    + '<div style="flex:1;">'
-                                    + '<div style="font-weight:900;font-size:15px;color:#e2e8f0;margin-bottom:2px;">' + (_c.name || 'Unknown') + '</div>'
-                                    + '<div style="font-size:11px;color:#94a3b8;margin-bottom:3px;">📱 Device: ' + (_c.device || '—') + '</div>'
-                                    + (_tm ? '<div style="font-size:10px;color:#64748b;">🕒 Connected at: ' + _tm + '</div>' : '')
-                                    + '<div style="margin-top:6px;display:flex;gap:6px;">'
-                                    + '<span style="font-size:9px;font-weight:700;background:#14532d;color:#4ade80;padding:2px 8px;border-radius:999px;border:1px solid rgba(74,222,128,0.4);">🟢 LIVE</span>'
-                                    + '<button onclick="showCashierBills(\'' + _safeName + '\')" style="font-size:9px;font-weight:700;background:#1e3a5f;color:#93c5fd;padding:2px 8px;border-radius:999px;border:1px solid rgba(147,197,253,0.3);cursor:pointer;">📋 View Bills</button>'
-                                    + '</div>'
-                                    + '</div></div>';
-                            }).join('');
-                        }
-                    } else {
-                        list.innerHTML = '<p style="font-size:12px;color:#475569;font-style:italic;text-align:center;padding:10px 0;">No cashiers connected yet.</p>';
-                        const _ipEl = document.getElementById('cashier-info-panel');
-                        if (_ipEl) _ipEl.innerHTML = '<p style="font-size:12px;color:#475569;font-style:italic;text-align:center;padding:10px;">No cashiers connected.</p>';
-                    }
-                });
-            }
-
-            if(!silent) console.info('[HOST] Server active on room:', liveSyncRoom);
-        };
-
-        // ── Visibility change: re-activate server when tab regains focus ──
-        document.addEventListener('visibilitychange', async () => {
-            if(document.visibilityState === 'visible' && localStorage.getItem('is_host') === 'true') {
-                if(!isHost) {
-                    console.info('[HOST] Tab visible again — resuming server...');
-                    try { await window.startHostServer(true); } catch(e) { console.warn(e); }
-                } else {
-                    // Just re-mark active + broadcast
-                    try {
-                        const ip = localStorage.getItem('host_ip');
-                        if(ip && liveSyncRoom) {
-                            const roomRef = ref(fb_db, 'live_rooms/' + liveSyncRoom);
-                            await set(child(roomRef, 'meta/status'), 'active');
-                            await window.broadcastInventoryUpdate();
-                        }
-                    } catch(e) { console.warn(e); }
-                }
-            }
-        });
-
-        window.broadcastInventoryUpdate = async function() {
-            if(!isHost || !liveSyncRoom) return;
-            const allInv = await window.db.inventory.toArray();
-            const invObj = {};
-            allInv.forEach(item => invObj[String(item.code).replace(/[.#$\[\]/]/g, '_')] = item);
-            await set(ref(fb_db, 'live_rooms/' + liveSyncRoom + '/inventory'), invObj);
-        };
-
-        // ── Owner cashier management (must live in module scope for Firebase access) ──
-        window.disconnectCashier = async function(sessionId) {
-            if(!liveSyncRoom) { alert('Server not running. Start the Live Server first.'); return; }
-            try {
-                await set(ref(fb_db, 'live_rooms/' + liveSyncRoom + '/cashiers/' + sessionId), null);
-            } catch(e) { alert('Failed to disconnect cashier: ' + e.message); }
-        };
-
-        window.removeCashier = async function(sessionId) {
-            if(!liveSyncRoom) { alert('Server not running. Start the Live Server first.'); return; }
-            try {
-                await set(ref(fb_db, 'live_rooms/' + liveSyncRoom + '/cashiers/' + sessionId), null);
-            } catch(e) { alert('Failed to remove cashier: ' + e.message); }
-        };
-
-        window.removeAllCashiers = async function() {
-            if(!liveSyncRoom) { alert('Server not running. Start the Live Server first.'); return; }
-            if(!confirm('Remove all cashiers from the connected list?')) return;
-            try {
-                await set(ref(fb_db, 'live_rooms/' + liveSyncRoom + '/cashiers'), null);
-            } catch(e) { alert('Failed: ' + e.message); }
-        };
-
-        window.connectToHost = async function() {
-            const ipInput = document.getElementById('client-ip').value;
-            const pass = document.getElementById('client-password').value;
-            const deviceName = document.getElementById('client-device').value || 'Unknown Device';
-            const cashierName = (document.getElementById('cashier-name') && document.getElementById('cashier-name').value.trim())
-                || localStorage.getItem('cashier_name') || 'Cashier';
-
-            if(!ipInput || !pass) return alert("Enter IP and Password");
-            
-            const roomCode = ipInput.replace(/\./g, '_');
-            const roomRef = ref(fb_db, 'live_rooms/' + roomCode);
-            const snapshot = await get(roomRef);
-            
-            const _rd = snapshot.exists() ? snapshot.val() : null;
-            const _sp = _rd ? (_rd.meta ? _rd.meta.password : _rd.password) : null;
-            if(snapshot.exists() && _sp === pass) {
-                document.getElementById('client-status').classList.remove('hidden');
-                document.getElementById('client-status').innerText = "🟢 Connected! Live updates active.";
-                isClient = true;
-                liveSyncRoom = roomCode;
-
-                // Save credentials for auto-reconnect on next page load
-                localStorage.setItem('cashier_saved_ip', ipInput);
-                localStorage.setItem('cashier_saved_password', pass);
-                localStorage.setItem('cashier_saved_device', deviceName);
-
-                // Register this cashier's session (onDisconnect auto-removes it)
-                const sessionId = 'session_' + Date.now().toString();
-                const _ph = localStorage.getItem('cashier_photo') || '';
-                await set(child(roomRef, 'cashiers/' + sessionId), {
-                    name: cashierName,
-                    device: deviceName,
-                    photo: _ph,
-                    connectedAt: Date.now()
-                });
-                // Auto-remove when tab closes
-                try {
-                    const { onDisconnect: _od } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js");
-                    const _cashierRef = child(roomRef, 'cashiers/' + sessionId);
-                    _od(_cashierRef).remove();
-                } catch(_e) { console.warn('onDisconnect setup failed:', _e); }
-
-                onValue(child(roomRef, 'inventory'), async (dataSnapshot) => {
-                    if(dataSnapshot.exists()) {
-                        const data = dataSnapshot.val();
-                        const itemsArray = Object.values(data);
-                        
-                        // FIX: Use bulkPut (merge/upsert) instead of clear+bulkPut
-                        // Clearing first wipes all local inventory if connection is partial
-                        await window.db.inventory.bulkPut(itemsArray);
-
-                        if(typeof window.renderInventory === 'function' && document.getElementById('tab-inventory').classList.contains('active')) {
-                            window.renderInventory();
-                        }
-                        if(typeof window.syncCartWithInventory === 'function') await window.syncCartWithInventory();
-                        if(typeof window.searchItems === 'function' && document.getElementById('bill-search').value.length > 0) {
-                            window.searchItems(document.getElementById('bill-search').value);
-                        }
-                    }
-                });
-            } else {
-                alert("Invalid IP or Password, or Host Server not running.");
-            }
-        };
 
         // --- INVENTORY CLOUD SYNC ---
         window.uploadInventoryToCloud = async function() {
@@ -2064,89 +1369,39 @@
         let bleCharacteristic = null;
         let currentFilter = 'day';
 
-        // Read password from storage, default 0054
-        function getAdminPassword() { return localStorage.getItem('admin_password') || "0054"; }
-
-        // CUSTOM PASSWORD MODAL LOGIC
-        let passwordPromiseResolve = null;
-        function requirePassword(msg) {
-            return new Promise(resolve => {
-                document.getElementById('password-modal-msg').innerText = msg;
-                const input = document.getElementById('password-modal-input');
-                input.value = '';
-                document.getElementById('password-modal').classList.remove('hidden');
-                
-                // Slight delay for focus in Tailwind modals
-                setTimeout(() => input.focus(), 50);
-                passwordPromiseResolve = resolve;
-            });
-        }
-        
-        window.closePasswordModal = function(isSubmit) {
-            const _inp = document.getElementById('password-modal-input');
-            const _val = isSubmit ? _inp.value : null;
-            document.getElementById('password-modal').classList.add('hidden');
-            _inp.value = '';
-            if(passwordPromiseResolve) {
-                passwordPromiseResolve(_val);
-                passwordPromiseResolve = null;
-            }
-        };
-
-        // Enter key support for modal
-        document.getElementById('password-modal-input').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') closePasswordModal(true);
-        });
-
-        window.changeAdminPassword = function() {
-            const oldP = document.getElementById('change-pass-old').value;
-            const newP = document.getElementById('change-pass-new').value;
-            
-            if(oldP !== getAdminPassword()) {
-                alert("Old password incorrect!");
-                return;
-            }
-            if(!newP) {
-                alert("New password cannot be empty!");
-                return;
-            }
-            
-            localStorage.setItem('admin_password', newP);
-            alert("Admin password updated successfully!");
-            document.getElementById('change-pass-old').value = '';
-            document.getElementById('change-pass-new').value = '';
-        };
-
         let currentBillShop = 'ruwancell';
         let currentInvShop = 'ruwancell';
         let currentHistShop = 'ruwancell';
         let currentRepShop = 'ruwancell';
         
         let currentRole = 'owner';
+        let deviceId = localStorage.getItem('device_id') || 'device_' + Date.now();
+        localStorage.setItem('device_id', deviceId);
 
-        // --- ROLE MANAGEMENT ---
+        // --- FIREBASE ROLE MANAGEMENT ---
         async function setRole(role) {
-            if (role === 'owner' && currentRole === 'cashier') {
-                const pass = await requirePassword("Enter Developer/Owner Password:");
-                if(pass !== getAdminPassword()) {
-                    if(pass !== null) alert("Access Denied! Incorrect Password.");
-                    return;
-                }
-            }
-
             currentRole = role;
             localStorage.setItem('app_role', role);
+            
+            // Save role to Firebase
+            try {
+                await set(ref(fb_db, 'roles/' + deviceId), {
+                    role: role,
+                    timestamp: Date.now(),
+                    deviceName: localStorage.getItem('cashier_name') || 'Unknown Device'
+                });
+            } catch(e) {
+                console.warn('Failed to save role to Firebase:', e);
+            }
             
             if (role === 'cashier') {
                 document.getElementById('role-selection-buttons').classList.add('hidden');
                 document.getElementById('cashier-mode-header').classList.remove('hidden');
                 document.getElementById('cashier-setup-section').style.display = 'block';
-                document.getElementById('owner-setup-section').style.display = 'none';
             } else {
                 document.getElementById('role-selection-buttons').classList.remove('hidden');
                 document.getElementById('cashier-mode-header').classList.add('hidden');
                 document.getElementById('cashier-setup-section').style.display = 'none';
-                document.getElementById('owner-setup-section').style.display = 'block';
             }
             
             // Hide/Show sidebar elements
@@ -2172,6 +1427,16 @@
             }
         }
         window.setRole = setRole;
+
+        // Listen for role changes from Firebase
+        onValue(ref(fb_db, 'roles/' + deviceId), (snap) => {
+            if (snap.exists()) {
+                const data = snap.val();
+                if (data.role && data.role !== currentRole) {
+                    setRole(data.role);
+                }
+            }
+        });
 
         function saveCashierInfo() {
             const _ne = document.getElementById('cashier-name');
@@ -3303,13 +2568,6 @@
         window.toggleSidebar = toggleSidebar;
 
         function showTab(id) {
-            // Firebase-based role restriction for cashiers
-            if (userRole === 'cashier' && !['billing', 'customers', 'history'].includes(id)) {
-                alert("Access Denied: Cashiers can only access Billing, History, and Customer tabs.");
-                return;
-            }
-
-            // Legacy role restriction (for backward compatibility)
             const hasFullAccess = Date.now() < parseInt(localStorage.getItem('cashier_full_access_expiry') || '0');
             if (currentRole === 'cashier' && !hasFullAccess && !['billing', 'serial', 'profile', 'warranty', 'customers', 'history', 'barcode-gen'].includes(id)) {
                 alert("Access Denied for Cashier Profile!");
@@ -3328,7 +2586,6 @@
             if(id === 'history') renderFullHistory();
             if(id === 'serial') { document.getElementById('serial-time').value = new Date().toLocaleString(); if(window.renderSerialHistory) renderSerialHistory(); }
             if(id === 'barcode-gen') renderBarcodePreview();
-            if(id === 'cloud') updateCloudLimitDisplay();
         }
         window.showTab = showTab;
 
@@ -3566,12 +2823,6 @@
         window.renderCustomers = renderCustomers;
 
         async function updateCustomerCredit(name, val, inputElem) {
-            const pass = await requirePassword("Enter Password to change credit balance:");
-            if(pass !== getAdminPassword()) {
-                if(pass !== null) alert("Incorrect Password!");
-                inputElem.value = inputElem.oldValue;
-                return;
-            }
             const amount = parseFloat(val) || 0;
             await db.customers.update(name, { 
                 creditAmount: amount, 
@@ -3582,11 +2833,6 @@
         window.updateCustomerCredit = updateCustomerCredit;
 
         async function settleCredit(name) {
-            const pass = await requirePassword("Enter Password to Settle:");
-            if(pass !== getAdminPassword()) {
-                if(pass !== null) alert("Incorrect Password!");
-                return;
-            }
 
             const amount = parseFloat(prompt(`Enter amount paid by ${name}:`));
             if(isNaN(amount) || amount <= 0) return;
@@ -4796,41 +4042,6 @@
             const savedName = localStorage.getItem('persistent_printer_name');
             if(savedName) { document.getElementById('printer-status').innerHTML = `<span class="w-3 h-3 rounded-full bg-blue-500 inline-block"></span> Status: Saved Printer - ` + savedName; }
 
-            // Auto-reconnect cashier to admin panel if previously connected
-            if (savedRole === 'cashier') {
-                const savedIp = localStorage.getItem('cashier_saved_ip');
-                const savedPass = localStorage.getItem('cashier_saved_password');
-                const savedDevice = localStorage.getItem('cashier_saved_device');
-                if (savedIp && savedPass) {
-                    const ipEl = document.getElementById('client-ip');
-                    const passEl = document.getElementById('client-password');
-                    const devEl = document.getElementById('client-device');
-                    if (ipEl) ipEl.value = savedIp;
-                    if (passEl) passEl.value = savedPass;
-                    if (devEl && savedDevice) devEl.value = savedDevice;
-                    // Ensure cashier name is loaded into input before reconnect
-                    const _rnEl = document.getElementById('cashier-name');
-                    if (_rnEl && !_rnEl.value.trim()) {
-                        _rnEl.value = localStorage.getItem('cashier_name') || 'Cashier';
-                    }
-                    try {
-                        await window.connectToHost();
-                    } catch(e) {
-                        console.warn('Auto-reconnect failed:', e);
-                    }
-                }
-            }
-
-            // Auto-resume host server on refresh/reopen if previously started
-            if (savedRole === 'owner' && localStorage.getItem('host_ip') && localStorage.getItem('is_host') === 'true') {
-                try {
-                    await window.startHostServer(true);
-                    console.info('[INIT] Host server auto-resumed.');
-                } catch(e) {
-                    console.warn('[INIT] Host auto-resume failed:', e);
-                }
-            }
-
             // Start cloud auto-sync timer if enabled
             startCloudAutoSync();
         }
@@ -5107,184 +4318,6 @@
 
         init();
         startCloudAutoDownload();
-    </script>
-
-    <!-- Firebase Authentication Functions (Outside Module for HTML Access) -->
-    <script>
-        // These functions are outside the module so HTML onclick handlers can access them
-        // They use the Firebase compat SDK which is available globally
-        
-        // Critical app functions for navigation (must be available immediately)
-        window.toggleSidebar = function() {
-            document.getElementById('sidebar').classList.toggle('open');
-            document.getElementById('sidebar-overlay').classList.toggle('hidden');
-        };
-
-        window.showTab = function(id) {
-            // Firebase-based role restriction for cashiers
-            if (window.userRole === 'cashier' && !['billing', 'customers', 'history'].includes(id)) {
-                alert("Access Denied: Cashiers can only access Billing, History, and Customer tabs.");
-                return;
-            }
-
-            // Legacy role restriction (for backward compatibility)
-            const hasFullAccess = Date.now() < parseInt(localStorage.getItem('cashier_full_access_expiry') || '0');
-            if (window.currentRole === 'cashier' && !hasFullAccess && !['billing', 'serial', 'profile', 'warranty', 'customers', 'history', 'barcode-gen'].includes(id)) {
-                alert("Access Denied for Cashier Profile!");
-                return;
-            }
-
-            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-            const targetTab = document.getElementById('tab-' + id);
-            if (targetTab) {
-                targetTab.classList.add('active');
-            }
-            if(id === 'inventory' && window.renderInventory) window.renderInventory();
-            if(id === 'customers' && window.renderCustomers) window.renderCustomers();
-            if(id === 'billing' && window.updateCustomerDropdown) window.updateCustomerDropdown();
-            if(id === 'reports' && window.calculateReports) window.calculateReports();
-            if(id === 'history' && window.renderFullHistory) window.renderFullHistory();
-            if(id === 'serial') { 
-                const serialTime = document.getElementById('serial-time');
-                if(serialTime) serialTime.value = new Date().toLocaleString();
-                if(window.renderSerialHistory) window.renderSerialHistory();
-            }
-            if(id === 'barcode-gen' && window.renderBarcodePreview) window.renderBarcodePreview();
-            if(id === 'cloud' && window.updateCloudLimitDisplay) window.updateCloudLimitDisplay();
-        };
-
-        window.showLoginForm = function() {
-            console.log('Show login form called');
-            const loginForm = document.getElementById('login-form');
-            const registerForm = document.getElementById('register-form');
-            const loginError = document.getElementById('login-error');
-            const loginStatus = document.getElementById('login-status');
-            
-            if (loginForm) loginForm.classList.remove('hidden');
-            if (registerForm) registerForm.classList.add('hidden');
-            if (loginError) loginError.classList.add('hidden');
-            if (loginStatus) loginStatus.textContent = 'Please login to continue';
-            
-            console.log('Forms toggled');
-        };
-
-        window.showRegisterForm = function() {
-            console.log('Show register form called');
-            const loginForm = document.getElementById('login-form');
-            const registerForm = document.getElementById('register-form');
-            const loginError = document.getElementById('login-error');
-            const loginStatus = document.getElementById('login-status');
-            
-            if (loginForm) loginForm.classList.add('hidden');
-            if (registerForm) registerForm.classList.remove('hidden');
-            if (loginError) loginError.classList.add('hidden');
-            if (loginStatus) loginStatus.textContent = 'Create new account';
-            
-            console.log('Forms toggled');
-        };
-
-        window.handleLogin = async function() {
-            console.log('Login button clicked');
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
-            const errorDiv = document.getElementById('login-error');
-            const loginStatus = document.getElementById('login-status');
-
-            console.log('Email:', email, 'Password:', password ? '***' : 'empty');
-
-            if (!email || !password) {
-                errorDiv.textContent = 'Please enter email and password';
-                errorDiv.classList.remove('hidden');
-                return;
-            }
-
-            try {
-                if (loginStatus) loginStatus.textContent = 'Logging in...';
-                // Use Firebase compat SDK
-                await firebase.auth().signInWithEmailAndPassword(email, password);
-                errorDiv.classList.add('hidden');
-                console.log('Login successful');
-            } catch (error) {
-                console.error('Login error:', error);
-                errorDiv.textContent = error.message;
-                errorDiv.classList.remove('hidden');
-                if (loginStatus) loginStatus.textContent = 'Login failed';
-            }
-        };
-
-        window.handleRegister = async function() {
-            console.log('Register button clicked');
-            const email = document.getElementById('register-email').value;
-            const password = document.getElementById('register-password').value;
-            const role = document.getElementById('register-role').value;
-            const displayName = document.getElementById('register-name').value;
-            const errorDiv = document.getElementById('login-error');
-            const loginStatus = document.getElementById('login-status');
-
-            console.log('Email:', email, 'Role:', role, 'Name:', displayName);
-
-            if (!email || !password || !displayName) {
-                errorDiv.textContent = 'Please fill all fields';
-                errorDiv.classList.remove('hidden');
-                return;
-            }
-
-            if (password.length < 6) {
-                errorDiv.textContent = 'Password must be at least 6 characters';
-                errorDiv.classList.remove('hidden');
-                return;
-            }
-
-            try {
-                if (loginStatus) loginStatus.textContent = 'Registering...';
-                // Create user in Firebase Auth using compat SDK
-                const userCredential = await firebase.auth().createUserWithEmailAndPassword(email, password);
-                const user = userCredential.user;
-
-                // Update display name
-                await user.updateProfile({ displayName: displayName });
-
-                // Save user role to Firebase Database using compat SDK
-                await firebase.database().ref('users/' + user.uid).set({
-                    email: email,
-                    displayName: displayName,
-                    role: role,
-                    createdAt: Date.now()
-                });
-
-                errorDiv.classList.add('hidden');
-                console.log('Registration successful');
-                alert('Registration successful! You can now login.');
-                showLoginForm();
-            } catch (error) {
-                console.error('Registration error:', error);
-                errorDiv.textContent = error.message;
-                errorDiv.classList.remove('hidden');
-                if (loginStatus) loginStatus.textContent = 'Registration failed';
-            }
-        };
-
-        window.handleLogout = async function() {
-            try {
-                await firebase.auth().signOut();
-                window.currentUser = null;
-                window.userRole = null;
-                // Show login modal
-                const loginModal = document.getElementById('firebase-login-modal');
-                if (loginModal) loginModal.classList.remove('hidden');
-                // Reset forms
-                const loginForm = document.getElementById('login-form');
-                const registerForm = document.getElementById('register-form');
-                const loginError = document.getElementById('login-error');
-                const loginStatus = document.getElementById('login-status');
-                if (loginForm) loginForm.classList.remove('hidden');
-                if (registerForm) registerForm.classList.add('hidden');
-                if (loginError) loginError.classList.add('hidden');
-                if (loginStatus) loginStatus.textContent = 'Please login to continue';
-            } catch (error) {
-                console.error('Logout error:', error);
-            }
-        };
     </script>
 
     <!-- ═══ CASHIER BILLS MODAL ═══ -->
