@@ -344,7 +344,7 @@
                         <p id="shift-status" class="text-xs text-emerald-400 font-bold mt-3 hidden relative z-10">✅ Shift Active - Billing Unlocked</p>
                     </div>
 
-                    <div class="bg-gradient-to-r from-purple-900/30 to-pink-900/30 p-6 rounded-xl border border-purple-500/50 shadow-lg text-left mt-6 relative overflow-hidden">
+                    <div id="admin-download-section" class="bg-gradient-to-r from-purple-900/30 to-pink-900/30 p-6 rounded-xl border border-purple-500/50 shadow-lg text-left mt-6 relative overflow-hidden hidden">
                         <div class="absolute top-0 right-0 w-32 h-32 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10"></div>
                         <h4 class="font-bold text-lg text-purple-400 mb-4 relative z-10">📥 Download Cashier Data</h4>
                         <p class="text-xs text-slate-400 mb-4 relative z-10">Download cashier bills and reports from Firebase. Bills will appear in History, reports in Reports tab.</p>
@@ -1495,11 +1495,13 @@
                 document.getElementById('role-selection-buttons').classList.add('hidden');
                 document.getElementById('cashier-mode-header').classList.remove('hidden');
                 document.getElementById('cashier-setup-section').style.display = 'block';
+                document.getElementById('admin-download-section').classList.add('hidden');
                 console.log('[Firebase] Cashier mode activated via Firebase');
             } else {
                 document.getElementById('role-selection-buttons').classList.remove('hidden');
                 document.getElementById('cashier-mode-header').classList.add('hidden');
                 document.getElementById('cashier-setup-section').style.display = 'none';
+                document.getElementById('admin-download-section').classList.remove('hidden');
                 console.log('[Firebase] Owner mode activated');
             }
             
@@ -1580,6 +1582,19 @@
         // --- SHIFT MANAGEMENT ---
         let shiftActive = false;
         let shiftStartTime = null;
+
+        // Restore shift state from localStorage on page load
+        if (localStorage.getItem('shift_active') === 'true') {
+            shiftActive = true;
+            shiftStartTime = parseInt(localStorage.getItem('shift_start_time') || '0');
+            // Update UI to reflect active shift
+            setTimeout(() => {
+                document.getElementById('btn-start-shift').disabled = true;
+                document.getElementById('btn-end-shift').disabled = false;
+                document.getElementById('shift-status').classList.remove('hidden');
+                document.getElementById('shift-status').innerText = '✅ Shift Active - Billing Unlocked';
+            }, 500);
+        }
 
         window.startShift = async function() {
             shiftActive = true;
