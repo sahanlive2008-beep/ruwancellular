@@ -332,6 +332,27 @@
                             </div>
                         </div>
                     </div>
+
+                    <div class="bg-gradient-to-r from-emerald-900/30 to-blue-900/30 p-6 rounded-xl border border-emerald-500/50 shadow-lg text-left mt-6 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10"></div>
+                        <h4 class="font-bold text-lg text-emerald-400 mb-4 relative z-10">⏰ Shift Management</h4>
+                        <p class="text-xs text-slate-400 mb-4 relative z-10">Start your shift to begin billing. End shift to upload all daily data to Firebase for admin review.</p>
+                        <div class="flex flex-col sm:flex-row gap-4 relative z-10">
+                            <button id="btn-start-shift" onclick="startShift()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-4 rounded-xl font-black text-lg uppercase tracking-wider border border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all">▶️ Start Shift</button>
+                            <button id="btn-end-shift" onclick="endShift()" class="flex-1 bg-red-600 hover:bg-red-500 text-white py-4 rounded-xl font-black text-lg uppercase tracking-wider border border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)] transition-all" disabled>⏹️ End Shift</button>
+                        </div>
+                        <p id="shift-status" class="text-xs text-emerald-400 font-bold mt-3 hidden relative z-10">✅ Shift Active - Billing Unlocked</p>
+                    </div>
+
+                    <div class="bg-gradient-to-r from-purple-900/30 to-pink-900/30 p-6 rounded-xl border border-purple-500/50 shadow-lg text-left mt-6 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-32 h-32 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10"></div>
+                        <h4 class="font-bold text-lg text-purple-400 mb-4 relative z-10">📥 Download Cashier Data</h4>
+                        <p class="text-xs text-slate-400 mb-4 relative z-10">Download cashier bills and reports from Firebase. Bills will appear in History, reports in Reports tab.</p>
+                        <div class="flex flex-col sm:flex-row gap-4 relative z-10">
+                            <button onclick="downloadCashierBills()" class="flex-1 bg-purple-600 hover:bg-purple-500 text-white py-4 rounded-xl font-black text-lg uppercase tracking-wider border border-purple-500 shadow-[0_0_15px_rgba(147,51,234,0.3)] transition-all">🧑‍💼 Download Bills</button>
+                            <button onclick="downloadCashierReports()" class="flex-1 bg-pink-600 hover:bg-pink-500 text-white py-4 rounded-xl font-black text-lg uppercase tracking-wider border border-pink-500 shadow-[0_0_15px_rgba(219,39,119,0.3)] transition-all">📊 Download Reports</button>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="bg-slate-800/80 p-6 rounded-xl border border-slate-600 shadow-lg text-left mt-6 relative overflow-hidden">
@@ -1235,6 +1256,79 @@
             }
         };
 
+        window.downloadCashierBills = async function() {
+            try {
+                // Get all cashier bills from Firebase
+                const snapshot = await get(child(ref(fb_db), 'cashier_bills'));
+                if (!snapshot.exists()) {
+                    alert("No cashier bills found on Firebase.");
+                    return;
+                }
+
+                const allCashierBills = snapshot.val();
+                let totalBillsDownloaded = 0;
+
+                // Iterate through all devices and shifts
+                for (const deviceId in allCashierBills) {
+                    const deviceBills = allCashierBills[deviceId];
+                    for (const shiftStartTime in deviceBills) {
+                        const shiftBills = deviceBills[shiftStartTime];
+                        const billsArray = Object.values(shiftBills);
+                        
+                        // Add bills to local database
+                        const _localIds = new Set((await db.sales.toArray()).map(s => s.id));
+                        const _newBills = billsArray.filter(s => s && s.id && !_localIds.has(s.id));
+                        if (_newBills.length > 0) {
+                            await db.sales.bulkAdd(_newBills);
+                            totalBillsDownloaded += _newBills.length;
+                        }
+                    }
+                }
+
+                alert(`Cashier bills downloaded: ${totalBillsDownloaded} new bill(s) added from Firebase. Check History tab.`);
+                showTab('history');
+                if(typeof renderFullHistory === 'function') renderFullHistory();
+                if(typeof calculateReports === 'function') calculateReports();
+            } catch (error) {
+                console.error(error);
+                alert("Download failed: " + error.message);
+            }
+        };
+
+        window.downloadCashierReports = async function() {
+            try {
+                // Get all cashier reports from Firebase
+                const snapshot = await get(child(ref(fb_db), 'cashier_reports'));
+                if (!snapshot.exists()) {
+                    alert("No cashier reports found on Firebase.");
+                    return;
+                }
+
+                const allCashierReports = snapshot.val();
+                let totalReportsDownloaded = 0;
+
+                // Iterate through all devices and shifts
+                for (const deviceId in allCashierReports) {
+                    const deviceReports = allCashierReports[deviceId];
+                    for (const shiftStartTime in deviceReports) {
+                        const shiftReports = deviceReports[shiftStartTime];
+                        
+                        // Save reports to localStorage for display in Reports tab
+                        const reportKey = `cashier_report_${deviceId}_${shiftStartTime}`;
+                        localStorage.setItem(reportKey, JSON.stringify(shiftReports));
+                        totalReportsDownloaded++;
+                    }
+                }
+
+                alert(`Cashier reports downloaded: ${totalReportsDownloaded} report(s) added from Firebase. Check Reports tab.`);
+                showTab('reports');
+                if(typeof calculateReports === 'function') calculateReports();
+            } catch (error) {
+                console.error(error);
+                alert("Download failed: " + error.message);
+            }
+        };
+
         // ─── SILENT AUTO-UPLOAD HELPERS (no alerts, no button state changes) ────
         window._silentUploadInventory = async function() {
             try {
@@ -1379,6 +1473,8 @@
         localStorage.setItem('device_id', deviceId);
 
         // --- FIREBASE ROLE MANAGEMENT ---
+        let roleListener = null;
+
         async function setRole(role) {
             currentRole = role;
             localStorage.setItem('app_role', role);
@@ -1390,6 +1486,7 @@
                     timestamp: Date.now(),
                     deviceName: localStorage.getItem('cashier_name') || 'Unknown Device'
                 });
+                console.log('[Firebase] Role saved:', role);
             } catch(e) {
                 console.warn('Failed to save role to Firebase:', e);
             }
@@ -1398,10 +1495,12 @@
                 document.getElementById('role-selection-buttons').classList.add('hidden');
                 document.getElementById('cashier-mode-header').classList.remove('hidden');
                 document.getElementById('cashier-setup-section').style.display = 'block';
+                console.log('[Firebase] Cashier mode activated via Firebase');
             } else {
                 document.getElementById('role-selection-buttons').classList.remove('hidden');
                 document.getElementById('cashier-mode-header').classList.add('hidden');
                 document.getElementById('cashier-setup-section').style.display = 'none';
+                console.log('[Firebase] Owner mode activated');
             }
             
             // Hide/Show sidebar elements
@@ -1428,12 +1527,14 @@
         }
         window.setRole = setRole;
 
-        // Listen for role changes from Firebase
-        onValue(ref(fb_db, 'roles/' + deviceId), (snap) => {
+        // Listen for role changes from Firebase (real-time sync)
+        roleListener = onValue(ref(fb_db, 'roles/' + deviceId), (snap) => {
             if (snap.exists()) {
                 const data = snap.val();
+                console.log('[Firebase] Role change detected:', data.role);
                 if (data.role && data.role !== currentRole) {
                     setRole(data.role);
+                    alert('Role changed to: ' + data.role.toUpperCase() + ' (controlled via Firebase)');
                 }
             }
         });
@@ -1475,6 +1576,127 @@
                 placeholder.style.display = 'flex';
             }
         }
+
+        // --- SHIFT MANAGEMENT ---
+        let shiftActive = false;
+        let shiftStartTime = null;
+
+        window.startShift = async function() {
+            shiftActive = true;
+            shiftStartTime = Date.now();
+            localStorage.setItem('shift_active', 'true');
+            localStorage.setItem('shift_start_time', shiftStartTime.toString());
+            
+            // Update UI
+            document.getElementById('btn-start-shift').disabled = true;
+            document.getElementById('btn-end-shift').disabled = false;
+            document.getElementById('shift-status').classList.remove('hidden');
+            document.getElementById('shift-status').innerText = '✅ Shift Active - Billing Unlocked';
+            
+            // Unlock billing tab
+            showTab('billing');
+            
+            // Save shift start to Firebase
+            try {
+                await set(ref(fb_db, 'shifts/' + deviceId), {
+                    status: 'active',
+                    startTime: shiftStartTime,
+                    cashierName: localStorage.getItem('cashier_name') || 'Unknown',
+                    deviceId: deviceId
+                });
+                console.log('[Firebase] Shift started');
+            } catch(e) {
+                console.warn('Failed to save shift to Firebase:', e);
+            }
+            
+            alert('Shift Started! Billing is now unlocked.');
+        };
+
+        window.endShift = async function() {
+            if (!shiftActive) {
+                alert('No active shift to end.');
+                return;
+            }
+            
+            if (!confirm('Are you sure you want to end your shift? This will upload all daily data to Firebase.')) {
+                return;
+            }
+            
+            const shiftEndTime = Date.now();
+            const cashierName = localStorage.getItem('cashier_name') || 'Unknown';
+            
+            // Get all bills from today
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const allBills = await db.sales.where('date').gte(today.getTime()).toArray();
+            
+            // Upload bills to Firebase
+            try {
+                const billsData = {};
+                allBills.forEach((bill, index) => {
+                    const safeKey = (bill.invoiceNo || 'bill_' + index).replace(/[.#$\[\]/]/g, '_');
+                    billsData[safeKey] = {
+                        ...bill,
+                        cashierName: cashierName,
+                        deviceId: deviceId,
+                        shiftStartTime: shiftStartTime,
+                        shiftEndTime: shiftEndTime
+                    };
+                });
+                
+                await set(ref(fb_db, 'cashier_bills/' + deviceId + '/' + shiftStartTime), billsData);
+                console.log('[Firebase] Bills uploaded:', allBills.length);
+            } catch(e) {
+                console.warn('Failed to upload bills to Firebase:', e);
+            }
+            
+            // Upload reports to Firebase
+            try {
+                const reportsData = {};
+                const ruwanTotal = document.getElementById('cashier-sales-ruwan')?.innerText || 'LKR 0.00';
+                const tharuTotal = document.getElementById('cashier-sales-tharu')?.innerText || 'LKR 0.00';
+                
+                reportsData['daily_report'] = {
+                    ruwanCellular: ruwanTotal,
+                    salonTharu: tharuTotal,
+                    totalBills: allBills.length,
+                    shiftStartTime: shiftStartTime,
+                    shiftEndTime: shiftEndTime,
+                    cashierName: cashierName,
+                    deviceId: deviceId,
+                    date: new Date().toISOString()
+                };
+                
+                await set(ref(fb_db, 'cashier_reports/' + deviceId + '/' + shiftStartTime), reportsData);
+                console.log('[Firebase] Reports uploaded');
+            } catch(e) {
+                console.warn('Failed to upload reports to Firebase:', e);
+            }
+            
+            // Update shift status in Firebase
+            try {
+                await set(ref(fb_db, 'shifts/' + deviceId), {
+                    status: 'ended',
+                    startTime: shiftStartTime,
+                    endTime: shiftEndTime,
+                    cashierName: cashierName,
+                    deviceId: deviceId,
+                    billsCount: allBills.length
+                });
+            } catch(e) {
+                console.warn('Failed to update shift status in Firebase:', e);
+            }
+            
+            // Update UI
+            shiftActive = false;
+            localStorage.setItem('shift_active', 'false');
+            localStorage.removeItem('shift_start_time');
+            document.getElementById('btn-start-shift').disabled = false;
+            document.getElementById('btn-end-shift').disabled = true;
+            document.getElementById('shift-status').classList.add('hidden');
+            
+            alert('Shift Ended! ' + allBills.length + ' bills and reports uploaded to Firebase.');
+        };
 
         async function renderCashierReport() {
             const now = new Date();
@@ -4317,6 +4539,7 @@
         };
 
         init();
+        startCloudAutoSync();
         startCloudAutoDownload();
     </script>
 
