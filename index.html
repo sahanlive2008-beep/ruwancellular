@@ -298,6 +298,19 @@
                     <button onclick="setRole('owner')" class="text-xs bg-slate-800 text-emerald-400 font-bold px-4 py-2 rounded-lg shadow border border-slate-600 hover:bg-slate-700 hover:text-white transition-colors">🔄 Switch Owner</button>
                 </div>
 
+                <div id="owner-setup-section" class="hidden mt-6 border-t border-slate-700 pt-6">
+                    <h3 class="font-bold text-2xl mb-6 text-white">Admin Panel</h3>
+                    
+                    <div class="bg-gradient-to-r from-purple-900/30 to-pink-900/30 p-6 rounded-xl border border-purple-500/50 shadow-lg text-left relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-32 h-32 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10"></div>
+                        <h4 class="font-bold text-lg text-purple-400 mb-4 relative z-10">📥 Download Cashier Data</h4>
+                        <p class="text-xs text-slate-400 mb-4 relative z-10">Download cashier bills and reports from Firebase. Bills will appear in History, reports in Reports tab.</p>
+                        <div class="flex flex-col sm:flex-row gap-4 relative z-10">
+                            <button onclick="downloadCashierBills()" class="flex-1 bg-purple-600 hover:bg-purple-500 text-white py-4 rounded-xl font-black text-lg uppercase tracking-wider border border-purple-500 shadow-[0_0_15px_rgba(147,51,234,0.3)] transition-all">🧑‍💼 Download Bills</button>
+                            <button onclick="downloadCashierReports()" class="flex-1 bg-pink-600 hover:bg-pink-500 text-white py-4 rounded-xl font-black text-lg uppercase tracking-wider border border-pink-500 shadow-[0_0_15px_rgba(219,39,119,0.3)] transition-all">📊 Download Reports</button>
+                        </div>
+                    </div>
+                </div>
 
                 <div id="cashier-setup-section" class="hidden mt-6 border-t border-slate-700 pt-6">
                     <h3 class="font-bold text-2xl mb-6 text-white">Smart Cashier Profile</h3>
@@ -342,16 +355,6 @@
                             <button id="btn-end-shift" onclick="endShift()" class="flex-1 bg-red-600 hover:bg-red-500 text-white py-4 rounded-xl font-black text-lg uppercase tracking-wider border border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)] transition-all" disabled>⏹️ End Shift</button>
                         </div>
                         <p id="shift-status" class="text-xs text-emerald-400 font-bold mt-3 hidden relative z-10">✅ Shift Active - Billing Unlocked</p>
-                    </div>
-
-                    <div id="admin-download-section" class="bg-gradient-to-r from-purple-900/30 to-pink-900/30 p-6 rounded-xl border border-purple-500/50 shadow-lg text-left mt-6 relative overflow-hidden hidden">
-                        <div class="absolute top-0 right-0 w-32 h-32 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10"></div>
-                        <h4 class="font-bold text-lg text-purple-400 mb-4 relative z-10">📥 Download Cashier Data</h4>
-                        <p class="text-xs text-slate-400 mb-4 relative z-10">Download cashier bills and reports from Firebase. Bills will appear in History, reports in Reports tab.</p>
-                        <div class="flex flex-col sm:flex-row gap-4 relative z-10">
-                            <button onclick="downloadCashierBills()" class="flex-1 bg-purple-600 hover:bg-purple-500 text-white py-4 rounded-xl font-black text-lg uppercase tracking-wider border border-purple-500 shadow-[0_0_15px_rgba(147,51,234,0.3)] transition-all">🧑‍💼 Download Bills</button>
-                            <button onclick="downloadCashierReports()" class="flex-1 bg-pink-600 hover:bg-pink-500 text-white py-4 rounded-xl font-black text-lg uppercase tracking-wider border border-pink-500 shadow-[0_0_15px_rgba(219,39,119,0.3)] transition-all">📊 Download Reports</button>
-                        </div>
                     </div>
                 </div>
 
@@ -1478,7 +1481,7 @@
         async function setRole(role) {
             currentRole = role;
             localStorage.setItem('app_role', role);
-            
+
             // Save role to Firebase
             try {
                 await set(ref(fb_db, 'roles/' + deviceId), {
@@ -1490,21 +1493,21 @@
             } catch(e) {
                 console.warn('Failed to save role to Firebase:', e);
             }
-            
+
             if (role === 'cashier') {
                 document.getElementById('role-selection-buttons').classList.add('hidden');
                 document.getElementById('cashier-mode-header').classList.remove('hidden');
                 document.getElementById('cashier-setup-section').style.display = 'block';
-                document.getElementById('admin-download-section').classList.add('hidden');
+                document.getElementById('owner-setup-section').classList.add('hidden');
                 console.log('[Firebase] Cashier mode activated via Firebase');
             } else {
                 document.getElementById('role-selection-buttons').classList.remove('hidden');
                 document.getElementById('cashier-mode-header').classList.add('hidden');
                 document.getElementById('cashier-setup-section').style.display = 'none';
-                document.getElementById('admin-download-section').classList.remove('hidden');
+                document.getElementById('owner-setup-section').classList.remove('hidden');
                 console.log('[Firebase] Owner mode activated');
             }
-            
+
             // Hide/Show sidebar elements
             const hasFullAccess = Date.now() < parseInt(localStorage.getItem('cashier_full_access_expiry') || '0');
             const isEffectivelyOwner = role === 'owner' || (role === 'cashier' && hasFullAccess);
@@ -1518,7 +1521,7 @@
             // Restrict views
             if (role === 'cashier') {
                 const activeTab = document.querySelector('.tab-content.active')?.id;
-                const allowed = ['tab-billing', 'tab-serial', 'tab-profile', 'tab-warranty', 'tab-customers', 'tab-history', 'tab-barcode-gen']; 
+                const allowed = ['tab-billing', 'tab-serial', 'tab-profile', 'tab-warranty', 'tab-customers', 'tab-history', 'tab-barcode-gen'];
                 if (!isEffectivelyOwner && !allowed.includes(activeTab)) {
                     showTab('billing');
                 }
@@ -4236,13 +4239,13 @@
             if (!localStorage.getItem('cashier_full_access_expiry')) {
                 localStorage.setItem('cashier_full_access_expiry', Date.now() + (48 * 60 * 60 * 1000));
             }
-            
+
             const savedRole = localStorage.getItem('app_role') || 'owner';
-            
+
             // Temporarily bypass strict initialization constraint for Dev switch behavior logic
             currentRole = 'owner'; // default to pass validation check briefly
             setRole(savedRole);
-            
+
             const _cne = document.getElementById('cashier-name');
             if (_cne) _cne.value = localStorage.getItem('cashier_name') || '';
             loadCashierPhoto();
@@ -4265,12 +4268,6 @@
             loadLogo(); updateCustomerDropdown(); updateLivePreview();
             const savedName = localStorage.getItem('persistent_printer_name');
             if(savedName) { document.getElementById('printer-status').innerHTML = `<span class="w-3 h-3 rounded-full bg-blue-500 inline-block"></span> Status: Saved Printer - ` + savedName; }
-
-            // Ensure admin download section is visible for owner role
-            const adminDownloadSection = document.getElementById('admin-download-section');
-            if (adminDownloadSection && savedRole === 'owner') {
-                adminDownloadSection.classList.remove('hidden');
-            }
 
             // Restore shift state from localStorage
             if (localStorage.getItem('shift_active') === 'true') {
