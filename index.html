@@ -1583,19 +1583,6 @@
         let shiftActive = false;
         let shiftStartTime = null;
 
-        // Restore shift state from localStorage on page load
-        if (localStorage.getItem('shift_active') === 'true') {
-            shiftActive = true;
-            shiftStartTime = parseInt(localStorage.getItem('shift_start_time') || '0');
-            // Update UI to reflect active shift
-            setTimeout(() => {
-                document.getElementById('btn-start-shift').disabled = true;
-                document.getElementById('btn-end-shift').disabled = false;
-                document.getElementById('shift-status').classList.remove('hidden');
-                document.getElementById('shift-status').innerText = '✅ Shift Active - Billing Unlocked';
-            }, 500);
-        }
-
         window.startShift = async function() {
             shiftActive = true;
             shiftStartTime = Date.now();
@@ -4278,6 +4265,27 @@
             loadLogo(); updateCustomerDropdown(); updateLivePreview();
             const savedName = localStorage.getItem('persistent_printer_name');
             if(savedName) { document.getElementById('printer-status').innerHTML = `<span class="w-3 h-3 rounded-full bg-blue-500 inline-block"></span> Status: Saved Printer - ` + savedName; }
+
+            // Ensure admin download section is visible for owner role
+            const adminDownloadSection = document.getElementById('admin-download-section');
+            if (adminDownloadSection && savedRole === 'owner') {
+                adminDownloadSection.classList.remove('hidden');
+            }
+
+            // Restore shift state from localStorage
+            if (localStorage.getItem('shift_active') === 'true') {
+                shiftActive = true;
+                shiftStartTime = parseInt(localStorage.getItem('shift_start_time') || '0');
+                const startBtn = document.getElementById('btn-start-shift');
+                const endBtn = document.getElementById('btn-end-shift');
+                const statusEl = document.getElementById('shift-status');
+                if (startBtn) startBtn.disabled = true;
+                if (endBtn) endBtn.disabled = false;
+                if (statusEl) {
+                    statusEl.classList.remove('hidden');
+                    statusEl.innerText = '✅ Shift Active - Billing Unlocked';
+                }
+            }
 
             // Start cloud auto-sync timer if enabled
             startCloudAutoSync();
